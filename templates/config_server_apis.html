@@ -1,0 +1,109 @@
+{% extends "layouts/adminlte.html" %}
+{% block title %}APIs por servidor{% endblock %}
+{% block page_title %}APIs por servidor{% endblock %}
+{% block page_subtitle %}<small class="text-muted">Matriz de activación por servidor</small>{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">APIs por servidor</li>{% endblock %}
+{% block extra_css %}<style>
+.matrix-table th.server-col, .matrix-table td.server-col { position: sticky; left: 0; background: #fff; z-index: 2; min-width: 140px; font-weight: 600; }
+.matrix-table thead th { position: sticky; top: 0; background: #f8f9fa; z-index: 1; white-space: nowrap; font-size: 0.85rem; }
+.matrix-table thead th.server-col { z-index: 3; }
+.matrix-wrap { max-height: 70vh; overflow: auto; }
+.api-col { text-align: center; vertical-align: middle; }
+</style>{% endblock %}
+
+{% block content %}
+{% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+
+        <div class="card p-3">
+            <p class="text-muted small mb-3">
+                Active o desactive cada API por servidor. Los cambios se guardan automáticamente en
+                <code>config.json</code> (clave <code>server_apis</code>).
+            </p>
+
+            {% if servers and apis %}
+                <div class="matrix-wrap">
+                    <table class="table table-sm table-bordered table-hover matrix-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="server-col">Servidor</th>
+                                {% for api in apis %}
+                                    <th class="api-col" title="{{ api.name }}">{{ api.name }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for server in servers %}
+                                <tr>
+                                    <td class="server-col">{{ server.name }}</td>
+                                    {% for api in apis %}
+                                        {% set active = assignments.get(server.name, {}).get(api.name, false) %}
+                                        <td class="api-col">
+                                            <input
+                                                type="checkbox"
+                                                class="form-check-input server-api-toggle"
+                                                data-server="{{ server.name|e }}"
+                                                data-api="{{ api.name|e }}"
+                                                {% if active %}checked{% endif %}
+                                                aria-label="{{ api.name }} en {{ server.name }}"
+                                            />
+                                        </td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% elif not servers and not apis %}
+                <p class="text-muted mb-0">No hay servidores ni APIs configurados. Regístrelos primero.</p>
+            {% elif not servers %}
+                <p class="text-muted mb-0">No hay servidores. <a href="/config-servers">Agregar servidores</a>.</p>
+            {% else %}
+                <p class="text-muted mb-0">No hay APIs. <a href="/config-apis">Registrar APIs</a>.</p>
+            {% endif %}
+
+            <div id="toggleResult" class="mt-3 text-muted small"></div>
+        </div>
+    </div>
+
+    {% endblock %}
+
+{% block extra_js %}
+<script>
+        function setToggleResult(message, success) {
+            const el = document.getElementById('toggleResult');
+            el.textContent = message;
+            el.className = success ? 'mt-3 text-success small' : 'mt-3 text-danger small';
+        }
+
+        document.querySelectorAll('.server-api-toggle').forEach((checkbox) => {
+            checkbox.addEventListener('change', async () => {
+                const server = checkbox.dataset.server;
+                const api = checkbox.dataset.api;
+                const active = checkbox.checked;
+                checkbox.disabled = true;
+
+                try {
+                    const resp = await fetch('/config-server-apis/toggle', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ server, api, active })
+                    });
+                    const data = await resp.json();
+                    if (!resp.ok || !data.success) {
+                        checkbox.checked = !active;
+                        setToggleResult(data.message || 'No se pudo guardar el cambio.', false);
+                        return;
+                    }
+                    setToggleResult(data.message || 'Guardado.', true);
+                } catch (err) {
+                    checkbox.checked = !active;
+                    setToggleResult('Error de conexión al guardar.', false);
+                } finally {
+                    checkbox.disabled = false;
+                }
+            });
+        });
+    </script>
+{% endblock %}

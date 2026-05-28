@@ -1,0 +1,305 @@
+{% extends "layouts/adminlte.html" %}
+{% block title %}Tablero{% endblock %}
+{% block page_title %}Tablero{% endblock %}
+{% block page_subtitle %}<small class="text-muted">Resumen operativo del contact center</small>{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Tablero</li>{% endblock %}
+
+{% block extra_css %}
+<style>
+.dashboard-stats > [class*="col-"] { display: flex; }
+.dashboard-stats .small-box {
+    width: 100%;
+    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+}
+.dashboard-stats .small-box .inner { flex: 1 1 auto; }
+.dashboard-stats .small-box .small-box-footer { margin-top: auto; }
+.logs-panel {
+    max-height: 280px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 11px;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 10px;
+    border-radius: 4px;
+}
+.log-info { color: #4ec9b0; }
+.log-warning { color: #dcdcaa; }
+.log-error { color: #f48771; }
+/* Scroll vertical a partir de la 6ª fila (~5 filas visibles + encabezado) */
+.campaign-table-scroll {
+    max-height: 16.5rem;
+    overflow-y: auto;
+}
+.campaign-table-scroll thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #fff;
+    box-shadow: 0 1px 0 #dee2e6;
+}
+.campaign-table-scroll.table-striped thead th {
+    background: #fff;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Sección 1: indicadores -->
+<div class="row dashboard-stats mb-3">
+    <div class="col-lg-4 col-12 mb-3 mb-lg-0">
+        <div class="small-box bg-info mb-0">
+            <div class="inner">
+                <h3 id="statServers">{{ servers_count }}</h3>
+                <p>Servidores configurados</p>
+            </div>
+            <div class="icon"><i class="fas fa-server"></i></div>
+            <a href="/config-servers" class="small-box-footer">Ver servidores <i class="fas fa-arrow-circle-right"></i></a>
+        </div>
+    </div>
+    <div class="col-lg-4 col-12 mb-3 mb-lg-0">
+        <div class="small-box bg-success mb-0">
+            <div class="inner">
+                <h3 id="statCampaigns">{{ campaigns_total }} <sup class="text-sm font-weight-light">/ <span id="statCampaignsScheduled">{{ campaigns_scheduled }}</span> prog.</sup></h3>
+                <p>Campañas de hoy (totales / programadas)</p>
+            </div>
+            <div class="icon"><i class="fas fa-bullhorn"></i></div>
+            <a href="/config-bigquery" class="small-box-footer">Gestionar campañas <i class="fas fa-arrow-circle-right"></i></a>
+        </div>
+    </div>
+    <div class="col-lg-4 col-12">
+        <div class="small-box bg-warning mb-0">
+            <div class="inner">
+                <h3 id="statClientsCalled">{{ clients_called }} <sup class="text-sm font-weight-light">/ <span id="statClientsTotal">{{ clients_total }}</span></sup></h3>
+                <p>Clientes llamados vs total (<span id="statProgressPercent">{{ progress_percent }}</span>%)</p>
+            </div>
+            <div class="icon"><i class="fas fa-phone-volume"></i></div>
+            <a href="/config-bigquery" class="small-box-footer">
+                <span id="statClientsContacted">{{ clients_contacted }}</span> contactados · <span id="statClientsPending">{{ clients_pending }}</span> pendientes
+                <i class="fas fa-arrow-circle-right"></i>
+            </a>
+        </div>
+    </div>
+
+</div>
+
+<!-- Sección 2: tabla de campañas -->
+<div class="card card-outline card-primary">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-table mr-1"></i> Campañas de hoy</h3>
+        <div class="card-tools">
+            <button type="button" class="btn btn-tool" id="btnRefreshCampaigns" onclick="refreshCampaigns()" title="Actualizar estado de campañas">
+                <i class="fas fa-sync-alt" id="iconRefreshCampaigns"></i>
+            </button>
+            <a href="/config-bigquery" class="btn btn-tool btn-sm text-primary"><i class="fas fa-plus"></i> Nueva campaña</a>
+        </div>
+    </div>
+    <div class="card-body table-responsive p-0{% if campaign_rows|length > 5 %} campaign-table-scroll{% endif %}">
+        <table class="table table-hover table-striped mb-0">
+            <thead>
+                <tr>
+                    <th>Campaña</th>
+                    <th>Tipo campaña</th>
+                    <th class="text-right">Clientes</th>
+                    <th class="text-right">Llamados</th>
+                    <th class="text-right">Faltantes</th>
+                    <th class="text-right">Contactados</th>
+                    <th>Estado</th>
+                    <th class="text-center">Acción</th>
+                </tr>
+            </thead>
+            <tbody id="campaignTableBody">
+                {% if campaign_rows %}
+                    {% for row in campaign_rows %}
+                    <tr>
+                        <td>
+                            <strong>{{ row.nombre }}</strong>
+                            {% if row.servidor %}<br><small class="text-muted">{{ row.servidor }}</small>{% endif %}
+                        </td>
+                        <td>{{ row.tipo_campana or '—' }}</td>
+                        <td class="text-right">{{ row.clientes }}</td>
+                        <td class="text-right">{{ row.llamados }}</td>
+                        <td class="text-right">{{ row.faltantes }}</td>
+                        <td class="text-right">{{ row.contactados }}</td>
+                        <td>
+                            {% if row.estado == 'programada' %}
+                                <span class="badge badge-info">{{ row.estado_label }}</span>
+                            {% elif row.estado == 'en_curso' %}
+                                <span class="badge badge-warning">{{ row.estado_label }}</span>
+                            {% elif row.estado == 'terminada' %}
+                                <span class="badge badge-success">{{ row.estado_label }}</span>
+                            {% else %}
+                                <span class="badge badge-secondary">{{ row.estado_label }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="/config-bigquery" class="btn btn-xs btn-outline-primary" title="Gestionar en BigQuery">
+                                <i class="fas fa-edit"></i> Gestionar
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            No hay campañas programadas para hoy.
+                            <a href="/config-bigquery">Programar una campaña</a>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Sección 3: logs -->
+<div class="card card-outline card-dark">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-terminal mr-1"></i> Actividad en vivo</h3>
+        <div class="card-tools">
+            <button type="button" class="btn btn-tool" onclick="loadLogs()" title="Actualizar"><i class="fas fa-sync-alt"></i></button>
+        </div>
+    </div>
+    <div class="card-body p-2">
+        <div class="logs-panel" id="logsPanel">
+            <div class="text-muted">Cargando logs...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const DASHBOARD_REFRESH_MS = 300000;
+
+    function estadoBadge(estado, label) {
+        const map = {
+            programada: 'badge-info',
+            en_curso: 'badge-warning',
+            terminada: 'badge-success',
+            pendiente: 'badge-secondary',
+        };
+        const cls = map[estado] || 'badge-secondary';
+        return `<span class="badge ${cls}">${escapeHtml(label)}</span>`;
+    }
+
+    function renderCampaignRows(rows) {
+        const tbody = document.getElementById('campaignTableBody');
+        if (!rows || !rows.length) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">
+                        No hay campañas programadas para hoy.
+                        <a href="/config-bigquery">Programar una campaña</a>
+                    </td>
+                </tr>`;
+            return;
+        }
+        tbody.innerHTML = rows.map(row => {
+            const servidor = row.servidor
+                ? `<br><small class="text-muted">${escapeHtml(row.servidor)}</small>`
+                : '';
+            return `
+                <tr>
+                    <td><strong>${escapeHtml(row.nombre)}</strong>${servidor}</td>
+                    <td>${escapeHtml(row.tipo_campana || '—')}</td>
+                    <td class="text-right">${row.clientes}</td>
+                    <td class="text-right">${row.llamados}</td>
+                    <td class="text-right">${row.faltantes}</td>
+                    <td class="text-right">${row.contactados}</td>
+                    <td>${estadoBadge(row.estado, row.estado_label)}</td>
+                    <td class="text-center">
+                        <a href="/config-bigquery" class="btn btn-xs btn-outline-primary" title="Gestionar en BigQuery">
+                            <i class="fas fa-edit"></i> Gestionar
+                        </a>
+                    </td>
+                </tr>`;
+        }).join('');
+    }
+
+    function updateDashboardStats(data) {
+        document.getElementById('statServers').textContent = data.servers_count;
+        document.getElementById('statCampaigns').innerHTML =
+            `${data.campaigns_total} <sup class="text-sm font-weight-light">/ ${data.campaigns_scheduled} prog.</sup>`;
+        document.getElementById('statCampaignsScheduled').textContent = data.campaigns_scheduled;
+        document.getElementById('statClientsCalled').innerHTML =
+            `${data.clients_called} <sup class="text-sm font-weight-light">/ ${data.clients_total}</sup>`;
+        document.getElementById('statClientsTotal').textContent = data.clients_total;
+        document.getElementById('statProgressPercent').textContent = data.progress_percent;
+        document.getElementById('statClientsContacted').textContent = data.clients_contacted;
+        document.getElementById('statClientsPending').textContent = data.clients_pending;
+    }
+
+    function applyDashboardData(data) {
+        if (!data || data.success === false) return;
+        updateDashboardStats(data);
+        renderCampaignRows(data.campaign_rows || []);
+    }
+
+    function loadDashboard() {
+        fetch('/api/dashboard')
+            .then(response => response.json())
+            .then(applyDashboardData)
+            .catch(() => {});
+    }
+
+    function refreshCampaigns() {
+        const btn = document.getElementById('btnRefreshCampaigns');
+        const icon = document.getElementById('iconRefreshCampaigns');
+        btn.disabled = true;
+        icon.classList.add('fa-spin');
+        fetch('/api/dashboard/refresh', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    alert(data.message || 'No se pudo actualizar el estado de las campañas.');
+                    return;
+                }
+                applyDashboardData(data);
+            })
+            .catch(() => {
+                alert('No se pudo conectar para actualizar las campañas.');
+            })
+            .finally(() => {
+                btn.disabled = false;
+                icon.classList.remove('fa-spin');
+            });
+    }
+
+    function loadLogs() {
+        fetch('/api/recent_logs')
+            .then(response => response.json())
+            .then(logs => {
+                const logsPanel = document.getElementById('logsPanel');
+                if (!logs.length) {
+                    logsPanel.innerHTML = '<div class="text-muted">No hay logs disponibles</div>';
+                    return;
+                }
+                let html = '';
+                logs.forEach(log => {
+                    let className = 'log-info';
+                    if (log.includes('ERROR')) className = 'log-error';
+                    else if (log.includes('WARNING')) className = 'log-warning';
+                    html += `<div class="log-line ${className}">${escapeHtml(log)}</div>`;
+                });
+                logsPanel.innerHTML = html;
+            })
+            .catch(() => {
+                document.getElementById('logsPanel').innerHTML =
+                    '<div class="text-danger">No se pudieron cargar los logs.</div>';
+            });
+    }
+
+    function escapeHtml(text) {
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    loadLogs();
+    loadDashboard();
+    setInterval(loadLogs, 5000);
+    setInterval(loadDashboard, DASHBOARD_REFRESH_MS);
+</script>
+{% endblock %}

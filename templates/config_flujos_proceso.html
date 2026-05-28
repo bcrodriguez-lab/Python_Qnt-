@@ -1,0 +1,196 @@
+{% extends "layouts/adminlte.html" %}
+{% block title %}Flujos de proceso{% endblock %}
+{% block page_title %}Flujos de proceso{% endblock %}
+{% block page_subtitle %}<small class="text-muted">Relación de flujos Wolkvox con servidores (id → campaign_id)</small>{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Flujos de proceso</li>{% endblock %}
+
+{% block content %}
+{% if error %}
+<div class="alert alert-danger alert-dismissible fade show">
+    {{ error }}
+    <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+</div>
+{% endif %}
+
+<div class="mb-3">
+    <button class="btn btn-outline-primary btn-sm" type="button" data-toggle="collapse" data-target="#flujosTable">Ver flujos</button>
+    <button class="btn btn-primary btn-sm" type="button" data-toggle="collapse" data-target="#flujoForm" onclick="prepareNewFlujo()">Agregar flujo</button>
+</div>
+
+<div class="collapse show" id="flujosTable">
+    <div class="card card-outline card-primary">
+        <div class="card-header"><h3 class="card-title">Flujos configurados</h3></div>
+        <div class="card-body table-responsive p-0">
+            <table class="table table-hover table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>Id (campaign_id)</th>
+                        <th>Nombre</th>
+                        <th>Servidor</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if flujos %}
+                        {% for f in flujos %}
+                        <tr>
+                            <td><code>{{ f.id }}</code></td>
+                            <td>{{ f.nombre }}</td>
+                            <td>{{ f.servidor }}{% if not f.server_exists %} <span class="text-danger small">(servidor no existe)</span>{% endif %}</td>
+                            <td>
+                                <button type="button" class="btn btn-xs btn-outline-primary btn-edit-flujo" data-flujo-id="{{ f.id|e }}">Editar</button>
+                                {% if f.deletable %}
+                                <button type="button" class="btn btn-xs btn-outline-danger btn-delete-flujo" data-flujo-id="{{ f.id|e }}">Borrar</button>
+                                {% else %}
+                                <button type="button" class="btn btn-xs btn-secondary" disabled title="Tiene campañas asociadas">Borrar</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="4" class="text-center text-muted">No hay flujos de proceso configurados.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer text-muted text-sm">
+            El <strong>Id</strong> es el valor que se envía a las APIs Wolkvox como <code>campaign_id</code>
+            y se selecciona en campañas tipo Llamada o WhatsApp.
+        </div>
+    </div>
+</div>
+
+<div class="collapse mt-3" id="flujoForm">
+    <div class="card card-outline card-secondary">
+        <div class="card-header"><h3 class="card-title" id="flujoFormTitle">Agregar flujo de proceso</h3></div>
+        <div class="card-body">
+            <input type="hidden" id="flujoOriginalId" value="" />
+            <div class="form-group">
+                <label>Id (campaign_id Wolkvox)</label>
+                <input id="flujoId" class="form-control" placeholder="Ej: 32841" />
+                <small class="form-text text-muted">Identificador del flujo en Wolkvox. No se puede cambiar al editar.</small>
+            </div>
+            <div class="form-group">
+                <label>Nombre</label>
+                <input id="flujoNombre" class="form-control" placeholder="Nombre descriptivo del flujo" />
+            </div>
+            <div class="form-group">
+                <label>Servidor</label>
+                <select id="flujoServidor" class="form-control">
+                    <option value="">(Seleccionar servidor)</option>
+                    {% for s in servers %}
+                        <option value="{{ s.name }}">{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="saveFlujo()">Guardar</button>
+            <button class="btn btn-default" onclick="clearFlujoForm()">Limpiar</button>
+            <div id="flujoResult" class="mt-3 text-muted"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function setFlujoResult(message, success) {
+        const el = document.getElementById('flujoResult');
+        el.textContent = message;
+        el.className = success ? 'mt-3 text-success' : 'mt-3 text-danger';
+    }
+
+    function prepareNewFlujo() {
+        clearFlujoForm();
+        document.getElementById('flujoFormTitle').textContent = 'Agregar flujo de proceso';
+    }
+
+    function clearFlujoForm() {
+        document.getElementById('flujoOriginalId').value = '';
+        document.getElementById('flujoId').value = '';
+        document.getElementById('flujoId').readOnly = false;
+        document.getElementById('flujoNombre').value = '';
+        document.getElementById('flujoServidor').value = '';
+        document.getElementById('flujoFormTitle').textContent = 'Agregar flujo de proceso';
+        setFlujoResult('', true);
+    }
+
+    async function editFlujo(id) {
+        setFlujoResult('Cargando flujo...', true);
+        try {
+            const resp = await fetch('/config-flujos-proceso/get', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            });
+            const data = await resp.json();
+            if (!resp.ok || !data.success) {
+                setFlujoResult(data.message || 'Error cargando flujo.', false);
+                return;
+            }
+            const flujo = data.flujo;
+            document.getElementById('flujoOriginalId').value = flujo.id || '';
+            document.getElementById('flujoId').value = flujo.id || '';
+            document.getElementById('flujoId').readOnly = true;
+            document.getElementById('flujoNombre').value = flujo.nombre || '';
+            document.getElementById('flujoServidor').value = flujo.servidor || '';
+            document.getElementById('flujoFormTitle').textContent = 'Editar flujo de proceso';
+            $('#flujoForm').collapse('show');
+            setFlujoResult('Flujo cargado para edición.', true);
+        } catch (err) {
+            setFlujoResult('Error cargando flujo.', false);
+        }
+    }
+
+    async function saveFlujo() {
+        const id = document.getElementById('flujoId').value.trim();
+        const nombre = document.getElementById('flujoNombre').value.trim();
+        const servidor = document.getElementById('flujoServidor').value.trim();
+        const original_id = document.getElementById('flujoOriginalId').value.trim();
+        if (!id || !nombre || !servidor) {
+            setFlujoResult('Id, nombre y servidor son obligatorios.', false);
+            return;
+        }
+        setFlujoResult('Guardando...', true);
+        const resp = await fetch('/config-flujos-proceso/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, nombre, servidor, original_id: original_id || id })
+        });
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+            setFlujoResult(data.message || 'Guardado correctamente.', true);
+            setTimeout(() => location.reload(), 700);
+        } else {
+            setFlujoResult(data.message || 'Error guardando flujo.', false);
+        }
+    }
+
+    async function deleteFlujo(id) {
+        if (!confirm(`¿Eliminar el flujo "${id}"?`)) return;
+        setFlujoResult('Eliminando...', true);
+        try {
+            const resp = await fetch('/config-flujos-proceso/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            });
+            const data = await resp.json();
+            if (!resp.ok || !data.success) {
+                setFlujoResult(data.message || 'No se pudo eliminar el flujo.', false);
+                return;
+            }
+            setFlujoResult(data.message || 'Flujo eliminado.', true);
+            setTimeout(() => location.reload(), 700);
+        } catch (err) {
+            setFlujoResult('Error eliminando flujo.', false);
+        }
+    }
+
+    document.querySelectorAll('.btn-edit-flujo').forEach((btn) => {
+        btn.addEventListener('click', () => editFlujo(btn.dataset.flujoId));
+    });
+    document.querySelectorAll('.btn-delete-flujo').forEach((btn) => {
+        btn.addEventListener('click', () => deleteFlujo(btn.dataset.flujoId));
+    });
+</script>
+{% endblock %}

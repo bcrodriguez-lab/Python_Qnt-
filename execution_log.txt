@@ -1,0 +1,167 @@
+2026-05-23 13:26:00 - INFO - Log rotated to C:\Users\julid\Downloads\Python14\Python14\execution_log_backup_20260523_132600.txt
+2026-05-23 13:26:31 - INFO - prueba tarea
+2026-05-23 13:33:29 - INFO - [EJECUCION] --- Campaña id=5 ---
+2026-05-23 13:33:29 - INFO - [EJECUCION] estado: iniciando ejecución
+2026-05-23 13:33:29 - INFO - [EJECUCION]   id: 5
+2026-05-23 13:33:29 - INFO - [EJECUCION]   nombre: Prueba
+2026-05-23 13:33:29 - INFO - [EJECUCION]   descripcion: prueba
+2026-05-23 13:33:29 - INFO - [EJECUCION]   operacion: RBK
+2026-05-23 13:33:29 - INFO - [EJECUCION]   tipo: Manual
+2026-05-23 13:33:29 - INFO - [EJECUCION]   usuario: Sara
+2026-05-23 13:33:29 - INFO - [EJECUCION]   servidor: Prueba
+2026-05-23 13:33:29 - INFO - [EJECUCION]   api: 
+2026-05-23 13:33:29 - INFO - [EJECUCION]   fecha_inicio: 2026-05-23 13:33:00
+2026-05-23 13:33:29 - INFO - [EJECUCION]   consulta: select 1
+2026-05-23 13:33:29 - INFO - [EJECUCION]   total_clientes: 0
+2026-05-23 13:33:29 - INFO - [EJECUCION]   clientes_llamados: 0
+2026-05-23 13:33:29 - INFO - [EJECUCION]   clientes_contactados: 0
+2026-05-23 13:33:29 - INFO - [EJECUCION]   ejecutada: False
+2026-05-23 13:33:29 - INFO - [EJECUCION]   clientes_a_ejecutar_query: 1
+2026-05-23 13:33:29 - INFO - [EJECUCION] --- Fin campaña id=5 ---
+2026-05-23 13:33:29 - INFO - EJECUCION campaña id=5: clientes_a_ejecutar_query=1
+2026-05-23 13:33:29 - INFO - Consumo API campaña id=5 (Prueba), servidor=Prueba, api=-
+2026-05-23 13:33:29 - INFO - Secuencia de consumo API finalizada (comentada) campaña id=5
+2026-05-23 13:33:29 - INFO - EJECUCION campaña id=5 finalizada y marcada como ejecutada.
+2026-05-23 13:38:16 - INFO - [API] prueba consumo API
+2026-05-24 10:04:52 - INFO - [API] Campaña id=6 (Prueba) servidor=qnt_juridico_blaster api=-: secuencia de consumo ejecutada
+2026-05-24 10:04:52 - INFO - [EJECUCION] id=6, nombre=Prueba, descripcion=Ilocalizados, operacion=Digital, tipo=Manual, tipo_campana=Llamada, flujo_proceso_id=32841, usuario=Alejandra, servidor=qnt_juridico_blaster, api=, fecha_inicio=2026-05-24 10:04:00, consulta=select 'Julián' customer_name,'' customer_last_name,'' id_type,'1032377364' customer_id,'' age,'' ge…, total_clientes=1, clientes_llamados=0, clientes_contactados=0, ejecutada=True, clientes_a_ejecutar_query=1, estado=ejecutada
+2026-05-24 10:04:53 - INFO - [API] Campaña id=6 (Prueba) servidor=qnt_juridico_blaster api=-: secuencia de consumo ejecutada
+2026-05-24 10:04:53 - INFO - [EJECUCION] id=6, nombre=Prueba, descripcion=Ilocalizados, operacion=Digital, tipo=Manual, tipo_campana=Llamada, flujo_proceso_id=32841, usuario=Alejandra, servidor=qnt_juridico_blaster, api=, fecha_inicio=2026-05-24 10:04:00, consulta=select 'Julián' customer_name,'' customer_last_name,'' id_type,'1032377364' customer_id,'' age,'' ge…, total_clientes=1, clientes_llamados=0, clientes_contactados=0, ejecutada=True, clientes_a_ejecutar_query=1, estado=ejecutada
+2026-05-24 10:46:26 - INFO - [API] Campaña id=7 (prueba2) servidor=qnt_juridico_blaster flujo=32841: secuencia Wolkvox iniciada en segundo plano
+2026-05-24 10:46:26 - INFO - [EJECUCION] id=7, nombre=prueba2, descripcion=prueba, operacion=Digital, tipo=Manual, tipo_campana=Llamada, flujo_proceso_id=32841, usuario=Alejandra, servidor=qnt_juridico_blaster, api=, fecha_inicio=2026-05-24 10:46:00, consulta=select 'Julián' customer_name,'' customer_last_name,'' id_type,'1032377364' customer_id,'' age,'' ge…, total_clientes=1, clientes_llamados=0, clientes_contactados=0, ejecutada=True, clientes_a_ejecutar_query=1, estado=ejecutada; secuencia_wolkvox=en_curso
+2026-05-24 10:46:26 - INFO - [API] Inicio secuencia Wolkvox campaña id=7 (prueba2) flujo=32841
+2026-05-24 10:46:26 - INFO - [API] Consultar campaña y verificar si ya terminó campaña id=7 flujo=32841: en curso
+2026-05-24 10:46:27 - INFO - [API] Detener la campaña en Wolkvox (id=7): OK
+2026-05-24 10:46:28 - ERROR - [API] Borrar clientes de la campaña (id=7): No se pudieron borrar los clientes de la campaña (HTTP 404)
+2026-05-24 10:46:28 - ERROR - [API] Secuencia abortada en preparación campaña id=7
+2026-05-24 11:02:24 - INFO - [API] Campaña id=8 (prueba 2) servidor=qnt_juridico_blaster flujo=32841: secuencia Wolkvox iniciada en segundo plano
+2026-05-24 11:02:24 - INFO - [EJECUCION] id=8, nombre=prueba 2, descripcion=dfdfd, operacion=Digital, tipo=Manual, tipo_campana=Llamada, flujo_proceso_id=32841, usuario=Alan, servidor=qnt_juridico_blaster, api=, fecha_inicio=2026-05-24 11:02:00, consulta=select 'Julián' customer_name,'' customer_last_name,'' id_type,'1032377364' customer_id,'' age,'' ge…, total_clientes=1, clientes_llamados=0, clientes_contactados=0, ejecutada=True, clientes_a_ejecutar_query=1, estado=ejecutada; secuencia_wolkvox=en_curso
+2026-05-24 11:02:24 - INFO - [API] Inicio secuencia Wolkvox campaña id=8 (prueba 2) flujo=32841
+2026-05-24 11:02:24 - INFO - [API] Consultar campaña y verificar si ya terminó campaña id=8 flujo=32841: en curso
+2026-05-24 11:02:25 - INFO - [API] Detener la campaña en Wolkvox (id=8): OK
+2026-05-24 11:02:26 - WARNING - [API] Borrar clientes de la campaña (id=8): No se pudieron borrar los clientes de la campaña (HTTP 404) — se continúa con el cargue
+2026-05-24 11:02:30 - INFO - [API] Cargar clientes desde BigQuery (id=8): OK
+2026-05-24 11:02:30 - INFO - [API] Monitoreo campaña id=8 ciclo 1/288 (cada 300s)
+2026-05-24 11:02:31 - INFO - [API] Monitoreo #1 campaña id=8 flujo=32841: en curso
+2026-05-24 11:07:31 - INFO - [API] Monitoreo campaña id=8 ciclo 2/288 (cada 300s)
+2026-05-24 11:07:31 - INFO - [API] Monitoreo #2 campaña id=8 flujo=32841: en curso
+2026-05-24 11:16:53 - INFO - [API] Campaña id=9 (pryueba 2) servidor=qnt_juridico_blaster api=-: secuencia de consumo ejecutada
+2026-05-24 11:16:53 - INFO - [EJECUCION] id=9, nombre=pryueba 2, descripcion=gfdgd, operacion=Digital, tipo=Manual, tipo_campana=Llamada, flujo_proceso_id=32841, usuario=Julian, servidor=qnt_juridico_blaster, api=, fecha_inicio=2026-05-24 11:16:00, consulta=select 'Julián' customer_name,'' customer_last_name,'' id_type,'1032377364' customer_id,'' age,'' ge…, total_clientes=1, clientes_llamados=0, clientes_contactados=0, ejecutada=True, clientes_a_ejecutar_query=1, estado=ejecutada
+2026-05-24 11:19:03 - INFO - [API] Campaña id=10 (dfdf) servidor=qnt_juridico_blaster flujo=32841: secuencia Wolkvox iniciada en segundo plano
+2026-05-24 11:19:03 - INFO - [EJECUCION] id=10, nombre=dfdf, descripcion=dfd, operacion=Juridico, tipo=Toma, tipo_campana=Llamada, flujo_proceso_id=32841, usuario=Julian, servidor=qnt_juridico_blaster, api=, fecha_inicio=2026-05-24 11:19:00, consulta=select 'Julián' customer_name,'' customer_last_name,'' id_type,'1032377364' customer_id,'' age,'' ge…, total_clientes=1, clientes_llamados=0, clientes_contactados=0, ejecutada=True, clientes_a_ejecutar_query=1, estado=ejecutada; secuencia_wolkvox=en_curso
+2026-05-24 11:19:03 - INFO - [API] Inicio secuencia Wolkvox campaña id=10 (dfdf) flujo=32841
+2026-05-24 11:19:04 - INFO - [API] Consultar campaña y verificar si ya terminó campaña id=10 flujo=32841: terminada (records=1, dial=1, pendientes=0, status=started)
+2026-05-24 11:19:04 - INFO - [API] Detener la campaña en Wolkvox (id=10): OK
+2026-05-24 11:19:05 - INFO - [API] Borrar clientes de la campaña (id=10): OK
+2026-05-24 11:19:06 - INFO - [API] Cargar clientes desde BigQuery (id=10): OK
+2026-05-24 11:19:06 - INFO - [API] Monitoreo campaña id=10 ciclo 1/288 (cada 300s)
+2026-05-24 11:19:07 - INFO - [API] Monitoreo #1 campaña id=10 flujo=32841: terminada (records=1, dial=1, pendientes=0, status=started)
+2026-05-24 11:19:07 - INFO - [API] Campaña id=10 flujo=32841 detectada como terminada
+2026-05-24 11:19:08 - INFO - [API] Parar campaña cuando el monitoreo detecta que terminó (id=10): OK
+2026-05-24 11:19:08 - INFO - [API] Secuencia Wolkvox finalizada campaña id=10
+2026-05-24 11:38:21 - INFO - [API] Campaña id=11 (fgfd) servidor=qnt_juridico_blaster flujo=32841: secuencia Wolkvox iniciada en segundo plano
+2026-05-24 11:38:21 - INFO - [EJECUCION] id=11, nombre=fgfd, descripcion=dssfsf, operacion=Cobro, tipo=Manual, tipo_campana=Llamada, flujo_proceso_id=32841, usuario=Alejandra, servidor=qnt_juridico_blaster, api=, fecha_inicio=2026-05-24 11:38:00, consulta=select 'Julián' customer_name,'' customer_last_name,'' id_type,'1032377364' customer_id,'' age,'' ge…, total_clientes=1, clientes_llamados=0, clientes_contactados=0, ejecutada=True, clientes_a_ejecutar_query=1, estado=ejecutada; secuencia_wolkvox=en_curso
+2026-05-24 11:38:21 - INFO - [API] Inicio secuencia Wolkvox campaña id=11 (fgfd) flujo=32841
+2026-05-24 11:38:22 - INFO - [API] Consultar campaña y verificar si ya terminó campaña id=11 flujo=32841: en curso (records=1, dial=0, clean=1, pendientes=1, status=stopped)
+2026-05-24 11:38:22 - INFO - [API] Detener la campaña en Wolkvox (id=11): OK
+2026-05-24 11:38:23 - INFO - [API] Borrar clientes de la campaña (id=11): OK
+2026-05-24 11:38:24 - INFO - [API] Cargar clientes desde BigQuery (id=11): OK
+2026-05-24 11:38:24 - INFO - [API] Monitoreo campaña id=11 ciclo 1/288 (cada 300s)
+2026-05-24 11:38:25 - INFO - [API] Monitoreo #1 campaña id=11 flujo=32841: en curso (records=1, dial=0, clean=1, pendientes=1, status=started)
+2026-05-24 11:43:25 - INFO - [API] Monitoreo campaña id=11 ciclo 2/288 (cada 300s)
+2026-05-24 11:43:26 - INFO - [API] Monitoreo #2 campaña id=11 flujo=32841: terminada (records=1, dial=1, clean=0, pendientes=0, status=started)
+2026-05-24 11:43:26 - INFO - [API] Campaña id=11 flujo=32841 detectada como terminada
+2026-05-24 11:43:27 - INFO - [API] Parar campaña cuando el monitoreo detecta que terminó (id=11): OK
+2026-05-24 11:43:27 - INFO - [API] Secuencia Wolkvox finalizada campaña id=11
+2026-05-24 12:18:48 - WARNING - [API] Actualización tablero campaña id=6 error: Timeout al consultar campañas Wolkvox.
+2026-05-24 12:19:09 - WARNING - [API] Actualización tablero campaña id=7 error: Timeout al consultar campañas Wolkvox.
+2026-05-24 12:19:30 - WARNING - [API] Actualización tablero campaña id=8 error: Timeout al consultar campañas Wolkvox.
+2026-05-24 12:19:51 - WARNING - [API] Actualización tablero campaña id=9 error: Timeout al consultar campañas Wolkvox.
+2026-05-24 12:20:12 - WARNING - [API] Actualización tablero campaña id=10 error: Timeout al consultar campañas Wolkvox.
+2026-05-24 12:20:33 - WARNING - [API] Actualización tablero campaña id=11 error: Timeout al consultar campañas Wolkvox.
+2026-05-25 10:38:16 - INFO - [API] Campaña id=12 (Prueba) servidor=qnt_juridico_blaster flujo=32841: secuencia Wolkvox iniciada en segundo plano
+2026-05-25 10:38:16 - INFO - [API] Inicio secuencia Wolkvox campaña id=12 (Prueba) flujo=32841
+2026-05-25 10:38:16 - INFO - [EJECUCION] id=12, nombre=Prueba, descripcion=Prueba, operacion=Digital, tipo=Manual, tipo_campana=Llamada, flujo_proceso_id=32841, usuario=Sebastian, servidor=qnt_juridico_blaster, api=, fecha_inicio=2026-05-25 10:38:00, consulta=select 'Julián' customer_name,'' customer_last_name,'' id_type,'1032377364' customer_id,'' age,'' ge…, total_clientes=1, clientes_llamados=0, clientes_contactados=0, ejecutada=True, clientes_a_ejecutar_query=1, estado=ejecutada; secuencia_wolkvox=en_curso
+2026-05-25 10:38:16 - WARNING - [API] Consultar campaña y verificar si ya terminó campaña id=12 flujo=32841: no se encontró la campaña en la respuesta Wolkvox
+2026-05-25 10:38:17 - INFO - [API] Detener la campaña en Wolkvox (id=12): OK
+2026-05-25 10:38:17 - INFO - [API] Borrar clientes de la campaña (id=12): OK
+2026-05-25 10:38:18 - INFO - [API] Cargar clientes desde BigQuery (id=12): OK
+2026-05-25 10:38:18 - INFO - [API] Monitoreo campaña id=12 ciclo 1/288 (cada 300s)
+2026-05-25 10:38:19 - INFO - [API] Monitoreo #1 campaña id=12 flujo=32841: en curso (records=1, dial=0, clean=1, pendientes=1, status=started)
+2026-05-25 10:40:15 - INFO - [API] Campaña id=13 (Prueba 2) servidor=qnt_cobro_blaster flujo=28702: secuencia Wolkvox iniciada en segundo plano
+2026-05-25 10:40:15 - INFO - [EJECUCION] id=13, nombre=Prueba 2, descripcion=prueba, operacion=Digital, tipo=Manual, tipo_campana=Llamada, flujo_proceso_id=28702, usuario=Carolina, servidor=qnt_cobro_blaster, api=, fecha_inicio=2026-05-25 10:40:00, consulta=select 'Julián' customer_name,'' customer_last_name,'' id_type,'1032377364' customer_id,'' age,'' ge…, total_clientes=1, clientes_llamados=0, clientes_contactados=0, ejecutada=True, clientes_a_ejecutar_query=1, estado=ejecutada; secuencia_wolkvox=en_curso
+2026-05-25 10:40:15 - INFO - [API] Inicio secuencia Wolkvox campaña id=13 (Prueba 2) flujo=28702
+2026-05-25 10:40:16 - INFO - [API] Consultar campaña y verificar si ya terminó campaña id=13 flujo=28702: terminada (records=0, dial=0, clean=0, pendientes=0, status=stopped)
+2026-05-25 10:40:16 - INFO - [API] Detener la campaña en Wolkvox (id=13): OK
+2026-05-25 10:40:17 - WARNING - [API] Borrar clientes de la campaña (id=13): No se pudieron borrar los clientes de la campaña (HTTP 404) — se continúa con el cargue
+2026-05-25 10:40:18 - ERROR - [API] Cargar clientes desde BigQuery (id=13): Carga de clientes falló (HTTP 404)
+2026-05-25 10:40:18 - ERROR - [API] Secuencia abortada en preparación campaña id=13
+2026-05-25 10:43:19 - INFO - [API] Monitoreo campaña id=12 ciclo 2/288 (cada 300s)
+2026-05-25 10:43:19 - INFO - [API] Monitoreo #2 campaña id=12 flujo=32841: terminada (records=1, dial=1, clean=0, pendientes=0, status=started)
+2026-05-25 10:43:19 - INFO - [API] Campaña id=12 flujo=32841 detectada como terminada
+2026-05-25 10:43:19 - INFO - [API] Parar campaña cuando el monitoreo detecta que terminó (id=12): OK
+2026-05-25 10:43:19 - INFO - [API] Secuencia Wolkvox finalizada campaña id=12
+2026-05-25 11:00:16 - INFO - [API] Campaña id=14 (prueba 3) servidor=qnt_cobro_blaster flujo=28702: secuencia Wolkvox iniciada en segundo plano
+2026-05-25 11:00:16 - INFO - [API] Inicio secuencia Wolkvox campaña id=14 (prueba 3) flujo=28702
+2026-05-25 11:00:16 - INFO - [EJECUCION] id=14, nombre=prueba 3, descripcion=prueba, operacion=Digital, tipo=Manual, tipo_campana=Llamada, flujo_proceso_id=28702, usuario=Alejandra, servidor=qnt_cobro_blaster, api=, fecha_inicio=2026-05-25 11:00:00, consulta=select 'Julián' customer_name,'' customer_last_name,'' id_type,'1032377364' customer_id,'' age,'' ge…, total_clientes=1, clientes_llamados=0, clientes_contactados=0, ejecutada=True, clientes_a_ejecutar_query=1, estado=ejecutada; secuencia_wolkvox=en_curso
+2026-05-25 11:00:16 - INFO - [API] Consultar campaña y verificar si ya terminó campaña id=14 flujo=28702: terminada (records=0, dial=0, clean=0, pendientes=0, status=stopped)
+2026-05-25 11:00:17 - INFO - [API] Detener la campaña en Wolkvox (id=14): OK
+2026-05-25 11:00:17 - WARNING - [API] Borrar clientes de la campaña (id=14): No se pudieron borrar los clientes de la campaña (HTTP 404) — se continúa con el cargue
+2026-05-25 11:00:18 - ERROR - [API] Cargar clientes desde BigQuery (id=14): Carga de clientes falló (HTTP 404)
+2026-05-25 11:00:18 - ERROR - [API] Secuencia abortada en preparación campaña id=14
+2026-05-25 11:52:16 - INFO - [API] Campaña id=15 (Prueba 4) servidor=operacion-interna flujo=20213: secuencia Wolkvox iniciada en segundo plano
+2026-05-25 11:52:16 - INFO - [API] Inicio secuencia Wolkvox campaña id=15 (Prueba 4) flujo=20213
+2026-05-25 11:52:16 - WARNING - [API] Consultar campaña y verificar si ya terminó campaña id=15 error: API 'Consultar campañas' no está activa para el servidor 'operacion-interna'.
+2026-05-25 11:52:16 - ERROR - [API] Detener la campaña en Wolkvox (id=15): API 'Parar campaña' no está activa para el servidor 'operacion-interna'.
+2026-05-25 11:52:16 - ERROR - [API] Secuencia abortada en preparación campaña id=15
+2026-05-25 11:52:16 - INFO - [EJECUCION] id=15, nombre=Prueba 4, descripcion=Prueba, operacion=RBK, tipo=Manual, tipo_campana=Llamada, flujo_proceso_id=20213, usuario=Alan, servidor=operacion-interna, api=, fecha_inicio=2026-05-25 11:52:00, consulta=select 'Julián' customer_name,'' customer_last_name,'' id_type,'1032377364' customer_id,'' age,'' ge…, total_clientes=1, clientes_llamados=0, clientes_contactados=0, ejecutada=True, clientes_a_ejecutar_query=1, estado=ejecutada; secuencia_wolkvox=en_curso
+2026-05-25 11:56:15 - INFO - [API] Campaña id=16 (prueba) servidor=operacion-interna flujo=20213: secuencia Wolkvox iniciada en segundo plano
+2026-05-25 11:56:15 - INFO - [API] Inicio secuencia Wolkvox campaña id=16 (prueba) flujo=20213
+2026-05-25 11:56:15 - INFO - [EJECUCION] id=16, nombre=prueba, descripcion=Prueba, operacion=Digital, tipo=Manual, tipo_campana=Llamada, flujo_proceso_id=20213, usuario=Carolina, servidor=operacion-interna, api=, fecha_inicio=2026-05-25 11:56:00, consulta=select 'Julián' customer_name,'' customer_last_name,'' id_type,'1032377364' customer_id,'' age,'' ge…, total_clientes=1, clientes_llamados=0, clientes_contactados=0, ejecutada=True, clientes_a_ejecutar_query=1, estado=ejecutada; secuencia_wolkvox=en_curso
+2026-05-25 11:56:16 - INFO - [API] Consultar campaña y verificar si ya terminó campaña id=16 flujo=20213: terminada (records=0, dial=0, clean=0, pendientes=0, status=stopped)
+2026-05-25 11:56:16 - INFO - [API] Detener la campaña en Wolkvox (id=16): OK
+2026-05-25 11:56:16 - WARNING - [API] Borrar clientes de la campaña (id=16): No se pudieron borrar los clientes de la campaña (HTTP 404) — se continúa con el cargue
+2026-05-25 11:56:17 - ERROR - [API] Cargar clientes desde BigQuery (id=16): Carga de clientes falló (HTTP 404)
+2026-05-25 11:56:17 - ERROR - [API] Secuencia abortada en preparación campaña id=16
+2026-05-25 12:00:15 - INFO - [API] Campaña id=17 (Prueba 5) servidor=operacion-interna flujo=20213: secuencia Wolkvox iniciada en segundo plano
+2026-05-25 12:00:15 - INFO - [API] Inicio secuencia Wolkvox campaña id=17 (Prueba 5) flujo=20213
+2026-05-25 12:00:15 - INFO - [EJECUCION] id=17, nombre=Prueba 5, descripcion=Prueba, operacion=Cobro, tipo=Manual, tipo_campana=Llamada, flujo_proceso_id=20213, usuario=Sebastian, servidor=operacion-interna, api=, fecha_inicio=2026-05-25 12:00:00, consulta=select 'Julián' customer_name,'' customer_last_name,'' id_type,'1032377364' customer_id,'' age,'' ge…, total_clientes=1, clientes_llamados=0, clientes_contactados=0, ejecutada=True, clientes_a_ejecutar_query=1, estado=ejecutada; secuencia_wolkvox=en_curso
+2026-05-25 12:00:16 - INFO - [API] Consultar campaña y verificar si ya terminó campaña id=17 flujo=20213: terminada (records=0, dial=0, clean=0, pendientes=0, status=stopped)
+2026-05-25 12:00:16 - INFO - [API] Detener la campaña en Wolkvox (id=17): OK
+2026-05-25 12:00:16 - WARNING - [API] Borrar clientes de la campaña (id=17): No se pudieron borrar los clientes de la campaña (HTTP 404) — se continúa con el cargue
+2026-05-25 12:00:17 - ERROR - [API] Cargar clientes desde BigQuery (id=17): Carga de clientes falló (HTTP 404)
+2026-05-25 12:00:17 - ERROR - [API] Secuencia abortada en preparación campaña id=17
+2026-05-25 13:59:16 - INFO - [API] Campaña id=18 (Prueba 10) servidor=qnt_juridico_blaster flujo=32841: secuencia Wolkvox iniciada en segundo plano
+2026-05-25 13:59:16 - INFO - [API] Inicio secuencia Wolkvox campaña id=18 (Prueba 10) flujo=32841
+2026-05-25 13:59:16 - INFO - [EJECUCION] id=18, nombre=Prueba 10, descripcion=prueba, operacion=Digital, tipo=Manual, tipo_campana=Llamada, flujo_proceso_id=32841, usuario=Sebastian, servidor=qnt_juridico_blaster, api=, fecha_inicio=2026-05-25 13:59:00, consulta=select 'Julián' customer_name,'' customer_last_name,'' id_type,'1032377364' customer_id,'' age,'' ge…, total_clientes=1, clientes_llamados=0, clientes_contactados=0, ejecutada=True, clientes_a_ejecutar_query=1, estado=ejecutada; secuencia_wolkvox=en_curso
+2026-05-25 13:59:17 - INFO - [API] Consultar campaña y verificar si ya terminó campaña id=18 flujo=32841: terminada (records=1, dial=1, clean=0, pendientes=0, status=stopped)
+2026-05-25 13:59:17 - INFO - [API] Detener la campaña en Wolkvox (id=18): OK
+2026-05-25 13:59:17 - INFO - [API] Borrar clientes de la campaña (id=18): OK
+2026-05-25 13:59:18 - INFO - [API] Cargar clientes desde BigQuery (id=18): OK
+2026-05-25 13:59:18 - INFO - [API] Monitoreo campaña id=18 ciclo 1/288 (cada 300s)
+2026-05-25 13:59:19 - INFO - [API] Monitoreo #1 campaña id=18 flujo=32841: en curso (records=1, dial=1, clean=1, pendientes=1, status=started)
+2026-05-25 14:04:19 - INFO - [API] Monitoreo campaña id=18 ciclo 2/288 (cada 300s)
+2026-05-25 14:04:19 - INFO - [API] Monitoreo #2 campaña id=18 flujo=32841: terminada (records=1, dial=1, clean=0, pendientes=0, status=started)
+2026-05-25 14:04:19 - INFO - [API] Campaña id=18 flujo=32841 detectada como terminada
+2026-05-25 14:04:20 - INFO - [API] Parar campaña cuando el monitoreo detecta que terminó (id=18): OK
+2026-05-25 14:04:20 - INFO - [API] Secuencia Wolkvox finalizada campaña id=18
+2026-05-28 08:34:47 - INFO - [API] Campaña id=19 (Prueba-api) servidor=Qnt_recaudo_blaster flujo=26678: secuencia Wolkvox iniciada en segundo plano
+2026-05-28 08:34:47 - INFO - [API] Inicio secuencia Wolkvox campaña id=19 (Prueba-api) flujo=26678
+2026-05-28 08:34:47 - INFO - [EJECUCION] id=19, nombre=Prueba-api, descripcion=Prueba de campaña, operacion=Recaudo, tipo=Manual, tipo_campana=Llamada, flujo_proceso_id=26678, usuario=Julian, servidor=Qnt_recaudo_blaster, api=, fecha_inicio=2026-05-28 08:24:00, consulta=select 'brayan' customer_name,'' customer_last_name,'' id_type,'1032679329' customer_id,'' age,'' ge…, total_clientes=1, clientes_llamados=0, clientes_contactados=0, ejecutada=True, clientes_a_ejecutar_query=1, estado=ejecutada; secuencia_wolkvox=en_curso
+2026-05-28 08:34:47 - INFO - [API] Campaña id=19 (Prueba-api) servidor=Qnt_recaudo_blaster flujo=26678: secuencia Wolkvox iniciada en segundo plano
+2026-05-28 08:34:47 - INFO - [EJECUCION] id=19, nombre=Prueba-api, descripcion=Prueba de campaña, operacion=Recaudo, tipo=Manual, tipo_campana=Llamada, flujo_proceso_id=26678, usuario=Julian, servidor=Qnt_recaudo_blaster, api=, fecha_inicio=2026-05-28 08:24:00, consulta=select 'brayan' customer_name,'' customer_last_name,'' id_type,'1032679329' customer_id,'' age,'' ge…, total_clientes=1, clientes_llamados=0, clientes_contactados=0, ejecutada=True, clientes_a_ejecutar_query=1, estado=ejecutada; secuencia_wolkvox=en_curso
+2026-05-28 08:34:47 - INFO - [API] Inicio secuencia Wolkvox campaña id=19 (Prueba-api) flujo=26678
+2026-05-28 08:34:47 - WARNING - [API] Consultar campaña y verificar si ya terminó campaña id=19 flujo=26678: no se encontró la campaña en la respuesta Wolkvox
+2026-05-28 08:34:48 - WARNING - [API] Consultar campaña y verificar si ya terminó campaña id=19 flujo=26678: no se encontró la campaña en la respuesta Wolkvox
+2026-05-28 08:34:48 - INFO - [API] Detener la campaña en Wolkvox (id=19): OK
+2026-05-28 08:34:48 - ERROR - [API] Detener la campaña en Wolkvox (id=19): No se pudo detener la campaña (HTTP 404)
+2026-05-28 08:34:48 - ERROR - [API] Secuencia abortada en preparación campaña id=19
+2026-05-28 08:34:49 - WARNING - [API] Borrar clientes de la campaña (id=19): No se pudieron borrar los clientes de la campaña (HTTP 404) — se continúa con el cargue
+2026-05-28 08:34:50 - INFO - [API] Cargar clientes desde BigQuery (id=19): OK
+2026-05-28 08:34:50 - INFO - [API] Monitoreo campaña id=19 ciclo 1/288 (cada 300s)
+2026-05-28 08:34:50 - INFO - [API] Monitoreo #1 campaña id=19 flujo=26678: en curso (records=1, dial=0, clean=1, pendientes=1, status=started)
+2026-05-28 08:39:50 - INFO - [API] Monitoreo campaña id=19 ciclo 2/288 (cada 300s)
+2026-05-28 08:39:51 - INFO - [API] Monitoreo #2 campaña id=19 flujo=26678: terminada (records=1, dial=1, clean=0, pendientes=0, status=started)
+2026-05-28 08:39:51 - INFO - [API] Campaña id=19 flujo=26678 detectada como terminada
+2026-05-28 08:39:51 - INFO - [API] Parar campaña cuando el monitoreo detecta que terminó (id=19): OK
+2026-05-28 08:39:51 - INFO - [API] Secuencia Wolkvox finalizada campaña id=19

@@ -1,0 +1,544 @@
+{% extends "layouts/adminlte.html" %}
+{% block title %}Campañas BigQuery{% endblock %}
+{% block page_title %}Parametrización de campañas{% endblock %}
+{% block page_subtitle %}<small class="text-muted">SQLite y sincronización a BigQuery</small>{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Campañas</li>{% endblock %}
+{% block extra_css %}<style>
+.textarea-query { min-height: 180px; font-family: monospace; font-size: 0.95rem; }
+.campaign-row:hover { background: #f8f9fa; }
+</style>{% endblock %}
+
+{% block content %}
+{% if error %}
+            <div class="alert alert-danger" role="alert">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <div class="mb-3">
+            <button class="btn btn-sm btn-outline-primary mr-1 mb-1" type="button" data-toggle="collapse" data-target="#filterSection" aria-expanded="false" aria-controls="filterSection">
+                Mostrar filtros
+            </button>
+            <button class="btn btn-sm btn-outline-primary" type="button" data-toggle="collapse" data-target="#saveSection" aria-expanded="false" aria-controls="saveSection">
+                Nueva campaña
+            </button>
+            <button class="btn btn-sm btn-success" type="button" onclick="syncToBigQuery()">
+                Sincronizar a BigQuery
+            </button>
+        </div>
+
+        <div class="collapse mb-3" id="filterSection">
+            <div class="card p-4">
+                <h5>Filtros de campañas</h5>
+                <form class="row g-3" method="get" action="/config-bigquery">
+                    <div class="col-md-6">
+                        <label class="form-label">Fecha inicio</label>
+                        <input name="start_date" type="date" class="form-control" value="{{ start_date or '' }}" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Fecha fin</label>
+                        <input name="end_date" type="date" class="form-control" value="{{ end_date or '' }}" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Buscar</label>
+                        <input name="search" type="text" class="form-control" placeholder="Buscar por nombre, tipo, operación, usuario o consulta" value="{{ search or '' }}" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Operación</label>
+                        <select name="operacion" class="form-control">
+                            <option value="">(Todos)</option>
+                            {% for op in operaciones %}
+                                <option value="{{ op }}" {% if operacion_selected == op %}selected{% endif %}>{{ op }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Tipo</label>
+                        <select name="tipo" class="form-control">
+                            <option value="">(Todos)</option>
+                            {% for t in tipos %}
+                                <option value="{{ t }}" {% if tipo_selected == t %}selected{% endif %}>{{ t }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Usuario</label>
+                        <select name="usuario" class="form-control">
+                            <option value="">(Todos)</option>
+                            {% for u in usuarios %}
+                                <option value="{{ u }}" {% if usuario_selected == u %}selected{% endif %}>{{ u }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Servidor</label>
+                        <select name="server" class="form-control">
+                            <option value="">(Todos)</option>
+                            {% for s in servers %}
+                                <option value="{{ s.name }}" {% if server == s.name %}selected{% endif %}>{{ s.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Página</label>
+                        <input name="page" type="number" min="1" class="form-control" value="{{ page }}" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Tamaño página</label>
+                        <select name="page_size" class="form-control">
+                            {% for size in [5,10,20,50] %}
+                                <option value="{{ size }}" {% if page_size == size %}selected{% endif %}>{{ size }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 d-flex justify-content-end gap-2">
+                        <button type="submit" class="btn btn-primary">Aplicar filtros</button>
+                        <a href="/config-bigquery" class="btn btn-outline-secondary">Hoy</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card p-4 mb-3">
+            <h5>Campañas guardadas</h5>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle">
+                    <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Operación</th>
+                                <th>Tipo</th>
+                                <th>Tipo campaña</th>
+                                <th>Flujo (id)</th>
+                                <th>Descripción</th>
+                                <th>Usuario</th>
+                                <th>Fecha inicio</th>
+                                <th>Servidor</th>
+                                <th>Acciones</th>
+                            </tr>
+                    </thead>
+                    <tbody>
+                        {% if campaigns %}
+                            {% for campaign in campaigns %}
+                                <tr class="campaign-row">
+                                    <td>{{ campaign.id }}</td>
+                                    <td>{{ campaign.nombre }}</td>
+                                    <td>{{ campaign.operacion }}</td>
+                                    <td>{{ campaign.tipo }}</td>
+                                    <td>{{ campaign.tipo_campana or '—' }}</td>
+                                    <td>{{ campaign.flujo_proceso_id or '—' }}</td>
+                                    <td>{{ campaign.descripcion or '' }}</td>
+                                    <td>{{ campaign.usuario }}</td>
+                                    <td>{{ campaign.fecha_inicio }}</td>
+                                    <td>{{ campaign.servidor or campaign.get('servidor') or campaign.get('server') }}</td>
+                                    <td>
+                                        {% if campaign.id %}
+                                            {% if campaign.editable %}
+                                                <button class="btn btn-sm btn-outline-primary mb-1" onclick="loadCampaign('{{ campaign.id }}')">Editar</button>
+                                            {% endif %}
+                                            <button class="btn btn-sm btn-outline-danger" onclick="deleteCampaign('{{ campaign.id }}')">Borrar</button>
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="11" class="text-center text-muted">No hay campañas guardadas.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="text-muted">Página {{ page }} de {{ total_pages }} | Total: {{ total }}</div>
+                <div class="btn-group" role="group" aria-label="Paginación">
+                    <a href="/config-bigquery?start_date={{ start_date }}&end_date={{ end_date }}&search={{ search|urlencode }}&server={{ server|urlencode }}&page={{ page-1 if page > 1 else 1 }}&page_size={{ page_size }}" class="btn btn-outline-primary {% if page <= 1 %}disabled{% endif %}">Anterior</a>
+                    <a href="/config-bigquery?start_date={{ start_date }}&end_date={{ end_date }}&search={{ search|urlencode }}&server={{ server|urlencode }}&page={{ page+1 if page < total_pages else total_pages }}&page_size={{ page_size }}" class="btn btn-outline-primary {% if page >= total_pages %}disabled{% endif %}">Siguiente</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="collapse" id="saveSection">
+            <div class="card p-4 mb-3">
+                <h5>Guardar campaña</h5>
+                <input id="campaignId" type="hidden" value="" />
+                <div class="mb-3">
+                    <label class="form-label">Nombre de campaña</label>
+                    <input id="campaignName" class="form-control" placeholder="Nombre de campaña" />
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Operación</label>
+                        <select id="campaignOperacion" class="form-control">
+                            <option value="">(Seleccionar operación)</option>
+                            {% for op in operaciones %}
+                                <option value="{{ op }}">{{ op }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Tipo</label>
+                        <select id="campaignTipo" class="form-control">
+                            <option value="">(Seleccionar tipo)</option>
+                            {% for t in tipos %}
+                                <option value="{{ t }}">{{ t }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Servidor</label>
+                    <select id="campaignServer" class="form-control">
+                        <option value="">(Seleccionar servidor)</option>
+                        {% for s in servers %}
+                            <option value="{{ s.name }}">{{ s.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Tipo de campaña</label>
+                        <select id="campaignTipoCampana" class="form-control">
+                            <option value="">(Seleccionar tipo de campaña)</option>
+                            {% for tc in tipos_campana %}
+                                <option value="{{ tc }}">{{ tc }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6" id="flujoProcesoGroup" style="display: none;">
+                        <label class="form-label">Flujo de proceso (campaign_id)</label>
+                        <select id="campaignFlujoProceso" class="form-control">
+                            <option value="">(Seleccionar flujo)</option>
+                        </select>
+                        <small id="flujoProcesoHint" class="form-text text-muted">Solo Llamada y WhatsApp. Elija el servidor primero; los flujos se filtran por servidor.</small>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Descripción</label>
+                    <textarea id="campaignDescripcion" class="form-control" rows="2" placeholder="Descripción breve de la campaña"></textarea>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Fecha de inicio</label>
+                        <input id="campaignInicio" type="datetime-local" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Usuario</label>
+                        <select id="campaignUsuario" class="form-control">
+                            <option value="">(Seleccionar usuario)</option>
+                            {% for u in usuarios %}
+                                <option value="{{ u }}">{{ u }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Consulta SQL</label>
+                    <textarea id="campaignConsulta" class="form-control textarea-query" placeholder="SELECT ... FROM ... WHERE ..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <button class="btn btn-primary" onclick="saveCampaign()">Guardar campaña</button>
+                    <button class="btn btn-secondary" onclick="testCampaignQuery()">Probar conteo</button>
+                    <button class="btn btn-outline-secondary" onclick="clearForm()">Limpiar</button>
+                </div>
+                <div class="card p-3 result-card" id="resultPanel">
+                    <h5 class="h6">Resultado</h5>
+                    <div id="resultText" class="text-muted">Guarda una campaña o prueba una consulta para ver el resultado aquí.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+        const TIPOS_CON_FLUJO = {{ tipos_campana_con_flujo|tojson }};
+
+        function tipoRequiereFlujo(tipo) {
+            if (!tipo) return false;
+            return TIPOS_CON_FLUJO.some((t) => t.toLowerCase() === tipo.toLowerCase());
+        }
+
+        function toggleFlujoProcesoField() {
+            const tipo = document.getElementById('campaignTipoCampana').value.trim();
+            const group = document.getElementById('flujoProcesoGroup');
+            const select = document.getElementById('campaignFlujoProceso');
+            const show = tipoRequiereFlujo(tipo);
+            group.style.display = show ? '' : 'none';
+            if (!show) {
+                select.value = '';
+            } else {
+                refreshFlujosProcesoOptions();
+            }
+        }
+
+        function setFlujoProcesoPlaceholder(text) {
+            const select = document.getElementById('campaignFlujoProceso');
+            select.innerHTML = '';
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = text;
+            select.appendChild(opt);
+        }
+
+        async function refreshFlujosProcesoOptions(selectedId) {
+            const select = document.getElementById('campaignFlujoProceso');
+            const hint = document.getElementById('flujoProcesoHint');
+            const servidor = (document.getElementById('campaignServer') || {}).value || '';
+            const current = selectedId || select.value || '';
+            if (!servidor) {
+                setFlujoProcesoPlaceholder('(Seleccione servidor primero)');
+                if (hint) {
+                    hint.textContent = 'Elija el servidor arriba para ver los flujos disponibles.';
+                }
+                return;
+            }
+            setFlujoProcesoPlaceholder('(Cargando flujos...)');
+            try {
+                const resp = await fetch('/config-bigquery/flujos-proceso?server=' + encodeURIComponent(servidor));
+                const data = await resp.json();
+                if (!resp.ok || !data.success) {
+                    setFlujoProcesoPlaceholder('(Error al cargar flujos)');
+                    return;
+                }
+                const flujos = data.flujos || [];
+                if (!flujos.length) {
+                    setFlujoProcesoPlaceholder('(Sin flujos para este servidor)');
+                    if (hint) {
+                        hint.textContent = 'No hay flujos en Configuración → Flujos de proceso para el servidor «' + servidor + '».';
+                    }
+                    return;
+                }
+                setFlujoProcesoPlaceholder('(Seleccionar flujo)');
+                flujos.forEach((f) => {
+                    const opt = document.createElement('option');
+                    opt.value = f.id;
+                    opt.textContent = f.label || (f.id + ' - ' + f.nombre);
+                    select.appendChild(opt);
+                });
+                if (hint) {
+                    hint.textContent = 'Solo Llamada y WhatsApp. Se guarda el id del flujo.';
+                }
+                if (current) {
+                    select.value = current;
+                }
+            } catch (err) {
+                console.error(err);
+                setFlujoProcesoPlaceholder('(Error al cargar flujos)');
+            }
+        }
+
+        function setResult(message, success) {
+            const resultText = document.getElementById('resultText');
+            resultText.textContent = message;
+            resultText.className = success ? 'text-success' : 'text-danger';
+        }
+
+        function clearForm() {
+            document.getElementById('campaignId').value = '';
+            document.getElementById('campaignName').value = '';
+            document.getElementById('campaignOperacion').value = '';
+            document.getElementById('campaignTipo').value = '';
+            document.getElementById('campaignTipoCampana').value = '';
+            document.getElementById('campaignFlujoProceso').value = '';
+            toggleFlujoProcesoField();
+            document.getElementById('campaignDescripcion').value = '';
+            document.getElementById('campaignServer').value = '';
+            document.getElementById('campaignInicio').value = '';
+            document.getElementById('campaignUsuario').value = '';
+            document.getElementById('campaignConsulta').value = '';
+            setResult('Formulario limpio.');
+        }
+
+        async function saveCampaign() {
+            const campaignId = document.getElementById('campaignId').value.trim();
+            const nombre = document.getElementById('campaignName').value.trim();
+            const operacion = document.getElementById('campaignOperacion').value.trim();
+            const tipo = document.getElementById('campaignTipo').value.trim();
+            const tipo_campana = document.getElementById('campaignTipoCampana').value.trim();
+            const fecha_inicio = document.getElementById('campaignInicio').value.trim();
+            const descripcion = document.getElementById('campaignDescripcion').value.trim();
+            const usuario = document.getElementById('campaignUsuario').value.trim();
+            const consulta = document.getElementById('campaignConsulta').value.trim();
+            const servidor = (document.getElementById('campaignServer') ? document.getElementById('campaignServer').value : '').trim();
+
+            const flujo_proceso_id = document.getElementById('campaignFlujoProceso').value.trim();
+
+            if (!nombre || !operacion || !tipo || !tipo_campana || !fecha_inicio || !usuario || !consulta) {
+                setResult('Debes completar todos los campos del formulario.', false);
+                return;
+            }
+            if (tipoRequiereFlujo(tipo_campana) && !flujo_proceso_id) {
+                setResult('Seleccione un flujo de proceso para campañas Llamada o WhatsApp.', false);
+                return;
+            }
+
+            const payload = {
+                id: campaignId, nombre, operacion, tipo, tipo_campana, flujo_proceso_id,
+                descripcion, fecha_inicio, usuario, consulta, server: servidor,
+            };
+            const endpoint = campaignId ? '/config-bigquery/update' : '/config-bigquery/save';
+            const actionText = campaignId ? 'Actualizando campaña...' : 'Guardando campaña...';
+
+            setResult(actionText, true);
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                setResult(data.message || 'Error guardando campaña.', false);
+                return;
+            }
+
+            setResult(data.message, true);
+            setTimeout(() => window.location.reload(), 700);
+        }
+
+        async function loadCampaign(campaignId) {
+            try {
+                const response = await fetch('/config-bigquery/get', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: campaignId })
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    setResult(data.message || 'Error cargando campaña.', false);
+                    return;
+                }
+
+                const campaign = data.campaign;
+                document.getElementById('campaignId').value = campaign.id || '';
+                document.getElementById('campaignName').value = campaign.nombre || '';
+                document.getElementById('campaignOperacion').value = campaign.operacion || '';
+                document.getElementById('campaignTipo').value = campaign.tipo || '';
+                document.getElementById('campaignTipoCampana').value = campaign.tipo_campana || '';
+                document.getElementById('campaignServer').value = campaign.servidor || '';
+                toggleFlujoProcesoField();
+                await refreshFlujosProcesoOptions(campaign.flujo_proceso_id || '');
+                document.getElementById('campaignDescripcion').value = campaign.descripcion || '';
+                document.getElementById('campaignInicio').value = campaign.fecha_inicio ? campaign.fecha_inicio.replace(' ', 'T') : '';
+                document.getElementById('campaignUsuario').value = campaign.usuario || '';
+                document.getElementById('campaignConsulta').value = campaign.consulta || '';
+
+                $('#saveSection').collapse('show');
+                setResult('Campaña cargada para edición.', true);
+            } catch (err) {
+                setResult('Error cargando campaña.', false);
+            }
+        }
+
+        async function deleteCampaign(campaignId) {
+            if (!confirm('¿Seguro que desea borrar esta campaña?')) {
+                return;
+            }
+            try {
+                setResult('Borrando campaña...', true);
+                const response = await fetch('/config-bigquery/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ id: campaignId })
+                });
+
+                let dataText = '';
+                try {
+                    dataText = await response.text();
+                } catch (e) {
+                    dataText = '';
+                }
+
+                let data = null;
+                try {
+                    data = dataText ? JSON.parse(dataText) : null;
+                } catch (e) {
+                    data = null;
+                }
+
+                if (!response.ok) {
+                    const msg = data && data.message ? data.message : (`HTTP ${response.status} ${response.statusText}` + (dataText ? '\n' + dataText : ''));
+                    console.error('Delete campaign failed:', msg);
+                    setResult(msg, false);
+                    return;
+                }
+
+                if (data && data.success === false) {
+                    setResult(data.message || 'Error borrando campaña.', false);
+                    return;
+                }
+
+                // success
+                const successMsg = data && data.message ? data.message : 'Campaña eliminada.';
+                setResult(successMsg, true);
+                setTimeout(() => window.location.reload(), 700);
+            } catch (err) {
+                console.error('Exception deleting campaign:', err);
+                setResult('Error borrando campaña: ' + (err && err.message ? err.message : ''), false);
+            }
+        }
+
+        async function syncToBigQuery() {
+            if (!confirm('¿Sincronizar todas las campañas de SQLite a BigQuery? Se borrará todo en BigQuery y se reescribirá.')) {
+                return;
+            }
+            setResult('Sincronizando con BigQuery...', true);
+            try {
+                const response = await fetch('/config-bigquery/sync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    setResult(data.message || 'Error sincronizando.', false);
+                    return;
+                }
+                setResult(data.message, true);
+            } catch (err) {
+                setResult('Error sincronizando: ' + err.message, false);
+            }
+        }
+
+        async function testCampaignQuery() {
+            const consulta = document.getElementById('campaignConsulta').value.trim();
+            if (!consulta) {
+                setResult('Ingresa la consulta SQL para probar.', false);
+                return;
+            }
+
+            setResult('Ejecutando conteo en BigQuery...', true);
+
+            const campaignId = document.getElementById('campaignId').value.trim();
+
+            const response = await fetch('/config-bigquery/test-count', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: consulta, campaign_id: campaignId || null })
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                setResult(data.message || 'Error ejecutando el conteo.', false);
+                return;
+            }
+
+            const saved = data.total_clientes_saved ? ' (actualizado en campaña)' : '';
+            setResult(`Total de registros: ${data.total}${saved}`, true);
+        }
+
+        document.getElementById('campaignTipoCampana').addEventListener('change', toggleFlujoProcesoField);
+        const serverSelect = document.getElementById('campaignServer');
+        if (serverSelect) {
+            serverSelect.addEventListener('change', () => {
+                if (tipoRequiereFlujo(document.getElementById('campaignTipoCampana').value.trim())) {
+                    refreshFlujosProcesoOptions();
+                }
+            });
+        }
+        toggleFlujoProcesoField();
+    </script>
+{% endblock %}

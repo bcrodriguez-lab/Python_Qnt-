@@ -1,0 +1,87 @@
+{% extends "layouts/adminlte.html" %}
+{% block title %}Descarga de reportes{% endblock %}
+{% block page_title %}Descarga de reportes{% endblock %}
+{% block page_subtitle %}<small class="text-muted">Exportar XLSX desde Wolkvox</small>{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="/">Inicio</a></li><li class="breadcrumb-item active">Reportes</li>{% endblock %}
+
+{% block content %}
+<div class="card card-outline card-primary">
+  <div class="card-header">
+    <h3 class="card-title"><i class="fas fa-file-excel mr-1"></i> Generar reporte</h3>
+  </div>
+  <div class="card-body">
+    <form id="reportForm">
+      <div class="form-group">
+        <label for="serverSelect">Servidor</label>
+        <select id="serverSelect" name="server" class="form-control">
+          <option value="">-- Seleccione servidor --</option>
+          {% for s in servers %}
+            <option value="{{ s.name }}">{{ s.name }}{% if s.url %} — {{ s.url }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group col-md-6">
+          <label for="dateIni">Fecha inicio</label>
+          <input type="date" id="dateIni" name="date_ini" class="form-control" value="{{ default_start }}">
+        </div>
+        <div class="form-group col-md-6">
+          <label for="dateEnd">Fecha fin</label>
+          <input type="date" id="dateEnd" name="date_end" class="form-control" value="{{ default_end }}">
+        </div>
+      </div>
+
+      <div id="reportFeedback" class="mb-2"></div>
+
+      <button type="submit" class="btn btn-success" id="btnGenerate">Generar y descargar XLSX</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('reportForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+  const btn = document.getElementById('btnGenerate');
+  const feedback = document.getElementById('reportFeedback');
+  feedback.innerHTML = '';
+  btn.disabled = true;
+  btn.textContent = 'Generando...';
+
+  const form = new FormData(this);
+
+  try{
+    const resp = await fetch('/reports/download', { method: 'POST', body: form });
+    if(!resp.ok){
+      const text = await resp.text();
+      feedback.innerHTML = `<div class="alert alert-danger">Error: ${resp.status} — ${text}</div>`;
+      return;
+    }
+
+    const blob = await resp.blob();
+    // Intentar obtener filename desde cabecera
+    const cd = resp.headers.get('Content-Disposition') || '';
+    let filename = 'reporte.xlsx';
+    const m = cd.match(/filename="?([^";]+)"?/);
+    if(m && m[1]) filename = m[1];
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+
+    feedback.innerHTML = `<div class="alert alert-success">Informe descargado: ${filename}</div>`;
+  }catch(err){
+    feedback.innerHTML = `<div class="alert alert-danger">Error generando el informe: ${err}</div>`;
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Generar y descargar XLSX';
+  }
+});
+</script>
+{% endblock %}

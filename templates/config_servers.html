@@ -1,0 +1,186 @@
+{% extends "layouts/adminlte.html" %}
+{% block title %}Servidores{% endblock %}
+{% block page_title %}Configuración de Servidores{% endblock %}
+{% block page_subtitle %}<small class="text-muted">Gestión de servidores Wolkvox</small>{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Servidores</li>{% endblock %}
+
+{% block content %}
+{% if error %}
+<div class="alert alert-danger alert-dismissible fade show">
+    {{ error }}
+    <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+</div>
+{% endif %}
+
+<div class="mb-3">
+    <button class="btn btn-outline-primary btn-sm" type="button" data-toggle="collapse" data-target="#serversTable">Ver servidores</button>
+    <button class="btn btn-primary btn-sm" type="button" data-toggle="collapse" data-target="#serverForm" onclick="prepareNewServer()">Agregar servidor</button>
+</div>
+
+<div class="collapse show" id="serversTable">
+    <div class="card card-outline card-primary">
+        <div class="card-header"><h3 class="card-title">Servidores configurados</h3></div>
+        <div class="card-body table-responsive p-0">
+            <table class="table table-hover table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>URL</th>
+                        <th>Token</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if servers %}
+                        {% for s in servers %}
+                        <tr>
+                            <td>{{ s.name }}</td>
+                            <td><a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.url }}</a></td>
+                            <td>{{ (s.token[:4] ~ '...') if s.token else '—' }}</td>
+                            <td>
+                                <button type="button" class="btn btn-xs btn-outline-primary btn-edit-server" data-server-name="{{ s.name|e }}">Editar</button>
+                                {% if s.deletable %}
+                                <button type="button" class="btn btn-xs btn-outline-danger btn-delete-server" data-server-name="{{ s.name|e }}">Borrar</button>
+                                {% else %}
+                                <button type="button" class="btn btn-xs btn-secondary" disabled title="Tiene campañas programadas sin ejecutar">Borrar</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="4" class="text-center text-muted">No hay servidores configurados.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer text-muted text-sm">No se puede borrar un servidor con campañas futuras sin ejecutar.</div>
+    </div>
+</div>
+
+<div class="collapse mt-3" id="serverForm">
+    <div class="card card-outline card-secondary">
+        <div class="card-header"><h3 class="card-title" id="serverFormTitle">Agregar servidor</h3></div>
+        <div class="card-body">
+            <input type="hidden" id="srvOriginalName" value="" />
+            <div class="form-group">
+                <label>Nombre</label>
+                <input id="srvName" class="form-control" placeholder="Nombre del servidor" />
+            </div>
+            <div class="form-group">
+                <label>URL</label>
+                <input id="srvUrl" class="form-control" placeholder="https://example.com" />
+            </div>
+            <div class="form-group">
+                <label>Token</label>
+                <input id="srvToken" class="form-control" placeholder="Token (opcional)" />
+            </div>
+            <button class="btn btn-primary" onclick="saveServer()">Guardar</button>
+            <button class="btn btn-default" onclick="clearServerForm()">Limpiar</button>
+            <div id="serverResult" class="mt-3 text-muted"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function setServerResult(message, success) {
+        const el = document.getElementById('serverResult');
+        el.textContent = message;
+        el.className = success ? 'mt-3 text-success' : 'mt-3 text-danger';
+    }
+
+    function prepareNewServer() {
+        clearServerForm();
+        document.getElementById('serverFormTitle').textContent = 'Agregar servidor';
+    }
+
+    function clearServerForm() {
+        document.getElementById('srvOriginalName').value = '';
+        document.getElementById('srvName').value = '';
+        document.getElementById('srvName').readOnly = false;
+        document.getElementById('srvUrl').value = '';
+        document.getElementById('srvToken').value = '';
+        document.getElementById('serverFormTitle').textContent = 'Agregar servidor';
+        setServerResult('', true);
+    }
+
+    async function editServer(name) {
+        setServerResult('Cargando servidor...', true);
+        try {
+            const resp = await fetch('/config-servers/get', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const data = await resp.json();
+            if (!resp.ok || !data.success) {
+                setServerResult(data.message || 'Error cargando servidor.', false);
+                return;
+            }
+            const server = data.server;
+            document.getElementById('srvOriginalName').value = server.name || '';
+            document.getElementById('srvName').value = server.name || '';
+            document.getElementById('srvUrl').value = server.url || '';
+            document.getElementById('srvToken').value = server.token || '';
+            document.getElementById('serverFormTitle').textContent = 'Editar servidor';
+            $('#serverForm').collapse('show');
+            setServerResult('Servidor cargado para edición.', true);
+        } catch (err) {
+            setServerResult('Error cargando servidor.', false);
+        }
+    }
+
+    async function saveServer() {
+        const name = document.getElementById('srvName').value.trim();
+        const url = document.getElementById('srvUrl').value.trim();
+        const token = document.getElementById('srvToken').value.trim();
+        const original_name = document.getElementById('srvOriginalName').value.trim();
+        if (!name || !url) {
+            setServerResult('Nombre y URL son obligatorios.', false);
+            return;
+        }
+        setServerResult('Guardando...', true);
+        const resp = await fetch('/config-servers/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, url, token, original_name: original_name || name })
+        });
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+            setServerResult(data.message || 'Guardado correctamente.', true);
+            setTimeout(() => location.reload(), 700);
+        } else {
+            setServerResult(data.message || 'Error guardando servidor.', false);
+        }
+    }
+
+    async function deleteServer(name) {
+        if (!confirm(`¿Eliminar el servidor "${name}"?`)) return;
+        setServerResult('Eliminando...', true);
+        try {
+            const resp = await fetch('/config-servers/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const data = await resp.json();
+            if (!resp.ok || !data.success) {
+                setServerResult(data.message || 'No se pudo eliminar el servidor.', false);
+                return;
+            }
+            setServerResult(data.message || 'Servidor eliminado.', true);
+            setTimeout(() => location.reload(), 700);
+        } catch (err) {
+            setServerResult('Error eliminando servidor.', false);
+        }
+    }
+
+    document.querySelectorAll('.btn-edit-server').forEach((btn) => {
+        btn.addEventListener('click', () => editServer(btn.dataset.serverName));
+    });
+    document.querySelectorAll('.btn-delete-server').forEach((btn) => {
+        btn.addEventListener('click', () => deleteServer(btn.dataset.serverName));
+    });
+</script>
+{% endblock %}

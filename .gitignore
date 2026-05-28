@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+
+token.json
+credentials.json
+
+config/google_key.json
+config/credentials.json
+
+downloads/
+app.db

@@ -1,0 +1,487 @@
+{% extends "layouts/adminlte.html" %}
+{% block title %}APIs{% endblock %}
+{% block page_title %}APIs{% endblock %}
+{% block page_subtitle %}<small class="text-muted">Registro e integración con api_handlers</small>{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">APIs</li>{% endblock %}
+{% block extra_css %}
+<style>
+.api-test-textarea {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.8rem;
+    min-height: 160px;
+}
+.api-test-response {
+    min-height: 200px;
+    background: #1e1e1e;
+    color: #d4d4d4;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% if error %}
+<div class="alert alert-danger alert-dismissible fade show">{{ error }}<button type="button" class="close" data-dismiss="alert"><span>&times;</span></button></div>
+{% endif %}
+
+<div class="mb-3">
+    <button class="btn btn-outline-primary btn-sm" type="button" data-toggle="collapse" data-target="#apisTable">Ver APIs</button>
+    <button class="btn btn-primary btn-sm" type="button" data-toggle="collapse" data-target="#apiForm" onclick="prepareNewApi()">Registrar API</button>
+</div>
+
+        <div class="collapse show mb-3" id="apisTable">
+            <div class="card p-3">
+                <h5>APIs configuradas</h5>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>URL</th>
+                                <th>Descripción</th>
+                                <th>Archivo</th>
+                                <th>Método</th>
+                                <th>Frecuencia (min)</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if apis %}
+                                {% for a in apis %}
+                                    <tr>
+                                        <td>{{ a.name }}</td>
+                                        <td><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.url }}</a></td>
+                                        <td>{{ a.descripcion or '—' }}</td>
+                                        <td><code>{{ a.archivo or '—' }}</code></td>
+                                        <td><code>{{ (a.metodo or '')|upper if a.metodo else '—' }}</code></td>
+                                        <td>{{ a.frecuencia_ejecucion }}</td>
+                                        <td>
+                                            {% if a.editable %}
+                                                <button type="button" class="btn btn-sm btn-outline-primary mb-1 btn-edit-api" data-api-name="{{ a.name|e }}">Editar</button>
+                                            {% else %}
+                                                <button type="button" class="btn btn-sm btn-outline-secondary mb-1" disabled title="{% if a.system %}API de referencia del sistema{% else %}No editable{% endif %}">Editar</button>
+                                            {% endif %}
+                                            {% if a.deletable %}
+                                                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-api" data-api-name="{{ a.name|e }}">Borrar</button>
+                                            {% else %}
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="{% if a.system %}API de referencia del sistema{% else %}Tiene campañas programadas sin ejecutar{% endif %}">Borrar</button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="7" class="text-center text-muted">No hay APIs configuradas.</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-muted small mb-0">
+                    Cada API se implementa en <code>api_handlers/&lt;archivo&gt;.py</code> con una funcion
+                    <code>&lt;metodo&gt;(api_config, payload)</code>. Use {% raw %}{{servidor}}{% endraw %} en la URL;
+                    el prefijo lo aporta el módulo Servidores al invocar.
+                    <strong>API DEMO</strong> es de referencia y no se puede editar ni borrar.
+                    Las demás APIs no se pueden borrar si tienen campañas pendientes asociadas.
+                </p>
+            </div>
+        </div>
+
+        <div class="collapse" id="apiForm">
+            <div class="card p-3">
+                <h5 id="apiFormTitle">Registrar API</h5>
+                <input type="hidden" id="apiOriginalName" value="" />
+                <div class="mb-3">
+                    <label class="form-label">Nombre (parametrización)</label>
+                    <input id="apiName" class="form-control" placeholder="Ej: API DEMO" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">URL</label>
+                    <input id="apiUrl" class="form-control" placeholder="{{servidor}}/api/v2/..." />
+                    <div class="form-text text-muted">Use {% raw %}{{servidor}}{% endraw %} como prefijo; la URL base viene del módulo Servidores.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Descripción</label>
+                    <textarea id="apiDescripcion" class="form-control" rows="2" placeholder="Descripción breve"></textarea>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Archivo (módulo en api_handlers/)</label>
+                        <input id="apiArchivo" class="form-control" list="apiArchivoList" placeholder="Ej: DEMO" />
+                        <datalist id="apiArchivoList">
+                            {% for f in handler_files %}
+                                <option value="{{ f }}"></option>
+                            {% endfor %}
+                        </datalist>
+                        <div class="form-text">Nombre sin .py (ej. DEMO → api_handlers/DEMO.py)</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Método HTTP</label>
+                        <select id="apiMetodo" class="form-control">
+                            {% for m in http_methods %}
+                                <option value="{{ m }}" {% if m == 'POST' %}selected{% endif %}>{{ m }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Debe existir la función en minúsculas en el handler (ej. POST → post)</div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Frecuencia de ejecución (minutos)</label>
+                    <input id="apiFrecuencia" type="number" min="1" step="1" class="form-control" value="60" />
+                </div>
+                <div>
+                    <button type="button" class="btn btn-primary" onclick="saveApi()">Guardar</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="clearApiForm()">Limpiar</button>
+                </div>
+                <div id="apiResult" class="mt-3 text-muted"></div>
+
+                <hr class="my-4">
+                <h6 class="text-info"><i class="fas fa-vial mr-1"></i> Prueba manual</h6>
+                <p class="text-muted small mb-3">
+                    Usa la URL, archivo y método del formulario (no hace falta guardar antes).
+                    En la URL use {% raw %}{{servidor}}{% endraw %} como prefijo; en pruebas se toma de <code>config.json → servidor</code>
+                    o del parámetro <code>server</code> (nombre del servidor registrado).
+                    Variables {% raw %}{{nombre}}{% endraw %} en la URL deben ir en los parámetros con el mismo nombre.
+                </p>
+                <div class="mb-3">
+                    <label class="form-label">Parámetros de invocación (JSON)</label>
+                    <textarea id="apiTestParams" class="form-control api-test-textarea" spellcheck="false" placeholder='{"wolkvox-token": "...", "campaign_status": "active", "datos_clientes": "..."}'></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Headers de la petición</label>
+                    <textarea id="apiTestHeaders" class="form-control api-test-textarea" readonly spellcheck="false" placeholder="Se muestran al ejecutar la prueba (p. ej. wolkvox-token)"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Body de la petición (JSON enviado en POST)</label>
+                    <textarea id="apiTestBody" class="form-control api-test-textarea" readonly spellcheck="false" placeholder="Use «Previsualizar body» o «Ejecutar prueba»"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Respuesta del API</label>
+                    <textarea id="apiTestResponse" class="form-control api-test-textarea api-test-response" readonly spellcheck="false" placeholder="La respuesta aparecerá aquí"></textarea>
+                </div>
+                <div class="mb-2">
+                    <button type="button" class="btn btn-info" onclick="runApiTest()">
+                        <i class="fas fa-play mr-1"></i> Ejecutar prueba
+                    </button>
+                    <button type="button" class="btn btn-outline-info" onclick="previewApiBody()">Previsualizar body</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="loadApiTestTemplate()">Cargar plantilla</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="formatApiTestJson()">Formatear JSON</button>
+                </div>
+                <div id="apiTestStatus" class="text-muted small"></div>
+            </div>
+        </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+        function setApiResult(message, success) {
+            const el = document.getElementById('apiResult');
+            el.textContent = message;
+            el.className = success ? 'mt-3 text-success' : 'mt-3 text-danger';
+        }
+
+        function setApiTestStatus(message, success) {
+            const el = document.getElementById('apiTestStatus');
+            el.textContent = message;
+            el.className = success ? 'mt-3 text-success' : 'mt-3 text-danger';
+        }
+
+        function formatJsonValue(value) {
+            return JSON.stringify(value, null, 2);
+        }
+
+        function parseApiTestParams() {
+            const raw = document.getElementById('apiTestParams').value.trim();
+            if (!raw) {
+                return {};
+            }
+            return JSON.parse(raw);
+        }
+
+        function formatApiTestJson() {
+            try {
+                const parsed = parseApiTestParams();
+                document.getElementById('apiTestParams').value = formatJsonValue(parsed);
+                setApiTestStatus('JSON formateado.', true);
+            } catch (err) {
+                setApiTestStatus('JSON de parámetros inválido.', false);
+            }
+        }
+
+        function getApiDraftFromForm() {
+            return {
+                name: document.getElementById('apiName').value.trim(),
+                url: document.getElementById('apiUrl').value.trim(),
+                archivo: document.getElementById('apiArchivo').value.trim(),
+                metodo: document.getElementById('apiMetodo').value.trim(),
+            };
+        }
+
+        function buildApiTestRequest(extra) {
+            const draft = getApiDraftFromForm();
+            return Object.assign({ draft: draft, name: draft.name || undefined }, extra || {});
+        }
+
+        function clearApiTestFields() {
+            document.getElementById('apiTestParams').value = '';
+            document.getElementById('apiTestHeaders').value = '';
+            document.getElementById('apiTestBody').value = '';
+            document.getElementById('apiTestResponse').value = '';
+            setApiTestStatus('', true);
+        }
+
+        async function loadApiTestTemplate() {
+            const draft = getApiDraftFromForm();
+            if (!draft.url || !draft.archivo || !draft.metodo) {
+                setApiTestStatus('Complete URL, archivo y método HTTP en el formulario.', false);
+                return;
+            }
+
+            setApiTestStatus('Cargando plantilla...', true);
+            try {
+                const resp = await fetch('/config-apis/test-template', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(buildApiTestRequest())
+                });
+                const data = await resp.json();
+                if (!resp.ok || !data.success) {
+                    setApiTestStatus(data.message || 'No se pudo cargar la plantilla.', false);
+                    return;
+                }
+                document.getElementById('apiTestParams').value = formatJsonValue(data.template || {});
+                let hint = 'Plantilla cargada.';
+                if (data.url_placeholders && data.url_placeholders.length) {
+                    hint += ' Variables en URL: ' + data.url_placeholders.join(', ') + '.';
+                }
+                setApiTestStatus(hint, true);
+            } catch (err) {
+                setApiTestStatus('Error cargando plantilla de prueba.', false);
+            }
+        }
+
+        async function previewApiBody() {
+            const draft = getApiDraftFromForm();
+            if (!draft.url || !draft.archivo || !draft.metodo) {
+                setApiTestStatus('Complete URL, archivo y método HTTP en el formulario.', false);
+                return;
+            }
+            let payload;
+            try {
+                payload = parseApiTestParams();
+            } catch (err) {
+                setApiTestStatus('JSON de parámetros inválido.', false);
+                return;
+            }
+
+            setApiTestStatus('Generando body...', true);
+            try {
+                const resp = await fetch('/config-apis/preview-body', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(buildApiTestRequest({ payload: payload }))
+                });
+                const data = await resp.json();
+                if (!resp.ok || !data.success) {
+                    setApiTestStatus(data.message || 'No se pudo previsualizar el body.', false);
+                    return;
+                }
+                document.getElementById('apiTestBody').value = formatJsonValue(data.request_body);
+                if (data.request_url) {
+                    setApiTestStatus('Body generado. URL: ' + data.request_url, true);
+                } else {
+                    setApiTestStatus('Body generado (sin llamar al servicio externo).', true);
+                }
+            } catch (err) {
+                setApiTestStatus('Error al previsualizar el body.', false);
+            }
+        }
+
+        async function runApiTest() {
+            const draft = getApiDraftFromForm();
+            if (!draft.url || !draft.archivo || !draft.metodo) {
+                setApiTestStatus('Complete URL, archivo y método HTTP en el formulario.', false);
+                return;
+            }
+            let payload;
+            try {
+                payload = parseApiTestParams();
+            } catch (err) {
+                setApiTestStatus('JSON de parámetros inválido.', false);
+                return;
+            }
+
+            setApiTestStatus('Ejecutando prueba...', true);
+            document.getElementById('apiTestResponse').value = '';
+            try {
+                const resp = await fetch('/config-apis/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(buildApiTestRequest({ payload: payload }))
+                });
+                const data = await resp.json();
+                if (data.request_headers && Object.keys(data.request_headers).length) {
+                    document.getElementById('apiTestHeaders').value = formatJsonValue(data.request_headers);
+                }
+                if (data.request_body !== undefined) {
+                    document.getElementById('apiTestBody').value = formatJsonValue(data.request_body);
+                }
+                const output = {
+                    success: data.success,
+                    message: data.message,
+                    request_url: data.request_url,
+                    request_headers: data.request_headers,
+                    result: data.result,
+                };
+                document.getElementById('apiTestResponse').value = formatJsonValue(output);
+                setApiTestStatus(data.message || (data.success ? 'Prueba exitosa.' : 'Prueba fallida.'), !!data.success);
+            } catch (err) {
+                setApiTestStatus('Error ejecutando la prueba.', false);
+            }
+        }
+
+        function prepareNewApi() {
+            clearApiForm();
+            document.getElementById('apiFormTitle').textContent = 'Registrar API';
+            showApiForm();
+        }
+
+        function clearApiForm() {
+            document.getElementById('apiOriginalName').value = '';
+            document.getElementById('apiName').value = '';
+            document.getElementById('apiUrl').value = '';
+            document.getElementById('apiDescripcion').value = '';
+            document.getElementById('apiArchivo').value = '';
+            document.getElementById('apiMetodo').value = 'POST';
+            document.getElementById('apiFrecuencia').value = '60';
+            document.getElementById('apiFormTitle').textContent = 'Registrar API';
+            clearApiTestFields();
+            setApiResult('', true);
+        }
+
+        function showApiForm() {
+            $('#apiForm').collapse('show');
+        }
+
+        async function editApi(name) {
+            showApiForm();
+            setApiResult('Cargando API...', true);
+            try {
+                const resp = await fetch('/config-apis/get', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                const data = await resp.json();
+                if (!resp.ok || !data.success) {
+                    setApiResult(data.message || 'Error cargando API.', false);
+                    return;
+                }
+
+                const api = data.api;
+                document.getElementById('apiOriginalName').value = api.name || '';
+                document.getElementById('apiName').value = api.name || '';
+                document.getElementById('apiUrl').value = api.url || '';
+                document.getElementById('apiDescripcion').value = api.descripcion || '';
+                document.getElementById('apiArchivo').value = api.archivo || '';
+                document.getElementById('apiMetodo').value = (api.metodo || 'post').toUpperCase();
+                document.getElementById('apiFrecuencia').value = api.frecuencia_ejecucion || '';
+                document.getElementById('apiFormTitle').textContent = 'Editar API';
+                setApiResult('API cargada para edición.', true);
+                await loadApiTestTemplate();
+                document.getElementById('apiForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (err) {
+                setApiResult('Error cargando API.', false);
+            }
+        }
+
+        function readFrecuenciaMinutos() {
+            const input = document.getElementById('apiFrecuencia');
+            if (!input) {
+                return NaN;
+            }
+            const raw = String(input.value ?? '').trim();
+            if (raw === '') {
+                return NaN;
+            }
+            return parseInt(raw, 10);
+        }
+
+        async function saveApi() {
+            const name = document.getElementById('apiName').value.trim();
+            const url = document.getElementById('apiUrl').value.trim();
+            const descripcion = document.getElementById('apiDescripcion').value.trim();
+            const archivo = document.getElementById('apiArchivo').value.trim();
+            const metodo = document.getElementById('apiMetodo').value.trim();
+            const frecuenciaNum = readFrecuenciaMinutos();
+            const original_name = document.getElementById('apiOriginalName').value.trim();
+
+            if (!name) {
+                setApiResult('El nombre es obligatorio.', false);
+                return;
+            }
+            if (!url) {
+                setApiResult('La URL es obligatoria.', false);
+                return;
+            }
+            if (!archivo) {
+                setApiResult('El archivo (módulo) es obligatorio.', false);
+                return;
+            }
+            if (!metodo) {
+                setApiResult('El método es obligatorio.', false);
+                return;
+            }
+            if (!Number.isFinite(frecuenciaNum) || frecuenciaNum < 1) {
+                setApiResult('La frecuencia de ejecución debe ser un número entero mayor a 0.', false);
+                return;
+            }
+
+            setApiResult('Guardando...', true);
+            const resp = await fetch('/config-apis/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name, url, descripcion, archivo, metodo,
+                    frecuencia_ejecucion: frecuenciaNum,
+                    original_name: original_name || name
+                })
+            });
+            const data = await resp.json();
+            if (resp.ok && data.success) {
+                setApiResult(data.message || 'Guardado correctamente.', true);
+                setTimeout(() => location.reload(), 700);
+            } else {
+                setApiResult(data.message || 'Error guardando API.', false);
+            }
+        }
+
+        async function deleteApi(name) {
+            if (!confirm(`¿Eliminar la API "${name}"?`)) {
+                return;
+            }
+            setApiResult('Eliminando...', true);
+            try {
+                const resp = await fetch('/config-apis/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                const data = await resp.json();
+                if (!resp.ok || !data.success) {
+                    setApiResult(data.message || 'No se pudo eliminar la API.', false);
+                    return;
+                }
+                setApiResult(data.message || 'API eliminada.', true);
+                setTimeout(() => location.reload(), 700);
+            } catch (err) {
+                setApiResult('Error eliminando API.', false);
+            }
+        }
+
+        document.querySelectorAll('.btn-edit-api').forEach((btn) => {
+            btn.addEventListener('click', () => editApi(btn.dataset.apiName));
+        });
+
+        document.querySelectorAll('.btn-delete-api').forEach((btn) => {
+            btn.addEventListener('click', () => deleteApi(btn.dataset.apiName));
+        });
+    </script>
+{% endblock %}

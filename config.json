@@ -1,0 +1,235 @@
+{
+  "general_parameters": {
+    "campaign_check_interval_seconds": 60,
+    "console_message_interval_seconds": 60,
+    "log_retention_hours": 1,
+    "updated_at": "2026-05-20T13:40:56.371826"
+  },
+  "wolkvox-token": "7b69645f6469737472697d2d3230323630353232303832353338",
+  "servidor": "https://wv0051.wolkvox.com",
+  "servers": [
+    {
+      "name": "Prueba",
+      "url": "prueba",
+      "token": "7b69645f6469737472697d2d3230323630353232303832353338",
+      "created_at": "2026-05-16T00:41:28.796489",
+      "updated_at": "2026-05-24T12:31:59.074165"
+    },
+    {
+      "name": "qnt_juridico_blaster",
+      "url": "https://wv0051.wolkvox.com",
+      "token": "7b69645f6469737472697d2d3230323630353232303832353338",
+      "created_at": "2026-05-23T18:47:20.603430",
+      "updated_at": "2026-05-24T12:35:16.802246"
+    },
+    {
+      "name": "qnt_cobro_blaster",
+      "url": "https://wv0038.wolkvox.com/",
+      "token": "7b69645f6469737472697d2d3230323630353232303832343232",
+      "created_at": "2026-05-25T15:33:00.973295"
+    },
+    {
+      "name": "Qnt_RBK_blaster",
+      "url": "https://wv0022.wolkvox.com/",
+      "token": "7b69645f6469737472697d2d3230323630353232303832373234",
+      "created_at": "2026-05-25T16:09:27.715872"
+    },
+    {
+      "name": "Qnt_recaudo_blaster",
+      "url": "https://wv0017.wolkvox.com/",
+      "token": "7b69645f6469737472697d2d3230323630353232303832383434",
+      "created_at": "2026-05-25T16:10:38.076298"
+    },
+    {
+      "name": "qnt_digital",
+      "url": "https://wv0010.wolkvox.com/",
+      "token": "7b69645f6469737472697d2d3230323630353232303832393533",
+      "created_at": "2026-05-25T16:11:15.522168"
+    },
+    {
+      "name": "operacion-interna",
+      "url": "https://wv0016.wolkvox.com/",
+      "token": "7b69645f6469737472697d2d3230323630343038313230343137",
+      "created_at": "2026-05-25T16:11:55.799643"
+    }
+  ],
+  "options": {
+    "operaciones": [
+      "Digital",
+      "RBK",
+      "Juridico",
+      "Cobro",
+      "Recaudo"
+    ],
+    "tipos": [
+      "Manual",
+      "Toma"
+    ],
+    "usuarios": [
+      "Alejandra",
+      "Cesar",
+      "Carolina",
+      "Alan",
+      "Julian",
+      "Sebastian",
+      "Sara",
+      "Sergio"
+    ]
+  },
+  "apis": [
+    {
+      "name": "API DEMO",
+      "url": "https://httpbin.org/post",
+      "descripcion": "API de referencia POST. Plantilla en api_handlers/DEMO.py",
+      "token": "",
+      "frecuencia_ejecucion": 60,
+      "archivo": "DEMO",
+      "metodo": "post",
+      "created_at": "2026-05-18T17:40:04.488757"
+    },
+    {
+      "name": "Cargue de clientes",
+      "url": "{{servidor}}/api/v2/campaign.php?api=add_record&type_campaign=predictive&campaign_id={{campaign_id}}&campaign_status=1",
+      "descripcion": "Con esta api se realiza el cargue de los clientes a la campaña",
+      "frecuencia_ejecucion": 60,
+      "archivo": "Wolkvox_Carga_Clientes",
+      "metodo": "post",
+      "created_at": "2026-05-23T18:49:23.200790",
+      "updated_at": "2026-05-24T14:28:45.646277"
+    },
+    {
+      "name": "Consultar campañas",
+      "url": "{{servidor}}/api/v2/real_time.php?api=campaigns",
+      "descripcion": "Consulta el estado de la campaña",
+      "frecuencia_ejecucion": 60,
+      "archivo": "ConsultarCampanas",
+      "metodo": "get",
+      "created_at": "2026-05-24T01:26:33.288348",
+      "updated_at": "2026-05-24T12:35:45.588841"
+    },
+    {
+      "name": "Parar campaña",
+      "url": "{{servidor}}/api/v2/campaign.php?api=stop&campaign_id={{campaign_id}}",
+      "descripcion": "Detiene una campaña en Wolkvox",
+      "frecuencia_ejecucion": 60,
+      "archivo": "PararCampana",
+      "metodo": "put",
+      "created_at": "2026-05-24T14:00:00.000000"
+    },
+    {
+      "name": "Borrar clientes campaña",
+      "url": "{{servidor}}/api/v2/campaign.php?api=clear_campaign&type_campaign=1&campaign_id={{campaign_id}}",
+      "descripcion": "Borra los clientes de una campaña en Wolkvox",
+      "frecuencia_ejecucion": 60,
+      "archivo": "BorrarClientesCampana",
+      "metodo": "delete",
+      "created_at": "2026-05-24T15:00:00.000000",
+      "updated_at": "2026-05-24T14:25:19.298189"
+    },
+    {
+      "name": "Iniciar campaña",
+      "url": "{{servidor}}/api/v2/campaign.php?api=start&campaign_id={{campaign_id}}",
+      "descripcion": "Inicia una campaña en Wolkvox",
+      "frecuencia_ejecucion": 60,
+      "archivo": "IniciarCampana",
+      "metodo": "put",
+      "created_at": "2026-05-24T14:00:00.000000"
+    }
+  ],
+  "flujos_proceso": [
+    {
+      "id": "32841",
+      "nombre": "Conversacional",
+      "servidor": "qnt_juridico_blaster",
+      "created_at": "2026-05-24T14:55:24.827138"
+    },
+    {
+      "id": "28702",
+      "nombre": "Conversacional",
+      "servidor": "qnt_cobro_blaster",
+      "created_at": "2026-05-25T15:35:34.695314"
+    },
+    {
+      "id": "24298",
+      "nombre": "Conversacional",
+      "servidor": "Qnt_RBK_blaster",
+      "created_at": "2026-05-25T16:10:02.982990"
+    },
+    {
+      "id": "26678",
+      "nombre": "Conversacional",
+      "servidor": "Qnt_recaudo_blaster",
+      "created_at": "2026-05-25T16:16:20.436423"
+    },
+    {
+      "id": "7761",
+      "nombre": "Conversacional",
+      "servidor": "qnt_digital",
+      "created_at": "2026-05-25T16:21:23.201745"
+    },
+    {
+      "id": "20213",
+      "nombre": "Conversacional",
+      "servidor": "operacion-interna",
+      "created_at": "2026-05-25T16:48:28.928161"
+    }
+  ],
+  "server_apis": {
+    "Prueba": {
+      "API DEMO": true,
+      "Cargue de clientes": false,
+      "Consultar campañas": false,
+      "Parar campaña": false,
+      "Borrar clientes campaña": false,
+      "Iniciar campaña": false
+    },
+    "qnt_juridico_blaster": {
+      "API DEMO": false,
+      "Cargue de clientes": true,
+      "Consultar campañas": true,
+      "Parar campaña": true,
+      "Borrar clientes campaña": true,
+      "Iniciar campaña": true
+    },
+    "qnt_cobro_blaster": {
+      "API DEMO": false,
+      "Cargue de clientes": true,
+      "Consultar campañas": true,
+      "Parar campaña": true,
+      "Borrar clientes campaña": true,
+      "Iniciar campaña": true
+    },
+    "Qnt_RBK_blaster": {
+      "API DEMO": false,
+      "Cargue de clientes": true,
+      "Consultar campañas": true,
+      "Parar campaña": true,
+      "Borrar clientes campaña": true,
+      "Iniciar campaña": true
+    },
+    "Qnt_recaudo_blaster": {
+      "API DEMO": false,
+      "Cargue de clientes": true,
+      "Consultar campañas": true,
+      "Parar campaña": true,
+      "Borrar clientes campaña": true,
+      "Iniciar campaña": true
+    },
+    "qnt_digital": {
+      "API DEMO": false,
+      "Cargue de clientes": true,
+      "Consultar campañas": true,
+      "Parar campaña": true,
+      "Borrar clientes campaña": true,
+      "Iniciar campaña": true
+    },
+    "operacion-interna": {
+      "API DEMO": false,
+      "Cargue de clientes": true,
+      "Consultar campañas": true,
+      "Parar campaña": true,
+      "Borrar clientes campaña": true,
+      "Iniciar campaña": true
+    }
+  }
+}
