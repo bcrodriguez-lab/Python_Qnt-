@@ -1,0 +1,185 @@
+{% extends "layouts/adminlte.html" %}
+{% set is_edit = campaign is not none %}
+{% block title %}{{ "Editar" if is_edit else "Nueva" }} campaña automática{% endblock %}
+{% block page_title %}{{ "Editar" if is_edit else "Nueva" }} campaña automática{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/auto-campaigns">Campañas automáticas</a></li>
+<li class="breadcrumb-item active">{{ "Editar" if is_edit else "Nueva" }}</li>
+{% endblock %}
+{% block extra_css %}
+<style>
+.sql-editor { min-height: 220px; font-family: Consolas, monospace; font-size: .92rem; }
+.json-editor { min-height: 120px; font-family: Consolas, monospace; font-size: .92rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<form id="autoCampaignForm" data-id="{{ campaign.id if is_edit else '' }}" data-tipos-con-flujo='{{ tipos_campana_con_flujo|tojson|safe }}'>
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label>Nombre</label>
+                    <input class="form-control" name="name" value="{{ campaign.name if is_edit else '' }}" required>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label>Campaign ID Wolkvox</label>
+                    <input class="form-control" name="wolkvox_campaign_id" value="{{ campaign.wolkvox_campaign_id if is_edit else '' }}" required>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label>Servidor</label>
+                    <select class="form-control" name="server_name" required>
+                        <option value="">(Seleccionar servidor)</option>
+                        {% for server in servers %}
+                            <option value="{{ server.name }}" {% if is_edit and campaign.server_name == server.name %}selected{% endif %}>{{ server.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label>Operación</label>
+                    <select class="form-control" name="operation" required>
+                        <option value="">(Seleccionar operación)</option>
+                        {% for op in operaciones %}
+                            <option value="{{ op }}" {% if is_edit and campaign.operation == op %}selected{% endif %}>{{ op }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label>Tipo</label>
+                    <select class="form-control" name="type" required>
+                        <option value="">(Seleccionar tipo)</option>
+                        {% for tipo in tipos %}
+                            <option value="{{ tipo }}" {% if is_edit and campaign.type == tipo %}selected{% endif %}>{{ tipo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label>Tipo de campaña</label>
+                    <select class="form-control" name="campaign_type" required>
+                        <option value="">(Seleccionar tipo de campaña)</option>
+                        {% for tipo_campana in tipos_campana %}
+                            <option value="{{ tipo_campana }}" {% if is_edit and campaign.campaign_type == tipo_campana %}selected{% endif %}>{{ tipo_campana }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3" id="autoFlujoProcesoGroup" style="display: none;">
+                    <label>Flujo de proceso (campaign_id)</label>
+                    <select class="form-control" name="flujo_proceso_id" id="autoCampaignFlujoProceso">
+                        <option value="">(Seleccionar flujo)</option>
+                    </select>
+                    <small class="form-text text-muted" id="autoFlujoProcesoHint">
+                        Solo Llamada y WhatsApp. Elija el servidor primero; los flujos se filtran por servidor.
+                    </small>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label>Fecha de inicio</label>
+                    <input class="form-control" type="datetime-local" name="start_date" value="{{ campaign.start_date.replace(' ', 'T') if is_edit and campaign.start_date else '' }}">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label>Usuario</label>
+                    <select class="form-control" name="user_name" required>
+                        <option value="">(Seleccionar usuario)</option>
+                        {% for usuario in usuarios %}
+                            <option value="{{ usuario }}" {% if is_edit and campaign.user_name == usuario %}selected{% endif %}>{{ usuario }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label>Último preconteo</label>
+                    <input class="form-control" value="{{ campaign.last_precount if is_edit else 0 }}" readonly>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label>Descripción</label>
+                <textarea class="form-control" name="description" rows="2" placeholder="Descripción breve de la campaña">{{ campaign.description if is_edit else '' }}</textarea>
+            </div>
+            <div class="mb-3">
+                <label>Endpoint add_record</label>
+                <input class="form-control" name="wolkvox_add_record_endpoint" value="{{ campaign.wolkvox_add_record_endpoint if is_edit else '{{servidor}}/api/v2/campaign.php?api=add_record&type_campaign=predictive&campaign_id={{campaign_id}}&campaign_status=1' }}" required>
+            </div>
+            <div class="mb-3">
+                <label>Endpoint borrado de registros</label>
+                <input class="form-control" name="wolkvox_delete_records_endpoint" value="{{ campaign.wolkvox_delete_records_endpoint if is_edit else '' }}" placeholder="{{servidor}}/api/v2/campaign.php?api=clear_campaign&type_campaign=1&campaign_id={{campaign_id}}">
+                <small class="form-text text-muted">Si se deja vacío, el botón de borrado elimina solo logs locales.</small>
+            </div>
+            <div class="mb-3">
+                <label>Consulta SQL BigQuery</label>
+                <textarea class="form-control sql-editor" name="bigquery_query" required>{{ campaign.bigquery_query if is_edit else 'SELECT telefono, nombre_completo FROM `proyecto.dataset.tabla`' }}</textarea>
+                <button class="btn btn-sm btn-outline-secondary mt-2" type="button" id="precountButton">
+                    <i class="fas fa-calculator mr-1"></i>Validar consulta / preconteo
+                </button>
+                <span class="ml-2 text-muted" id="precountResult">Valida la consulta antes de guardar.</span>
+            </div>
+            <div class="mb-3">
+                <label>Mapeo de campos</label>
+                <textarea class="form-control json-editor" name="field_mapping" required>{{ campaign.field_mapping|tojson(indent=2) if is_edit else '{"telephone":"telefono","name":"nombre_completo"}' }}</textarea>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label>Tipo de programación</label>
+                    <select class="form-control" name="schedule_type" id="scheduleType">
+                        {% for option in ["manual", "one_time", "recurring"] %}
+                            <option value="{{ option }}" {% if is_edit and campaign.schedule_type == option %}selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-5 mb-3">
+                    <label>Valor de programación</label>
+                    <input class="form-control" name="schedule_value" id="scheduleValue" value="{{ campaign.schedule_value|tojson if is_edit and campaign.schedule_value is mapping else (campaign.schedule_value if is_edit and campaign.schedule_value else '') }}" placeholder="2026-06-01 10:00:00 o {&quot;interval_hours&quot;:24}">
+                </div>
+                <div class="col-md-3 mb-3 d-flex align-items-end">
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input" id="statusSwitch" name="status" {% if not is_edit or campaign.status %}checked{% endif %}>
+                        <label class="custom-control-label" for="statusSwitch">Activa</label>
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-primary" type="submit"><i class="fas fa-save mr-1"></i>Guardar</button>
+            <a class="btn btn-outline-secondary" href="/auto-campaigns">Volver</a>
+            {% if is_edit %}
+                <button class="btn btn-success" type="button" data-action="run" data-id="{{ campaign.id }}"><i class="fas fa-play mr-1"></i>Ejecutar</button>
+                <button class="btn btn-warning" type="button" data-action="stop" data-id="{{ campaign.id }}"><i class="fas fa-stop mr-1"></i>Detener</button>
+            {% endif %}
+        </div>
+    </div>
+</form>
+
+{% if is_edit %}
+<div class="card">
+    <div class="card-header"><h3 class="card-title">Ejecuciones</h3></div>
+    <div class="card-body table-responsive">
+        <table class="table table-sm">
+            <thead><tr><th>ID</th><th>Inicio</th><th>Fin</th><th>Obtenidos</th><th>Enviados</th><th>Fallidos</th><th>Error</th><th></th></tr></thead>
+            <tbody>
+            {% for log in logs %}
+                <tr>
+                    <td>{{ log.id }}</td>
+                    <td>{{ log.start_time }}</td>
+                    <td>{{ log.end_time }}</td>
+                    <td>{{ log.records_fetched }}</td>
+                    <td>{{ log.records_sent }}</td>
+                    <td>{{ log.records_failed }}</td>
+                    <td>{{ log.error_message }}</td>
+                    <td><a class="btn btn-xs btn-outline-info" href="/auto-campaigns/{{ campaign.id }}/report?execution_id={{ log.id }}">Informe</a></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="8" class="text-center text-muted">Sin ejecuciones registradas.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<div class="alert mt-3 d-none" id="autoCampaignMessage"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/auto_campaigns.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "layouts/adminlte.html" %}
+{% block title %}Campañas automáticas{% endblock %}
+{% block page_title %}Campañas automáticas{% endblock %}
+{% block page_subtitle %}<small class="text-muted">BigQuery → CSV → Wolkvox</small>{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Campañas automáticas</li>{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="/auto-campaigns/new" class="btn btn-primary btn-sm">
+        <i class="fas fa-plus mr-1"></i>Nueva campaña
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body table-responsive">
+        <table class="table table-sm table-hover">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Operación</th>
+                <th>Tipo</th>
+                <th>Campaña Wolkvox</th>
+                <th>Servidor</th>
+                <th>Programación</th>
+                <th>Estado</th>
+                <th>Última ejecución</th>
+                <th>Próxima</th>
+                <th>Último resultado</th>
+                <th>Acciones</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for campaign in campaigns %}
+                <tr>
+                    <td>{{ campaign.id }}</td>
+                    <td><a href="/auto-campaigns/{{ campaign.id }}">{{ campaign.name }}</a></td>
+                    <td>{{ campaign.operation or "—" }}</td>
+                    <td>{{ campaign.campaign_type or campaign.type or "—" }}</td>
+                    <td>{{ campaign.wolkvox_campaign_id }}</td>
+                    <td>{{ campaign.server_name or "—" }}</td>
+                    <td>{{ campaign.schedule_type }}</td>
+                    <td>
+                        {% if campaign.running %}
+                            <span class="badge badge-warning">En ejecución</span>
+                        {% elif campaign.status %}
+                            <span class="badge badge-success">Activa</span>
+                        {% else %}
+                            <span class="badge badge-secondary">Inactiva</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ campaign.last_run or "—" }}</td>
+                    <td>{{ campaign.next_run or "—" }}</td>
+                    <td>
+                        {{ campaign.latest_records_sent }}/{{ campaign.latest_records_fetched }}
+                        {% if campaign.latest_error %}<span class="text-danger" title="{{ campaign.latest_error }}">error</span>{% endif %}
+                    </td>
+                    <td class="text-nowrap">
+                        <button class="btn btn-sm btn-success" title="Ejecutar" data-action="run" data-id="{{ campaign.id }}"><i class="fas fa-play"></i></button>
+                        <button class="btn btn-sm btn-warning" title="Detener" data-action="stop" data-id="{{ campaign.id }}"><i class="fas fa-stop"></i></button>
+                        <a class="btn btn-sm btn-info" title="Informe" href="/auto-campaigns/{{ campaign.id }}/report"><i class="fas fa-file-download"></i></a>
+                        <button class="btn btn-sm btn-secondary" title="Reiniciar ciclo" data-action="reset" data-id="{{ campaign.id }}"><i class="fas fa-redo"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" title="Borrar registros/logs" data-action="records" data-id="{{ campaign.id }}"><i class="fas fa-eraser"></i></button>
+                        <button class="btn btn-sm btn-danger" title="Eliminar" data-action="delete" data-id="{{ campaign.id }}"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="11" class="text-center text-muted">No hay campañas automáticas configuradas.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="alert mt-3 d-none" id="autoCampaignMessage"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/auto_campaigns.js') }}"></script>
+{% endblock %}

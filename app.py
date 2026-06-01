@@ -71,6 +71,20 @@ from api_runner import (
 from servers import get_config_servidor_default
 from server_apis import load_assignment_matrix, set_server_api_active
 from dashboard import get_dashboard_data, refresh_dashboard_from_wolkvox
+from auto_campaigns import (
+    create_auto_campaign,
+    delete_auto_campaign,
+    get_auto_campaign,
+    list_auto_campaigns,
+    list_execution_logs,
+    parse_auto_campaign_id,
+    update_auto_campaign,
+)
+from auto_campaign_executor import (
+    is_auto_campaign_running,
+    request_stop_auto_campaign,
+    start_auto_campaign_async,
+)
 
 # Crear conexión global a BigQuery al iniciar la aplicación
 bq_client = None
@@ -945,6 +959,223 @@ def test_bigquery_query():
         return jsonify(result)
     log_gui_action("Probar conteo BigQuery fallo", mensaje=result.get("message"))
     return jsonify(result), 400
+
+
+@app.route("/auto-campaigns", methods=["GET"])
+def auto_campaigns_index():
+    campaigns = list_auto_campaigns()
+    return render_template("auto_campaigns/index.html", campaigns=campaigns)
+
+
+def _auto_campaign_form_context(campaign=None, logs=None):
+    servers_result = load_servers()
+    servers = servers_result.get("servers", []) if servers_result.get("success") else []
+    options = servers_result.get("options", {}) if servers_result.get("success") else {}
+    return {
+        "campaign": campaign,
+        "logs": logs or [],
+        "servers": servers,
+        "operaciones": options.get("operaciones", []),
+        "tipos": options.get("tipos", []),
+        "usuarios": options.get("usuarios", []),
+        "tipos_campana": TIPO_CAMPANA_OPTIONS,
+        "tipos_campana_con_flujo": TIPO_CAMPANA_CON_FLUJO,
+    }
+
+
+@app.route("/auto-campaigns/new", methods=["GET"])
+def auto_campaigns_new():
+    return render_template("auto_campaigns/form.html", **_auto_campaign_form_context())
+
+
+@app.route("/auto-campaigns", methods=["POST"])
+def auto_campaigns_create():
+    data = request.get_json(silent=True) or request.form.to_dict()
+    result = create_auto_campaign(data)
+    if not result.get("success"):
+        return jsonify(result), 400
+    log_gui_action("Crear campaña automática", id=result.get("campaign", {}).get("id"))
+    return jsonify(result)
+
+
+@app.route("/auto-campaigns/test-count", methods=["POST"])
+def auto_campaigns_test_count():
+    data = request.get_json() or {}
+    query = (data.get("query") or "").strip()
+    if not query:
+        return jsonify({"success": False, "message": "La consulta SQL es obligatoria."}), 400
+
+    global bq_client
+    if bq_client is None:
+        init_bigquery()
+    if bq_client is None:
+        return jsonify({"success": False, "message": "No se pudo inicializar el cliente de BigQuery."}), 500
+
+    result = count_query_results(bq_client, query)
+    if not result.get("success"):
+        log_gui_action("Preconteo campaña automática fallo", mensaje=result.get("message"))
+        return jsonify(result), 400
+
+    campaign_id = parse_auto_campaign_id(data.get("campaign_id") or data.get("id"))
+    if campaign_id is not None:
+        from database import AutoCampaign
+
+        campaign = AutoCampaign.query.get(campaign_id)
+        if campaign:
+            campaign.last_precount = int(result.get("total") or 0)
+            db.session.commit()
+            result["last_precount_saved"] = True
+
+    log_gui_action("Preconteo campaña automática", total=result.get("total"), campaign_id=campaign_id)
+    return jsonify(result)
+
+
+@app.route("/auto-campaigns/<int:campaign_id>", methods=["GET"])
+def auto_campaigns_detail(campaign_id):
+    campaign = get_auto_campaign(campaign_id)
+    if not campaign:
+        return jsonify({"success": False, "message": "No se encontró la campaña automática."}), 404
+    logs = list_execution_logs(campaign_id)
+    if request.headers.get("Accept", "").find("application/json") >= 0:
+        return jsonify({"success": True, "campaign": campaign, "logs": logs})
+    return render_template("auto_campaigns/form.html", **_auto_campaign_form_context(campaign, logs))
+
+
+@app.route("/auto-campaigns/<int:campaign_id>", methods=["PUT", "POST"])
+def auto_campaigns_update(campaign_id):
+    data = request.get_json(silent=True) or request.form.to_dict()
+    result = update_auto_campaign(campaign_id, data)
+    if not result.get("success"):
+        return jsonify(result), 400
+    log_gui_action("Actualizar campaña automática", id=campaign_id)
+    return jsonify(result)
+
+
+@app.route("/auto-campaigns/<int:campaign_id>", methods=["DELETE"])
+def auto_campaigns_delete(campaign_id):
+    result = delete_auto_campaign(campaign_id)
+    if not result.get("success"):
+        return jsonify(result), 400
+    log_gui_action("Eliminar campaña automática", id=campaign_id)
+    return jsonify(result)
+
+
+@app.route("/auto-campaigns/<int:campaign_id>/run", methods=["POST"])
+def auto_campaigns_run(campaign_id):
+    if is_auto_campaign_running(campaign_id):
+        return jsonify({"success": False, "message": "La campaña ya está en ejecución."}), 409
+    started = start_auto_campaign_async(campaign_id, app)
+    if not started:
+        return jsonify({"success": False, "message": "La campaña ya está en ejecución."}), 409
+    log_gui_action("Ejecutar campaña automática", id=campaign_id)
+    return jsonify({"success": True, "message": "Ejecución iniciada en segundo plano."})
+
+
+@app.route("/auto-campaigns/<int:campaign_id>/stop", methods=["POST"])
+def auto_campaigns_stop(campaign_id):
+    stopped = request_stop_auto_campaign(campaign_id)
+    if not stopped:
+        return jsonify({"success": False, "message": "La campaña no está en ejecución en este proceso."}), 404
+    log_gui_action("Detener campaña automática", id=campaign_id)
+    return jsonify({"success": True, "message": "Solicitud de detención enviada."})
+
+
+@app.route("/auto-campaigns/<int:campaign_id>/report", methods=["GET"])
+def auto_campaigns_report(campaign_id):
+    from database import AutoCampaignExecutionLog
+
+    execution_id = parse_auto_campaign_id(request.args.get("execution_id"))
+    query = AutoCampaignExecutionLog.query.filter_by(auto_campaign_id=campaign_id)
+    if execution_id is not None:
+        query = query.filter_by(id=execution_id)
+    log = query.order_by(AutoCampaignExecutionLog.start_time.desc()).first()
+    if not log:
+        return jsonify({"success": False, "message": "No hay informes para esta campaña."}), 404
+
+    payload = {
+        "execution_id": log.id,
+        "auto_campaign_id": log.auto_campaign_id,
+        "start_time": log.start_time.strftime("%Y-%m-%d %H:%M:%S") if log.start_time else "",
+        "end_time": log.end_time.strftime("%Y-%m-%d %H:%M:%S") if log.end_time else "",
+        "records_fetched": log.records_fetched,
+        "records_sent": log.records_sent,
+        "records_failed": log.records_failed,
+        "error_message": log.error_message or "",
+        "csv_file_path": log.csv_file_path or "",
+        "report_file_path": log.report_file_path or "",
+    }
+    bio = io.BytesIO(json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8"))
+    return send_file(
+        bio,
+        as_attachment=True,
+        download_name=f"auto_campaign_{campaign_id}_execution_{log.id}.json",
+        mimetype="application/json",
+    )
+
+
+@app.route("/auto-campaigns/<int:campaign_id>/records", methods=["DELETE"])
+def auto_campaigns_delete_records(campaign_id):
+    from database import AutoCampaign, AutoCampaignExecutionLog
+
+    campaign = AutoCampaign.query.get(campaign_id)
+    if not campaign:
+        return jsonify({"success": False, "message": "No se encontró la campaña automática."}), 404
+
+    remote_result = None
+    endpoint = (campaign.wolkvox_delete_records_endpoint or "").strip()
+    if endpoint:
+        token = (get_authorization_headers(campaign.server_name or None) or {}).get("wolkvox-token", "")
+        url = endpoint.replace("{{campaign_id}}", campaign.wolkvox_campaign_id)
+        if "{{servidor}}" in url or "{{server}}" in url:
+            server_value = campaign.server_name or ""
+            server = get_server(campaign.server_name) if campaign.server_name else None
+            if server:
+                server_value = (server.get("url") or "").rstrip("/")
+                if server_value and not server_value.startswith(("http://", "https://")):
+                    server_value = f"https://wv{server_value}.wolkvox.com"
+            url = url.replace("{{servidor}}", server_value).replace("{{server}}", server_value)
+        try:
+            response = requests.delete(url, headers={"wolkvox-token": token} if token else {}, timeout=60)
+            remote_result = {"status": response.status_code, "ok": response.ok, "text": response.text[:1000]}
+            if not response.ok:
+                return jsonify({
+                    "success": False,
+                    "message": "Wolkvox respondió error al borrar registros.",
+                    "remote": remote_result,
+                }), 502
+        except Exception as exc:
+            return jsonify({"success": False, "message": str(exc)}), 502
+
+    deleted_logs = AutoCampaignExecutionLog.query.filter_by(auto_campaign_id=campaign_id).delete()
+    db.session.commit()
+    log_gui_action("Borrar registros campaña automática", id=campaign_id, logs=deleted_logs)
+    return jsonify({
+        "success": True,
+        "message": "Registros remotos borrados si había endpoint configurado; logs locales eliminados.",
+        "deleted_logs": deleted_logs,
+        "remote": remote_result,
+    })
+
+
+@app.route("/auto-campaigns/<int:campaign_id>/reset", methods=["POST"])
+def auto_campaigns_reset(campaign_id):
+    from auto_campaigns import calculate_next_run
+    from database import AutoCampaign
+
+    campaign = AutoCampaign.query.get(campaign_id)
+    if not campaign:
+        return jsonify({"success": False, "message": "No se encontró la campaña automática."}), 404
+    if campaign.running:
+        return jsonify({"success": False, "message": "Detenga la campaña antes de reiniciar el ciclo."}), 409
+    campaign.next_run = calculate_next_run(campaign.schedule_type, campaign.schedule_value)
+    campaign.last_run = None
+    db.session.commit()
+    log_gui_action("Reiniciar ciclo campaña automática", id=campaign_id)
+    return jsonify({
+        "success": True,
+        "message": "Ciclo reiniciado.",
+        "next_run": campaign.next_run.strftime("%Y-%m-%d %H:%M:%S") if campaign.next_run else "",
+    })
 
 
 @app.route('/config-general')

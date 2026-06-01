@@ -56,6 +56,12 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a href="/auto-campaigns" class="nav-link {% if current_endpoint and current_endpoint.startswith('auto_campaigns') %}active{% endif %}">
+                            <i class="nav-icon fas fa-robot"></i>
+                            <p>CampaÃ±as automÃ¡ticas</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="/config-servers" class="nav-link {% if current_endpoint == 'config_servers' %}active{% endif %}">
                             <i class="nav-icon fas fa-server"></i>
                             <p>Servidores</p>

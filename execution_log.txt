@@ -165,3 +165,101 @@
 2026-05-28 08:39:51 - INFO - [API] Campaña id=19 flujo=26678 detectada como terminada
 2026-05-28 08:39:51 - INFO - [API] Parar campaña cuando el monitoreo detecta que terminó (id=19): OK
 2026-05-28 08:39:51 - INFO - [API] Secuencia Wolkvox finalizada campaña id=19
+2026-06-01 08:17:37 - INFO - [AUTO-CAMPAIGN] Iniciando id=1 nombre=Prueba-api
+2026-06-01 08:17:41 - ERROR - [AUTO-CAMPAIGN] id=1 lote fallido: Wolkvox HTTP 400
+2026-06-01 08:17:41 - INFO - [AUTO-CAMPAIGN] Finalizada id=1: fetched=1, sent=0, failed=1
+2026-06-01 08:17:47 - INFO - [AUTO-CAMPAIGN] Iniciando id=1 nombre=Prueba-api
+2026-06-01 08:17:50 - ERROR - [AUTO-CAMPAIGN] id=1 lote fallido: Wolkvox HTTP 400
+2026-06-01 08:17:50 - INFO - [AUTO-CAMPAIGN] Finalizada id=1: fetched=1, sent=0, failed=1
+2026-06-01 08:18:01 - INFO - [AUTO-CAMPAIGN] Iniciando id=1 nombre=Prueba-api
+2026-06-01 08:18:10 - ERROR - [AUTO-CAMPAIGN] id=1 lote fallido: Wolkvox HTTP 400
+2026-06-01 08:18:10 - INFO - [AUTO-CAMPAIGN] Finalizada id=1: fetched=1, sent=0, failed=1
+2026-06-01 08:20:07 - INFO - [AUTO-CAMPAIGN] Iniciando id=1 nombre=Prueba-api
+2026-06-01 08:20:09 - ERROR - [AUTO-CAMPAIGN] id=1 lote fallido: Wolkvox HTTP 400
+2026-06-01 08:20:09 - INFO - [AUTO-CAMPAIGN] Finalizada id=1: fetched=1, sent=0, failed=1
+2026-06-01 08:23:45 - INFO - [AUTO-CAMPAIGN] Iniciando id=1 nombre=Prueba-api
+2026-06-01 08:23:49 - ERROR - [AUTO-CAMPAIGN] id=1 lote fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'Campaign_id 26687 does not exist in your operation.'}
+2026-06-01 08:23:49 - INFO - [AUTO-CAMPAIGN] Finalizada id=1: fetched=1, sent=0, failed=1
+2026-06-01 08:25:02 - INFO - [AUTO-CAMPAIGN] Iniciando id=2 nombre=Prueba-api-2
+2026-06-01 08:25:03 - ERROR - [AUTO-CAMPAIGN] id=2 lote fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': '0 records has been added, please validate the data', 'data': [{'total_registers': '1', 'total_success': '0', 'total_errors': '1', 'array_errors': [{'error': 'CUSTOMER_ID is empty, object position 0', 'msg': 'CUSTOMER_ID is a required field, see schema for required fields'}]}]}
+2026-06-01 08:25:03 - INFO - [AUTO-CAMPAIGN] Finalizada id=2: fetched=1, sent=0, failed=1
+2026-06-01 08:25:12 - INFO - [AUTO-CAMPAIGN] Iniciando id=2 nombre=Prueba-api-2
+2026-06-01 08:25:14 - ERROR - [AUTO-CAMPAIGN] id=2 lote fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': '0 records has been added, please validate the data', 'data': [{'total_registers': '1', 'total_success': '0', 'total_errors': '1', 'array_errors': [{'error': 'CUSTOMER_ID is empty, object position 0', 'msg': 'CUSTOMER_ID is a required field, see schema for required fields'}]}]}
+2026-06-01 08:25:14 - INFO - [AUTO-CAMPAIGN] Finalizada id=2: fetched=1, sent=0, failed=1
+2026-06-01 08:27:44 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:27:47 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:27:48 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:27:51 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:29:02 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:29:04 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:29:19 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:29:21 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:29:33 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:29:36 - ERROR - [AUTO-CAMPAIGN] id=3 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'The campaign has not been started, please validate the data'}
+2026-06-01 08:29:36 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:29:56 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:29:59 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:30:23 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:30:26 - ERROR - [AUTO-CAMPAIGN] id=3 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'The campaign has not been started, please validate the data'}
+2026-06-01 08:30:26 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:31:03 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:31:05 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:31:07 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:31:10 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:32:38 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:32:40 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:32:56 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:32:58 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:33:08 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:33:11 - ERROR - [AUTO-CAMPAIGN] id=3 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'The campaign has not been started, please validate the data'}
+2026-06-01 08:33:11 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:33:27 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:33:30 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:33:35 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:33:38 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:48:30 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:48:34 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:48:51 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:48:53 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:49:04 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:49:08 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:49:17 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:49:24 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:49:53 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:49:56 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:50:29 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:50:32 - ERROR - [AUTO-CAMPAIGN] id=3 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'The campaign has not been started, please validate the data'}
+2026-06-01 08:50:32 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:58:22 - INFO - [AUTO-CAMPAIGN] Iniciando id=4 nombre=Prueba-api-4
+2026-06-01 08:58:26 - ERROR - [AUTO-CAMPAIGN] id=4 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'The campaign has not been started, please validate the data'}
+2026-06-01 08:58:26 - INFO - [AUTO-CAMPAIGN] Finalizada id=4: fetched=1, sent=1, failed=0
+2026-06-01 09:00:24 - INFO - [AUTO-CAMPAIGN] Iniciando id=4 nombre=Prueba-api-4
+2026-06-01 09:00:26 - INFO - [AUTO-CAMPAIGN] Finalizada id=4: fetched=1, sent=1, failed=0
+2026-06-01 09:00:42 - INFO - [AUTO-CAMPAIGN] Iniciando id=4 nombre=Prueba-api-4
+2026-06-01 09:00:44 - INFO - [AUTO-CAMPAIGN] Finalizada id=4: fetched=1, sent=1, failed=0
+2026-06-01 09:01:23 - INFO - [AUTO-CAMPAIGN] Iniciando id=4 nombre=Prueba-api-4
+2026-06-01 09:01:25 - INFO - [AUTO-CAMPAIGN] Finalizada id=4: fetched=1, sent=1, failed=0
+2026-06-01 09:12:08 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:12:11 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:13:15 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:13:18 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:13:41 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:13:49 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:14:18 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:14:20 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:15:20 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:15:22 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:15:37 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:15:39 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:15:46 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:15:50 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:16:39 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:16:42 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:16:52 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:16:55 - ERROR - [AUTO-CAMPAIGN] id=5 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'The campaign has not been started, please validate the data'}
+2026-06-01 09:16:55 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:17:07 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:17:10 - ERROR - [AUTO-CAMPAIGN] id=5 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'The campaign has not been started, please validate the data'}
+2026-06-01 09:17:10 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:17:25 - INFO - [AUTO-CAMPAIGN] Iniciando id=4 nombre=Prueba-api-4
+2026-06-01 09:17:28 - INFO - [AUTO-CAMPAIGN] Finalizada id=4: fetched=1, sent=1, failed=0

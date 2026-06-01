@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from flask import Flask
 from database import db, init_db, Campaign, ScheduledCSV, APIEndpoint, ScheduledQuery
+from auto_campaigns import check_auto_campaigns_schedule
 from werkzeug.utils import secure_filename
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -686,6 +687,17 @@ def execute_pending_tasks():
                     level="ERROR",
                 )
                 db.session.rollback()
+
+        try:
+            auto_result = check_auto_campaigns_schedule(app)
+            if auto_result.get("due"):
+                log_activity(
+                    f"Scheduler automático: {auto_result.get('started', 0)} iniciada(s), "
+                    f"{auto_result.get('skipped', 0)} omitida(s)"
+                )
+        except Exception as e:
+            log_task(f"Error revisando campañas automáticas: {e}", level="ERROR")
+            db.session.rollback()
 
 
 _initial_interval = get_campaign_check_interval_seconds()
