@@ -166,7 +166,7 @@ def validate_auto_campaign_payload(data: dict, *, partial=False) -> tuple[dict |
     if "field_mapping" in data:
         mapping = _loads_json(data.get("field_mapping"), None)
         if not isinstance(mapping, dict) or not mapping:
-            return None, "field_mapping debe ser un JSON objeto, por ejemplo {\"telephone\":\"telefono\"}."
+            return None, "field_mapping debe ser un JSON objeto, por ejemplo {\"strategy\":\"strategy\"}."
         payload["field_mapping"] = mapping
 
     if "schedule_type" in data:

@@ -110,7 +110,7 @@
             </div>
             <div class="mb-3">
                 <label>Consulta SQL BigQuery</label>
-                <textarea class="form-control sql-editor" name="bigquery_query" required>{{ campaign.bigquery_query if is_edit else 'SELECT telefono, nombre_completo FROM `proyecto.dataset.tabla`' }}</textarea>
+                <textarea class="form-control sql-editor" name="bigquery_query" required>{{ campaign.bigquery_query if is_edit else 'SELECT strategy, nombre_completo FROM `proyecto.dataset.tabla`' }}</textarea>
                 <button class="btn btn-sm btn-outline-secondary mt-2" type="button" id="precountButton">
                     <i class="fas fa-calculator mr-1"></i>Validar consulta / preconteo
                 </button>
@@ -118,7 +118,8 @@
             </div>
             <div class="mb-3">
                 <label>Mapeo de campos</label>
-                <textarea class="form-control json-editor" name="field_mapping" required>{{ campaign.field_mapping|tojson(indent=2) if is_edit else '{"telephone":"telefono","name":"nombre_completo"}' }}</textarea>
+                <textarea class="form-control json-editor" name="field_mapping" required>{{ campaign.field_mapping|tojson(indent=2) if is_edit else '{"strategy":"strategy","name":"nombre_completo"}' }}</textarea>
+                <small class="form-text text-muted">Mapee la columna de estrategia como `strategy` en lugar de `telephone`.</small>
             </div>
             <div class="row">
                 <div class="col-md-4 mb-3">
