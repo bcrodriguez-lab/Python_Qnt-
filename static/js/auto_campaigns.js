@@ -1,16 +1,15 @@
-(function () {
+﻿(function () {
     function message(text, ok) {
         const el = document.getElementById("autoCampaignMessage");
         if (!el) {
             alert(text);
-            return;
-        }
+            return;        }
         el.textContent = text;
         el.className = "alert mt-3 " + (ok ? "alert-success" : "alert-danger");
     }
-
+    
     async function parseResponse(response) {
-        const text = await response.text();
+      const text = await response.text();
         try {
             return text ? JSON.parse(text) : {};
         } catch (err) {
@@ -212,10 +211,23 @@
             resultEl.textContent = "Validando consulta...";
             resultEl.className = "ml-2 text-muted";
         }
+        let fieldMapping = null;
+        const form = document.getElementById("autoCampaignForm");
+        const formData = form ? new FormData(form) : new FormData();
+        const fieldMappingText = (formData.get("field_mapping") || "").trim();
+        if (fieldMappingText) {
+            try {
+                fieldMapping = JSON.parse(fieldMappingText);
+            } catch (err) {
+                message("El mapeo de campos debe ser JSON válido.", false);
+                return null;
+            }
+        }
+
         const response = await fetch("/auto-campaigns/test-count", {
             method: "POST",
             headers: { "Content-Type": "application/json", "Accept": "application/json" },
-            body: JSON.stringify({ query: query, campaign_id: campaignId || null })
+            body: JSON.stringify({ query: query, campaign_id: campaignId || null, field_mapping: fieldMapping })
         });
         const data = await parseResponse(response);
         if (!response.ok || data.success === false) {
@@ -227,10 +239,20 @@
             message(text, false);
             return null;
         }
+
         const total = Number(data.total || 0);
-        if (resultEl) {
-            resultEl.textContent = `Consulta válida. Registros: ${total}`;
-            resultEl.className = "ml-2 text-success";
+        if (data.warning) {
+            const text = data.warning;
+            if (resultEl) {
+                resultEl.textContent = text + ` Registros: ${total}`;
+                resultEl.className = "ml-2 text-warning";
+            }
+            message(text, false);
+        } else {
+            if (resultEl) {
+                resultEl.textContent = `Consulta válida. Registros: ${total}`;
+                resultEl.className = "ml-2 text-success";
+            }
         }
         return total;
     }

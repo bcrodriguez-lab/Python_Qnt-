@@ -27,7 +27,7 @@ from backend import (
 )
 from general_params import load_general_parameters, save_general_parameters
 from conexion_bigquery import get_bigquery_client
-from bigquery import escribir_resultados_campana, count_query_results, sync_campaigns_to_bigquery
+from bigquery import escribir_resultados_campana, count_query_results, sync_campaigns_to_bigquery, validate_query_columns
 from campaigns import (
     list_campaigns,
     get_campaign,
@@ -1011,10 +1011,33 @@ def auto_campaigns_test_count():
     if bq_client is None:
         return jsonify({"success": False, "message": "No se pudo inicializar el cliente de BigQuery."}), 500
 
+    field_mapping = None
+    if "field_mapping" in data and data.get("field_mapping"):
+        raw_mapping = data.get("field_mapping")
+        if isinstance(raw_mapping, str):
+            try:
+                field_mapping = json.loads(raw_mapping)
+            except json.JSONDecodeError:
+                return jsonify({"success": False, "message": "field_mapping debe ser JSON válido."}), 400
+        elif isinstance(raw_mapping, dict):
+            field_mapping = raw_mapping
+
+    if field_mapping:
+        validation = validate_query_columns(bq_client, query, field_mapping)
+        if not validation.get("success"):
+            log_gui_action("Preconteo campaña automática fallo", mensaje=validation.get("message"))
+            return jsonify(validation), 400
+
     result = count_query_results(bq_client, query)
     if not result.get("success"):
         log_gui_action("Preconteo campaña automática fallo", mensaje=result.get("message"))
         return jsonify(result), 400
+
+    # Si la validación devolvió advertencias, propágalas en la respuesta final
+    if field_mapping and 'validation' in locals() and validation.get('warning'):
+        result['warning'] = validation.get('warning')
+        # Asegurar que el mensaje principal incluya la advertencia
+        result['message'] = validation.get('warning') + (" - " + result.get('message', '') if result.get('message') else "")
 
     campaign_id = parse_auto_campaign_id(data.get("campaign_id") or data.get("id"))
     if campaign_id is not None:
@@ -1028,6 +1051,94 @@ def auto_campaigns_test_count():
 
     log_gui_action("Preconteo campaña automática", total=result.get("total"), campaign_id=campaign_id)
     return jsonify(result)
+
+
+@app.route("/auto-campaigns/validate-query-fields", methods=["POST"])
+def auto_campaigns_validate_query_fields():
+    """
+    Valida que una consulta BigQuery tenga los campos requeridos.
+    
+    Retorna:
+    - Los campos detectados en la consulta
+    - Los campos requeridos que faltan (si los hay)
+    - Las variaciones de nombres aceptadas
+    """
+    from services.query_validator import (
+        validate_and_normalize,
+        describe_field_aliases,
+        map_column_name,
+    )
+    
+    data = request.get_json() or {}
+    query = (data.get("query") or "").strip()
+    
+    if not query:
+        return jsonify({
+            "success": False,
+            "message": "La consulta SQL es obligatoria."
+        }), 400
+
+    global bq_client
+    if bq_client is None:
+        init_bigquery()
+    if bq_client is None:
+        return jsonify({
+            "success": False,
+            "message": "No se pudo inicializar el cliente de BigQuery."
+        }), 500
+
+    try:
+        # Ejecutar consulta
+        query_text = query.strip().rstrip(";")
+        if not re.match(r"^(SELECT|WITH)\b", query_text, re.IGNORECASE):
+            return jsonify({
+                "success": False,
+                "message": "Solo se permiten consultas SELECT o WITH."
+            }), 400
+
+        job = bq_client.query(query_text)
+        result = job.result(max_results=1)
+        rows = list(result)
+        
+        if not rows:
+            return jsonify({
+                "success": False,
+                "message": "La consulta no retorna resultados."
+            }), 400
+
+        # Validar y mapear campos
+        success, normalized_rows, error_msg = validate_and_normalize(rows)
+        
+        # Obtener información de campos detectados
+        raw_columns = list(rows[0].keys()) if rows else []
+        mapped_columns = {}
+        
+        for col in raw_columns:
+            mapped = map_column_name(col)
+            mapped_columns[col] = mapped or "NO_MAPEADO"
+        
+        response = {
+            "success": success,
+            "message": error_msg or "Consulta válida.",
+            "detected_columns": raw_columns,
+            "column_mapping": mapped_columns,
+            "field_aliases": describe_field_aliases(),
+            "sample_row": rows[0] if rows else None,
+        }
+        
+        if not success:
+            response["error"] = error_msg
+            return jsonify(response), 400
+        
+        return jsonify(response)
+    
+    except Exception as exc:
+        error_msg = f"Error validando consulta: {str(exc)}"
+        logger.error(error_msg)
+        return jsonify({
+            "success": False,
+            "message": error_msg
+        }), 500
 
 
 @app.route("/auto-campaigns/<int:campaign_id>", methods=["GET"])

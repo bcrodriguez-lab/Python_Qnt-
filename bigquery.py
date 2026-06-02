@@ -4,6 +4,8 @@ from google.cloud import bigquery
 from datetime import datetime
 import logging
 
+from services.query_validator import validate_and_normalize
+
 logger = logging.getLogger(__name__)
 
 # Campos que se escribirán en BigQuery (basados en el encabezado del CSV)
@@ -177,16 +179,19 @@ def escribir_resultados_campana(client, registros):
 def fetch_select_query_rows(client, query: str, *, max_rows: int = 50000) -> dict:
     """
     Ejecuta un SELECT en BigQuery y devuelve filas como list[dict] (para cargue Wolkvox).
+    
+    Automáticamente normaliza nombres de columnas y valida campos requeridos.
+    Acepta múltiples variaciones de nombres (NOMBRE, nombre_cliente, customer_name, etc.)
     """
     try:
         if not query or not isinstance(query, str):
             return {"success": False, "message": "La consulta es obligatoria.", "rows": []}
 
         query_text = query.strip().rstrip(";")
-        if not re.match(r"^SELECT\b", query_text, re.IGNORECASE):
+        if not re.match(r"^(SELECT|WITH)\b", query_text, re.IGNORECASE):
             return {
                 "success": False,
-                "message": "Solo se permiten consultas SELECT para obtener clientes.",
+                "message": "Solo se permiten consultas SELECT o WITH para obtener clientes.",
                 "rows": [],
             }
 
@@ -199,15 +204,80 @@ def fetch_select_query_rows(client, query: str, *, max_rows: int = 50000) -> dic
             if len(rows) >= max_rows:
                 break
 
+        # Validar y normalizar campos automáticamente
+        success, normalized_rows, error_msg = validate_and_normalize(rows)
+        if not success:
+            return {
+                "success": False,
+                "message": f"Validación de campos fallida: {error_msg}",
+                "rows": [],
+            }
+
         return {
             "success": True,
-            "rows": rows,
-            "total": len(rows),
-            "message": f"Se obtuvieron {len(rows)} fila(s) desde BigQuery.",
+            "rows": normalized_rows,
+            "total": len(normalized_rows),
+            "message": f"Se obtuvieron {len(normalized_rows)} fila(s) desde BigQuery.",
         }
     except Exception as e:
         logger.error(f"Error fetch_select_query_rows: {e}")
         return {"success": False, "message": str(e), "rows": []}
+
+
+def validate_query_columns(client, query: str, field_mapping: dict | None = None) -> dict:
+    """Valida que la consulta SELECT devuelva columnas compatibles con el mapeo de campaña."""
+    try:
+        if not query or not isinstance(query, str):
+            return {"success": False, "message": "La consulta es obligatoria."}
+
+        query_text = query.strip().rstrip(";")
+        if not re.match(r"^(SELECT|WITH)\b", query_text, re.IGNORECASE):
+            return {
+                "success": False,
+                "message": "Solo se permiten consultas SELECT o WITH para pruebas de compatibilidad.",
+            }
+
+        job = client.query(query_text)
+        result = job.result(max_results=1)
+        schema = getattr(result, "schema", None)
+        columns = []
+        if schema:
+            columns = [field.name for field in schema]
+        else:
+            rows = list(result)
+            if rows:
+                columns = list(rows[0].keys())
+
+        if field_mapping and isinstance(field_mapping, dict):
+            expected = {str(value).strip().lower() for value in field_mapping.values() if value}
+            found = {str(col).strip().lower() for col in columns} if columns else set()
+            # If there are no columns at all, it's an error
+            if not columns:
+                return {
+                    "success": False,
+                    "message": "La consulta no devolvió columnas. Verifica la consulta SQL.",
+                }
+            # If expected mapping columns are not present, return a warning but do not fail
+            if expected and not expected.intersection(found):
+                return {
+                    "success": True,
+                    "warning": (
+                        "La consulta no devuelve columnas compatibles con el mapeo de campaña. "
+                        f"Columnas encontradas: {', '.join(columns)}. "
+                        f"Al menos una de estas columnas era esperada: {', '.join(sorted(expected))}."
+                    ),
+                    "columns": columns,
+                    "message": f"Consulta válida (con advertencias). Columnas devueltas: {', '.join(columns)}",
+                }
+
+        return {
+            "success": True,
+            "columns": columns,
+            "message": f"Consulta válida. Columnas devueltas: {', '.join(columns)}",
+        }
+    except Exception as e:
+        logger.error(f"Error validate_query_columns: {e}")
+        return {"success": False, "message": str(e)}
 
 
 def count_query_results(client, query: str) -> dict:

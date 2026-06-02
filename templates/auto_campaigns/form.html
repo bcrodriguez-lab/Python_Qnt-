@@ -77,11 +77,11 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-4 mb-3">
+                <div class="col-md-6 mb-3">
                     <label>Fecha de inicio</label>
                     <input class="form-control" type="datetime-local" name="start_date" value="{{ campaign.start_date.replace(' ', 'T') if is_edit and campaign.start_date else '' }}">
                 </div>
-                <div class="col-md-4 mb-3">
+                <div class="col-md-6 mb-3">
                     <label>Usuario</label>
                     <select class="form-control" name="user_name" required>
                         <option value="">(Seleccionar usuario)</option>
@@ -89,10 +89,6 @@
                             <option value="{{ usuario }}" {% if is_edit and campaign.user_name == usuario %}selected{% endif %}>{{ usuario }}</option>
                         {% endfor %}
                     </select>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label>Último preconteo</label>
-                    <input class="form-control" value="{{ campaign.last_precount if is_edit else 0 }}" readonly>
                 </div>
             </div>
             <div class="mb-3">
@@ -111,15 +107,11 @@
             <div class="mb-3">
                 <label>Consulta SQL BigQuery</label>
                 <textarea class="form-control sql-editor" name="bigquery_query" required>{{ campaign.bigquery_query if is_edit else 'SELECT strategy, nombre_completo FROM `proyecto.dataset.tabla`' }}</textarea>
-                <button class="btn btn-sm btn-outline-secondary mt-2" type="button" id="precountButton">
-                    <i class="fas fa-calculator mr-1"></i>Validar consulta / preconteo
-                </button>
-                <span class="ml-2 text-muted" id="precountResult">Valida la consulta antes de guardar.</span>
             </div>
-            <div class="mb-3">
-                <label>Mapeo de campos</label>
-                <textarea class="form-control json-editor" name="field_mapping" required>{{ campaign.field_mapping|tojson(indent=2) if is_edit else '{"strategy":"strategy","name":"nombre_completo"}' }}</textarea>
-                <small class="form-text text-muted">Mapee la columna de estrategia como `strategy` en lugar de `telephone`.</small>
+            <div class="mb-3" id="fieldMappingGroup" style="display:none;">
+                <label>Mapeo de campos (oculto por defecto)</label>
+                <textarea class="form-control json-editor" name="field_mapping">{{ campaign.field_mapping|tojson(indent=2) if is_edit else '{\n  "customer_name": "customer_name",\n  "customer_last_name": "customer_last_name",\n  "id_type": "id_type",\n  "customer_id": "customer_id",\n  "age": "age",\n  "gender": "gender",\n  "country": "country",\n  "state": "state",\n  "city": "city",\n  "zone": "zone",\n  "address": "address",\n  "opt1": "opt1",\n  "opt2": "opt2",\n  "opt3": "opt3",\n  "opt4": "opt4",\n  "opt5": "opt5",\n  "opt6": "opt6",\n  "opt7": "opt7",\n  "opt8": "opt8",\n  "opt9": "opt9",\n  "opt10": "opt10",\n  "opt11": "opt11",\n  "opt12": "opt12",\n  "tel1": "tel1",\n  "tel2": "tel2",\n  "tel3": "tel3",\n  "tel4": "tel4",\n  "tel5": "tel5",\n  "tel6": "tel6",\n  "tel7": "tel7",\n  "tel8": "tel8",\n  "tel9": "tel9",\n  "tel10": "tel10",\n  "tel_extra": "tel_extra",\n  "email": "email",\n  "recall_date": "recall_date",\n  "recall_telephone": "recall_telephone"\n}' }}</textarea>
+                <small class="form-text text-muted">El mapeo se aplica por defecto al crear la campaña.</small>
             </div>
             <div class="row">
                 <div class="col-md-4 mb-3">

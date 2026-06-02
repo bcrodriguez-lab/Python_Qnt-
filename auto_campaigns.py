@@ -7,6 +7,45 @@ from database import AutoCampaign, AutoCampaignExecutionLog, db
 
 SCHEDULE_TYPES = ("manual", "one_time", "recurring")
 
+DEFAULT_FIELD_MAPPING = {
+    "customer_name": "customer_name",
+    "customer_last_name": "customer_last_name",
+    "id_type": "id_type",
+    "customer_id": "customer_id",
+    "age": "age",
+    "gender": "gender",
+    "country": "country",
+    "state": "state",
+    "city": "city",
+    "zone": "zone",
+    "address": "address",
+    "opt1": "opt1",
+    "opt2": "opt2",
+    "opt3": "opt3",
+    "opt4": "opt4",
+    "opt5": "opt5",
+    "opt6": "opt6",
+    "opt7": "opt7",
+    "opt8": "opt8",
+    "opt9": "opt9",
+    "opt10": "opt10",
+    "opt11": "opt11",
+    "opt12": "opt12",
+    "tel1": "tel1",
+    "tel2": "tel2",
+    "tel3": "tel3",
+    "tel4": "tel4",
+    "tel5": "tel5",
+    "tel6": "tel6",
+    "tel7": "tel7",
+    "tel8": "tel8",
+    "tel9": "tel9",
+    "tel10": "tel10",
+    "tel_extra": "tel_extra",
+    "email": "email",
+    "recall_date": "recall_date",
+    "recall_telephone": "recall_telephone",
+}
 
 def parse_auto_campaign_id(value) -> int | None:
     if value is None or value == "":
@@ -134,7 +173,6 @@ def validate_auto_campaign_payload(data: dict, *, partial=False) -> tuple[dict |
         "bigquery_query",
         "wolkvox_add_record_endpoint",
         "wolkvox_campaign_id",
-        "field_mapping",
         "schedule_type",
     )
     if not partial:
@@ -166,8 +204,12 @@ def validate_auto_campaign_payload(data: dict, *, partial=False) -> tuple[dict |
     if "field_mapping" in data:
         mapping = _loads_json(data.get("field_mapping"), None)
         if not isinstance(mapping, dict) or not mapping:
-            return None, "field_mapping debe ser un JSON objeto, por ejemplo {\"strategy\":\"strategy\"}."
+            return None, "field_mapping debe ser un JSON objeto."
         payload["field_mapping"] = mapping
+    else:
+        # Aplicar mapeo por defecto al crear campaña (no sobreescribir en updates parciales)
+        if not partial:
+            payload["field_mapping"] = DEFAULT_FIELD_MAPPING.copy()
 
     if "schedule_type" in data:
         schedule_type = (data.get("schedule_type") or "manual").strip()
@@ -215,6 +257,17 @@ def create_auto_campaign(data: dict) -> dict:
     if error:
         return {"success": False, "message": error}
     try:
+        # Si el request incluye un id explícito, evitar sobreescribir una campaña existente
+        explicit_id = None
+        try:
+            explicit_id = int((data.get("id") or data.get("campaign_id") or "").strip() or 0)
+        except Exception:
+            explicit_id = None
+        if explicit_id:
+            existing = AutoCampaign.query.get(explicit_id)
+            if existing:
+                return {"success": False, "message": f"Ya existe una campaña con id={explicit_id}. No se sobrescribirá."}
+            payload["id"] = explicit_id
         campaign = AutoCampaign(**payload)
         db.session.add(campaign)
         db.session.commit()

@@ -1,16 +1,19 @@
 import csv
 import json
+import re
 import threading
 from datetime import datetime
 from pathlib import Path
 
 import requests
+import time
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from auto_campaigns import calculate_next_run
 from conexion_bigquery import get_bigquery_client
 from database import AutoCampaign, AutoCampaignExecutionLog, db
 from api_handlers.Wolkvox_Carga_Clientes import transform_datos_clientes, serialize_clientes_body
+from services.query_validator import validate_and_normalize
 
 BASE_DIR = Path(__file__).resolve().parent
 AUTO_UPLOAD_DIR = BASE_DIR / "uploads" / "auto_campaigns"
@@ -58,10 +61,26 @@ def _normalize_bigquery_value(value):
 
 
 def fetch_data_from_bigquery(query: str, params=None) -> list[dict]:
+    """
+    Ejecuta una consulta BigQuery y valida que incluya campos requeridos.
+    
+    Acepta múltiples variaciones de nombres de columnas (ej: NOMBRE, nombre_cliente, 
+    customer_name, etc.) y mapea automáticamente a campos estándar.
+    
+    Args:
+        query: Consulta SQL SELECT/WITH
+        params: Ignorado (compatibilidad)
+    
+    Returns:
+        Lista de diccionarios normalizados
+    
+    Raises:
+        ValueError: Si la consulta es inválida o falta un campo requerido
+    """
     del params
     query_text = _render_query(query).strip().rstrip(";")
-    if not query_text.lower().startswith("select"):
-        raise ValueError("Solo se permiten consultas SELECT para campañas automáticas.")
+    if not re.match(r"^(SELECT|WITH)\b", query_text, re.IGNORECASE):
+        raise ValueError("Solo se permiten consultas SELECT o WITH para campañas automáticas.")
 
     client = get_bigquery_client()
     if client is None:
@@ -70,11 +89,42 @@ def fetch_data_from_bigquery(query: str, params=None) -> list[dict]:
     rows = []
     for row in client.query(query_text).result():
         rows.append({key: _normalize_bigquery_value(value) for key, value in dict(row).items()})
-    return rows
+    
+    # Validar y normalizar campos
+    success, normalized_rows, error_msg = validate_and_normalize(rows)
+    if not success:
+        raise ValueError(f"Validación de consulta fallida: {error_msg}")
+    
+    return normalized_rows
 
 
 def map_rows_for_wolkvox(rows: list[dict], field_mapping: dict) -> tuple[list[dict], list[str]]:
+    """
+    Mapea filas normalizadas a campos Wolkvox.
+    
+    Los campos ya vienen normalizados de fetch_data_from_bigquery.
+    Este mapeo solo reorganiza al formato esperado por Wolkvox.
+    
+    Args:
+        rows: Filas con campos normalizados (ej: customer_name, customer_id, etc.)
+        field_mapping: Mapeo {target_field: source_field} (generalmente 1:1 para campos normalizados)
+    
+    Returns:
+        (mapped_rows, column_list)
+    """
     columns = list(field_mapping.keys())
+    
+    if rows and field_mapping:
+        available_columns = set(rows[0].keys())
+        expected_sources = {str(value).strip().lower() for value in field_mapping.values() if value}
+        if expected_sources and not expected_sources.intersection(available_columns):
+            _log(
+                f"Advertencia: la consulta no devuelve columnas compatibles con el mapeo de campaña. "
+                f"Columnas encontradas: {', '.join(sorted(available_columns))}. "
+                f"Al menos una de estas columnas era esperada: {', '.join(sorted(expected_sources))}.",
+                level="WARN",
+            )
+
     mapped = []
     for row in rows:
         mapped_row = {}
@@ -140,15 +190,44 @@ def start_wolkvox_campaign(endpoint: str, token: str, campaign_id: str, *, serve
     url = _build_start_campaign_url(add_record_url, campaign_id)
     headers = {"wolkvox-token": token} if token else {}
     try:
-        response = requests.put(url, headers=headers, timeout=60)
-        return {
-            "success": response.ok,
-            "message": f"Wolkvox start HTTP {response.status_code}",
-            "url": url,
-            "response": _response_summary(response),
-        }
-    except requests.Timeout:
-        return {"success": False, "message": "Timeout iniciando campaña en Wolkvox.", "url": url}
+        # Retry on transient errors (e.g., 409 conflict or 5xx)
+        max_retries = 4
+        backoff_factor = 1.2
+        last_summary = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                response = requests.put(url, headers=headers, timeout=60)
+                summary = _response_summary(response)
+                last_summary = summary
+                if response.ok:
+                    return {
+                        "success": True,
+                        "message": f"Wolkvox start HTTP {response.status_code}",
+                        "url": url,
+                        "response": summary,
+                    }
+
+                if response.status_code in (409, 429) or (500 <= response.status_code < 600):
+                    _log(f"Wolkvox start returned {response.status_code} on attempt {attempt}. Will retry.", level="WARN")
+                    if attempt < max_retries:
+                        delay = backoff_factor * (2 ** (attempt - 1))
+                        time.sleep(delay)
+                        continue
+                    else:
+                        return {"success": False, "message": f"Wolkvox start HTTP {response.status_code} after {attempt} attempts.", "url": url, "response": summary}
+
+                return {"success": False, "message": f"Wolkvox start HTTP {response.status_code}", "url": url, "response": summary}
+            except requests.Timeout:
+                _log(f"Timeout iniciando campaña en Wolkvox on attempt {attempt}.", level="WARN")
+                if attempt < max_retries:
+                    delay = backoff_factor * (2 ** (attempt - 1))
+                    time.sleep(delay)
+                    continue
+                return {"success": False, "message": "Timeout iniciando campaña en Wolkvox.", "url": url}
+            except Exception as exc:
+                _log(f"Error iniciando campaña Wolkvox on attempt {attempt}: {exc}", level="ERROR")
+                return {"success": False, "message": str(exc), "url": url}
+        return {"success": False, "message": "Error desconocido iniciando campaña Wolkvox.", "url": url, "response": last_summary}
     except Exception as exc:
         return {"success": False, "message": str(exc), "url": url}
 
@@ -170,20 +249,63 @@ def send_csv_to_wolkvox(
         body = transform_datos_clientes(csv_content)
         if not body:
             return {"success": False, "records_sent": 0, "message": "El CSV no contiene clientes para enviar.", "url": url}
-        response = requests.post(
-            url,
-            headers=headers,
-            data=serialize_clientes_body(body).encode("utf-8"),
-            timeout=120,
-        )
-        summary = _response_summary(response)
-        return {
-            "success": response.ok,
-            "records_sent": 0,
-            "message": f"Wolkvox HTTP {response.status_code}",
-            "url": url,
-            "response": summary,
-        }
+        # Implement retry/backoff for transient Wolkvox conflicts or 5xx errors
+        max_retries = 5
+        backoff_factor = 1.5
+        last_summary = None
+        payload = serialize_clientes_body(body).encode("utf-8")
+        for attempt in range(1, max_retries + 1):
+            try:
+                response = requests.post(url, headers=headers, data=payload, timeout=120)
+                summary = _response_summary(response)
+                last_summary = summary
+                # If successful, return immediately
+                if response.ok:
+                    return {
+                        "success": True,
+                        "records_sent": 0,
+                        "message": f"Wolkvox HTTP {response.status_code}",
+                        "url": url,
+                        "response": summary,
+                    }
+
+                # If conflict (already processing) or server error, retry with backoff
+                if response.status_code in (409, 429) or (500 <= response.status_code < 600):
+                    _log(f"Wolkvox returned {response.status_code} on attempt {attempt}. Will retry.", level="WARN")
+                    if attempt < max_retries:
+                        delay = backoff_factor * (2 ** (attempt - 1))
+                        time.sleep(delay)
+                        continue
+                    else:
+                        # exhausted retries
+                        return {
+                            "success": False,
+                            "records_sent": 0,
+                            "message": f"Wolkvox HTTP {response.status_code} after {attempt} attempts.",
+                            "url": url,
+                            "response": summary,
+                        }
+
+                # Other non-retriable errors: return immediately with details
+                return {
+                    "success": False,
+                    "records_sent": 0,
+                    "message": f"Wolkvox HTTP {response.status_code}",
+                    "url": url,
+                    "response": summary,
+                }
+            except requests.Timeout:
+                _log(f"Timeout cargando CSV a Wolkvox on attempt {attempt}.", level="WARN")
+                if attempt < max_retries:
+                    delay = backoff_factor * (2 ** (attempt - 1))
+                    time.sleep(delay)
+                    continue
+                return {"success": False, "records_sent": 0, "message": "Timeout cargando CSV a Wolkvox.", "url": url}
+            except Exception as exc:
+                _log(f"Error enviando a Wolkvox on attempt {attempt}: {exc}", level="ERROR")
+                return {"success": False, "records_sent": 0, "message": str(exc), "url": url}
+        # Fallback if loop finishes without return
+        return {"success": False, "records_sent": 0, "message": "Error desconocido enviando a Wolkvox.", "url": url, "response": last_summary}
     except requests.Timeout:
         return {"success": False, "records_sent": 0, "message": "Timeout cargando CSV a Wolkvox.", "url": url}
     except Exception as exc:

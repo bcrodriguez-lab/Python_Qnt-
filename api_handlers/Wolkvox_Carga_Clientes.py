@@ -222,7 +222,7 @@ def resolve_url_template(url_template: str, payload: dict) -> str:
 
     missing: list[str] = []
 
-    def _replace(match: re.Match) -> str:
+    def _replace(match: "re.Match[str]") -> str:
         name = match.group(1)
         value = payload.get(name)
         if value is None or not str(value).strip():
