@@ -60,8 +60,10 @@
                         <button class="btn btn-sm btn-warning" title="Detener" data-action="stop" data-id="{{ campaign.id }}"><i class="fas fa-stop"></i></button>
                         <a class="btn btn-sm btn-info" title="Informe" href="/auto-campaigns/{{ campaign.id }}/report"><i class="fas fa-file-download"></i></a>
                         <button class="btn btn-sm btn-secondary" title="Reiniciar ciclo" data-action="reset" data-id="{{ campaign.id }}"><i class="fas fa-redo"></i></button>
+                        <button class="btn btn-sm btn-outline-secondary" title="Modificar (descarga reporte previo)" data-action="modify" data-id="{{ campaign.id }}"><i class="fas fa-edit"></i></button>
                         <button class="btn btn-sm btn-outline-danger" title="Borrar registros/logs" data-action="records" data-id="{{ campaign.id }}"><i class="fas fa-eraser"></i></button>
                         <button class="btn btn-sm btn-danger" title="Eliminar" data-action="delete" data-id="{{ campaign.id }}"><i class="fas fa-trash"></i></button>
+
                     </td>
                 </tr>
             {% else %}

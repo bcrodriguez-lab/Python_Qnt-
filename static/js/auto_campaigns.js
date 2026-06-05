@@ -109,13 +109,36 @@
     }
 
     async function postAction(id, action) {
+        // "modify" descarga el reporte previo y luego navega al formulario de edición.
+        if (action === 'modify') {
+            if (!confirm('Se descargará el informe en Excel antes de editar. ¿Continuar?')) return;
+            const response = await fetch(`/auto-campaigns/${id}/download-report-before-edit`, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' }
+            });
+            // Si falla, igual dejamos que el usuario edite.
+            try {
+                const data = await parseResponse(response);
+                if (response.ok && data.success !== false) {
+                    // OK
+                } else if (data && data.message) {
+                    message(data.message, false);
+                }
+            } catch (e) {
+                // Si el endpoint devuelve binario, parseResponse fallará; en ese caso igual navegamos.
+            }
+            window.location.href = `/auto-campaigns/${id}`;
+            return;
+        }
+
         const map = {
             run: { url: `/auto-campaigns/${id}/run`, method: "POST", confirm: null },
             stop: { url: `/auto-campaigns/${id}/stop`, method: "POST", confirm: null },
             reset: { url: `/auto-campaigns/${id}/reset`, method: "POST", confirm: "¿Reiniciar el ciclo de esta campaña?" },
             records: { url: `/auto-campaigns/${id}/records`, method: "DELETE", confirm: "¿Borrar registros remotos si hay endpoint y eliminar logs locales?" },
-            delete: { url: `/auto-campaigns/${id}`, method: "DELETE", confirm: "¿Eliminar esta campaña automática?" }
+            delete: { url: `/auto-campaigns/${id}/delete-report`, method: "POST", confirm: "¿Eliminar esta campaña automática? (Descargará el reporte en Excel antes de eliminar)" }
         };
+
         const cfg = map[action];
         if (!cfg) return;
         if (cfg.confirm && !confirm(cfg.confirm)) return;

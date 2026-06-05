@@ -3,6 +3,12 @@ from flask import jsonify, render_template, request, send_from_directory, send_f
 import io
 import csv
 from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.filters import AutoFilter
+from excel_report_builder import build_wolkvox_excel, _safe_filename
+
+
 import json
 import requests
 import re
@@ -88,6 +94,80 @@ from auto_campaign_executor import (
 
 # Crear conexión global a BigQuery al iniciar la aplicación
 bq_client = None
+
+
+def _to_wolkvox_ts(s: str, is_end: bool = False) -> str:
+    if not s:
+        return ''
+    try:
+        if 'T' in s or len(s) > 10:
+            dt = datetime.fromisoformat(s)
+        else:
+            d = date.fromisoformat(s)
+            dt = datetime(d.year, d.month, d.day, 23, 59, 59) if is_end else datetime(d.year, d.month, d.day, 0, 0, 0)
+        return dt.strftime('%Y%m%d%H%M%S')
+    except Exception:
+        return s
+
+
+def _wolkvox_report_rows(server: str, date_ini: str, date_end: str) -> list:
+    """Llama a Wolkvox reports_manager y retorna rows normalizadas."""
+    date_ini_ts = _to_wolkvox_ts(date_ini, is_end=False)
+    date_end_ts = _to_wolkvox_ts(date_end, is_end=True)
+
+    url = None
+    try:
+        srv = get_server(server)
+    except Exception:
+        srv = None
+
+    if srv:
+        prefix = (srv.get('url') or '').strip().rstrip('/')
+        base_url = prefix if prefix.lower().startswith('http') else f"https://wv{prefix}.wolkvox.com"
+        url = (
+            f"{base_url}/api/v2/reports_manager.php"
+            f"?api=cdr_1"
+            f"&date_ini={date_ini_ts}"
+            f"&date_end={date_end_ts}"
+        )
+    else:
+        if server.lower().startswith('http'):
+            base_url = server.rstrip('/')
+        else:
+            base_url = f"https://wv{server}.wolkvox.com"
+        if base_url.endswith('/'):
+            base_url = base_url.rstrip('/')
+        url = (
+            f"{base_url}/api/v2/reports_manager.php"
+            f"?api=cdr_1"
+            f"&date_ini={date_ini_ts}"
+            f"&date_end={date_end_ts}"
+        )
+
+    try:
+        headers = get_authorization_headers(server) or {}
+    except Exception:
+        headers = {}
+
+    resp = requests.get(url, headers=headers, timeout=60)
+    if resp.status_code != 200:
+        raise RuntimeError(f"Wolkvox devolvió {resp.status_code}: {resp.text[:500]}")
+
+    data_json = resp.json()
+    rows = []
+    if isinstance(data_json, list):
+        rows = data_json
+    elif isinstance(data_json, dict):
+        if 'data' in data_json and isinstance(data_json['data'], list):
+            rows = data_json['data']
+        elif 'files' in data_json and isinstance(data_json['files'], list):
+            rows = data_json['files']
+        else:
+            rows = [data_json]
+    else:
+        rows = [{'raw': resp.text}]
+    return rows
+
 
 
 @app.context_processor
@@ -312,114 +392,31 @@ def reports_download():
     # Procesar respuesta
     # =========================================================
 
-    rows = []
-    headers_row = []
+    # Usamos el builder nuevo (con formato) reutilizando lógica actual
+    # Nota: respetamos el formato/orden del Excel pero minimizamos duplicación.
 
     try:
-
         data_json = resp.json()
-
         if isinstance(data_json, list):
-
             rows = data_json
-
         elif isinstance(data_json, dict):
-
             if 'data' in data_json and isinstance(data_json['data'], list):
-
                 rows = data_json['data']
-
             elif 'files' in data_json and isinstance(data_json['files'], list):
-
                 rows = data_json['files']
-
             else:
-
                 rows = [data_json]
-
-    except Exception:
-
-        text = resp.text
-
-        try:
-
-            reader = csv.reader(io.StringIO(text))
-
-            csv_rows = list(reader)
-
-            if csv_rows:
-
-                headers_row = csv_rows[0]
-
-                rows = [
-                    dict(zip(headers_row, r))
-                    for r in csv_rows[1:]
-                ]
-
-        except Exception:
-
-            rows = [{
-                'raw': resp.text
-            }]
-
-    # =========================================================
-    # Obtener columnas
-    # =========================================================
-
-    all_keys = []
-
-    for r in rows:
-
-        if isinstance(r, dict):
-
-            for k in r.keys():
-
-                if k not in all_keys:
-
-                    all_keys.append(k)
-
-    # =========================================================
-    # Crear Excel
-    # =========================================================
-
-    wb = Workbook()
-
-    ws = wb.active
-
-    ws.title = 'report'
-
-    # Cabecera
-    ws.append(all_keys or ['raw'])
-
-    # Datos
-    for r in rows:
-
-        if isinstance(r, dict):
-
-            row = [r.get(k, '') for k in all_keys]
-
         else:
-
-            row = [str(r)]
-
-        ws.append(row)
-
-    # =========================================================
-    # Guardar archivo
-    # =========================================================
-
-    bio = io.BytesIO()
-
-    wb.save(bio)
-
-    bio.seek(0)
+            rows = [{'raw': resp.text}]
+    except Exception:
+        rows = [{'raw': resp.text}]
 
     # Nombre de archivo solicitado: "1. Detalle de las llamadas.YYYYMMDD-<Servidor>.xlsx"
     today_str = datetime.utcnow().strftime('%Y%m%d')
-    safe_server = (server or 'server').strip()
-    # Reemplazar caracteres no seguros por guión bajo
-    safe_server = re.sub(r'[^0-9A-Za-z._-]', '_', safe_server)
+    safe_server = _safe_filename(server or 'server')
     filename = f"1. Detalle de las llamadas.{today_str}-{safe_server}.xlsx"
+
+    bio, _ = build_wolkvox_excel(rows=rows, filename=filename)
 
     return send_file(
         bio,
@@ -427,6 +424,8 @@ def reports_download():
         download_name=filename,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
+
 
 @app.route("/api/invoke", methods=["POST"])
 def invoke_api():
@@ -1162,13 +1161,138 @@ def auto_campaigns_update(campaign_id):
     return jsonify(result)
 
 
+@app.route("/auto-campaigns/<int:campaign_id>/download-report-before-edit", methods=["POST"])
+def auto_campaigns_download_report_before_edit(campaign_id):
+    """Descarga XLSX previo a edición (servidor + campaña + fin) sin borrar la campaña."""
+    from database import AutoCampaign, AutoCampaignExecutionLog
+
+    campaign = AutoCampaign.query.get(campaign_id)
+    if not campaign:
+        return jsonify({"success": False, "message": "No se encontró la campaña automática."}), 404
+
+    server_name = (campaign.server_name or "").strip()
+    campaign_name = (campaign.name or "").strip() or f"campaign_{campaign_id}"
+
+    log = (
+        AutoCampaignExecutionLog.query.filter_by(auto_campaign_id=campaign_id)
+        .order_by(AutoCampaignExecutionLog.end_time.desc())
+        .first()
+    )
+
+    end_dt = log.end_time if log and log.end_time else campaign.last_run
+    if not end_dt:
+        end_dt = datetime.utcnow()
+
+    # Rango para Wolkvox: mismo criterio que delete-report
+    date_ini = end_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    date_end = end_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    date_ini_str = date_ini.strftime("%Y-%m-%d")
+    date_end_str = date_end.strftime("%Y-%m-%d")
+
+    if not server_name:
+        return jsonify({"success": False, "message": "La campaña no tiene server_name configurado."}), 400
+
+    try:
+        rows = _wolkvox_report_rows(server_name, date_ini_str, date_end_str)
+    except Exception as exc:
+        return jsonify({"success": False, "message": f"Error generando reporte previo a edición: {exc}"}), 502
+
+    safe_server = _safe_filename(server_name)
+    safe_campaign = _safe_filename(campaign_name)
+    end_file_ts = end_dt.strftime("%Y%m%d_%H%M%S")
+    filename = f"reporte_{safe_server}_{safe_campaign}_finalizado_{end_file_ts}.xlsx"
+
+    bio, _ = build_wolkvox_excel(rows=rows, filename=filename)
+
+    return send_file(
+        bio,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+
+@app.route("/auto-campaigns/<int:campaign_id>/delete-report", methods=["POST"])
+def auto_campaigns_delete_report(campaign_id):
+    """Elimina la campaña automática descargando un XLSX (servidor + campaña + fin)."""
+    from database import AutoCampaign, AutoCampaignExecutionLog
+
+    campaign = AutoCampaign.query.get(campaign_id)
+    if not campaign:
+        return jsonify({"success": False, "message": "No se encontró la campaña automática."}), 404
+
+    if campaign.running:
+        return jsonify({"success": False, "message": "No se puede borrar una campaña en ejecución."}), 409
+
+    server_name = (campaign.server_name or "").strip()
+    campaign_name = (campaign.name or "").strip() or f"campaign_{campaign_id}"
+
+    # Tomar fecha/hora de finalización desde el último log (si existe)
+    log = (
+        AutoCampaignExecutionLog.query.filter_by(auto_campaign_id=campaign_id)
+        .order_by(AutoCampaignExecutionLog.end_time.desc())
+        .first()
+    )
+
+    end_dt = log.end_time if log and log.end_time else campaign.last_run
+    if not end_dt:
+        # fallback: usar ahora UTC
+        end_dt = datetime.utcnow()
+
+    end_str = end_dt.strftime("%Y-%m-%dT%H:%M:%S")
+
+    # Ventana para reportes: 1 día hacia atrás (ajustable)
+    date_ini = (end_dt.replace(hour=0, minute=0, second=0, microsecond=0))
+    date_end = (end_dt.replace(hour=23, minute=59, second=59, microsecond=999999))
+
+    date_ini_str = date_ini.strftime("%Y-%m-%d")
+    date_end_str = date_end.strftime("%Y-%m-%d")
+
+    if not server_name:
+        return jsonify({"success": False, "message": "La campaña no tiene server_name configurado."}), 400
+
+    # Llamar a Wolkvox y generar Excel con formato
+    try:
+        rows = _wolkvox_report_rows(server_name, date_ini_str, date_end_str)
+    except Exception as exc:
+        return jsonify({"success": False, "message": f"Error generando reporte para eliminación: {exc}"}), 502
+
+    safe_server = _safe_filename(server_name)
+    safe_campaign = _safe_filename(campaign_name)
+    end_file_ts = end_dt.strftime("%Y%m%d_%H%M%S")
+    filename = f"reporte_{safe_server}_{safe_campaign}_finalizado_{end_file_ts}.xlsx"
+
+    bio, _ = build_wolkvox_excel(rows=rows, filename=filename)
+
+    # Enviar el archivo ANTES de eliminar (para no perder metadatos)
+    # Luego eliminamos la campaña y logs.
+    result = delete_auto_campaign(campaign_id)
+    if not result.get("success"):
+        # Si falló el delete, igual preferimos no romper descarga; pero avisamos
+        log_gui_action("Eliminar campaña automática fallo (post report)", id=campaign_id)
+
+    log_gui_action("Eliminar campaña automática con descarga", id=campaign_id, server=server_name, nombre=campaign_name, end=end_str)
+
+    from flask import make_response
+    resp = make_response(send_file(
+        bio,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ))
+    return resp
+
+
 @app.route("/auto-campaigns/<int:campaign_id>", methods=["DELETE"])
 def auto_campaigns_delete(campaign_id):
+    # Mantener compatibilidad: eliminación normal sin reporte
     result = delete_auto_campaign(campaign_id)
     if not result.get("success"):
         return jsonify(result), 400
     log_gui_action("Eliminar campaña automática", id=campaign_id)
     return jsonify(result)
+
 
 
 @app.route("/auto-campaigns/<int:campaign_id>/run", methods=["POST"])

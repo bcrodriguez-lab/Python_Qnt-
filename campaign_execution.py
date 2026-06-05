@@ -682,6 +682,7 @@ def run_campaign_wolkvox_workflow(campaign_id: int) -> None:
     finished = _run_monitor_loop(campaign)
 
     if finished:
+        # 1) Parar campaña en Wolkvox
         for step in rules["on_finished"]:
             result = _invoke_named_api(step["api"], campaign)
             if result.get("success"):
@@ -692,6 +693,99 @@ def run_campaign_wolkvox_workflow(campaign_id: int) -> None:
                     f"{result.get('message')}",
                     level="WARNING",
                 )
+
+        # 2) Marcar fin + opcional: generar archivo Excel y dejarlo listo para descarga
+        # Nota: no es posible "descargar al navegador" desde este worker sin una petición HTTP.
+        # En su lugar, generamos un XLSX formateado y lo dejamos en uploads/descargas como archivo.
+        try:
+            from excel_report_builder import build_wolkvox_excel, _safe_filename
+            import os
+
+            server_name = (campaign.servidor or "").strip()
+            campaign_name = (campaign.nombre or "").strip() or f"campaign_{campaign.id}"
+            end_dt = datetime.utcnow()
+
+            # Ventana: día completo del end_dt
+            date_ini = end_dt.replace(hour=0, minute=0, second=0, microsecond=0).strftime("%Y-%m-%d")
+            date_end = end_dt.replace(hour=23, minute=59, second=59, microsecond=999999).strftime("%Y-%m-%d")
+
+            # Reutilizamos la lógica de /reports/download desde Wolkvox (sin endpoint)
+            # Construimos URL y consumimos
+            from backend import get_authorization_headers, get_server
+            import requests
+
+            def _to_wolkvox_ts(s: str, is_end: bool = False) -> str:
+                if not s:
+                    return ""
+                if "T" in s or len(s) > 10:
+                    dt = datetime.fromisoformat(s)
+                else:
+                    from datetime import date
+                    d = date.fromisoformat(s)
+                    dt = datetime(d.year, d.month, d.day, 23, 59, 59) if is_end else datetime(d.year, d.month, d.day, 0, 0, 0)
+                return dt.strftime("%Y%m%d%H%M%S")
+
+            date_ini_ts = _to_wolkvox_ts(date_ini, is_end=False)
+            date_end_ts = _to_wolkvox_ts(date_end, is_end=True)
+
+            srv = None
+            try:
+                srv = get_server(server_name)
+            except Exception:
+                srv = None
+
+            if srv:
+                prefix = (srv.get("url") or "").strip().rstrip("/")
+                base_url = prefix if prefix.lower().startswith("http") else f"https://wv{prefix}.wolkvox.com"
+            else:
+                if server_name.lower().startswith("http"):
+                    base_url = server_name.rstrip("/")
+                else:
+                    base_url = f"https://wv{server_name}.wolkvox.com"
+                base_url = base_url.rstrip("/")
+
+            url = (
+                f"{base_url}/api/v2/reports_manager.php"
+                f"?api=cdr_1"
+                f"&date_ini={date_ini_ts}"
+                f"&date_end={date_end_ts}"
+            )
+
+            headers = get_authorization_headers(server_name) or {}
+            resp = requests.get(url, headers=headers, timeout=60)
+            resp.raise_for_status()
+
+            data_json = resp.json()
+            rows = []
+            if isinstance(data_json, list):
+                rows = data_json
+            elif isinstance(data_json, dict):
+                if "data" in data_json and isinstance(data_json["data"], list):
+                    rows = data_json["data"]
+                elif "files" in data_json and isinstance(data_json["files"], list):
+                    rows = data_json["files"]
+                else:
+                    rows = [data_json]
+            else:
+                rows = [{"raw": resp.text}]
+
+            safe_server = _safe_filename(server_name)
+            safe_campaign = _safe_filename(campaign_name)
+            end_file_ts = end_dt.strftime("%Y%m%d_%H%M%S")
+            filename = f"auto_campaign_report_{safe_server}_{safe_campaign}_{end_file_ts}.xlsx"
+
+            # Guardar en la carpeta uploads (o downloads si prefieres)
+            output_dir = os.path.join(os.path.dirname(__file__), "uploads", "auto_campaigns")
+            os.makedirs(output_dir, exist_ok=True)
+            output_path = os.path.join(output_dir, filename)
+
+            bio, _ = build_wolkvox_excel(rows=rows, filename=filename)
+            with open(output_path, "wb") as f:
+                f.write(bio.getvalue())
+
+            _log(f"[API] XLSX generado al finalizar campaña id={campaign.id}: {output_path}")
+        except Exception as exc:
+            _log(f"[API] No se pudo generar XLSX al finalizar campaña id={campaign.id}: {exc}", level="WARNING")
 
     _log(f"[API] Secuencia Wolkvox finalizada campaña id={campaign.id}")
 
