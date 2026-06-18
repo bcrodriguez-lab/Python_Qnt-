@@ -110,66 +110,6 @@ def _to_wolkvox_ts(s: str, is_end: bool = False) -> str:
         return s
 
 
-def _wolkvox_report_rows(server: str, date_ini: str, date_end: str) -> list:
-    """Llama a Wolkvox reports_manager y retorna rows normalizadas."""
-    date_ini_ts = _to_wolkvox_ts(date_ini, is_end=False)
-    date_end_ts = _to_wolkvox_ts(date_end, is_end=True)
-
-    url = None
-    try:
-        srv = get_server(server)
-    except Exception:
-        srv = None
-
-    if srv:
-        prefix = (srv.get('url') or '').strip().rstrip('/')
-        base_url = prefix if prefix.lower().startswith('http') else f"https://wv{prefix}.wolkvox.com"
-        url = (
-            f"{base_url}/api/v2/reports_manager.php"
-            f"?api=cdr_1"
-            f"&date_ini={date_ini_ts}"
-            f"&date_end={date_end_ts}"
-        )
-    else:
-        if server.lower().startswith('http'):
-            base_url = server.rstrip('/')
-        else:
-            base_url = f"https://wv{server}.wolkvox.com"
-        if base_url.endswith('/'):
-            base_url = base_url.rstrip('/')
-        url = (
-            f"{base_url}/api/v2/reports_manager.php"
-            f"?api=cdr_1"
-            f"&date_ini={date_ini_ts}"
-            f"&date_end={date_end_ts}"
-        )
-
-    try:
-        headers = get_authorization_headers(server) or {}
-    except Exception:
-        headers = {}
-
-    resp = requests.get(url, headers=headers, timeout=60)
-    if resp.status_code != 200:
-        raise RuntimeError(f"Wolkvox devolvió {resp.status_code}: {resp.text[:500]}")
-
-    data_json = resp.json()
-    rows = []
-    if isinstance(data_json, list):
-        rows = data_json
-    elif isinstance(data_json, dict):
-        if 'data' in data_json and isinstance(data_json['data'], list):
-            rows = data_json['data']
-        elif 'files' in data_json and isinstance(data_json['files'], list):
-            rows = data_json['files']
-        else:
-            rows = [data_json]
-    else:
-        rows = [{'raw': resp.text}]
-    return rows
-
-
-
 @app.context_processor
 def inject_admin_ui():
     from flask import request
@@ -1976,6 +1916,87 @@ def reportes():
         default_start=default_start,
         default_end=default_end,
     )
+# ========== INTEGRACIÓN CON DESCARGA AUTOMÁTICA ==========
+try:
+    from download_auto import iniciar_scheduler, detener_scheduler, estado_scheduler, descargar_todos_los_reportes
+    AUTO_DOWNLOAD_AVAILABLE = True
+except ImportError:
+    AUTO_DOWNLOAD_AVAILABLE = False
+    logger.warning("Módulo download_auto no disponible")
+
+# Variable global para controlar si el scheduler está activo
+auto_download_active = False
+
+@app.route('/api/auto-download/status', methods=['GET'])
+def auto_download_status():
+    """Retorna el estado del sistema de descargas automáticas."""
+    if not AUTO_DOWNLOAD_AVAILABLE:
+        return jsonify({'success': False, 'message': 'Módulo de descargas automáticas no disponible'}), 404
+    
+    return jsonify({
+        'success': True,
+        'status': estado_scheduler(),
+        'active': auto_download_active
+    })
+
+@app.route('/api/auto-download/start', methods=['POST'])
+def auto_download_start():
+    """Inicia el sistema de descargas automáticas."""
+    global auto_download_active
+    
+    if not AUTO_DOWNLOAD_AVAILABLE:
+        return jsonify({'success': False, 'message': 'Módulo de descargas automáticas no disponible'}), 404
+    
+    if auto_download_active:
+        return jsonify({'success': False, 'message': 'El sistema ya está activo'}), 400
+    
+    try:
+        resultado = iniciar_scheduler()
+        if resultado:
+            auto_download_active = True
+            log_gui_action("Iniciar descargas automáticas")
+            return jsonify({'success': True, 'message': 'Sistema de descargas automáticas iniciado'})
+        else:
+            return jsonify({'success': False, 'message': 'Error al iniciar el sistema'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/auto-download/stop', methods=['POST'])
+def auto_download_stop():
+    """Detiene el sistema de descargas automáticas."""
+    global auto_download_active
+    
+    if not AUTO_DOWNLOAD_AVAILABLE:
+        return jsonify({'success': False, 'message': 'Módulo de descargas automáticas no disponible'}), 404
+    
+    if not auto_download_active:
+        return jsonify({'success': False, 'message': 'El sistema no está activo'}), 400
+    
+    try:
+        detener_scheduler()
+        auto_download_active = False
+        log_gui_action("Detener descargas automáticas")
+        return jsonify({'success': True, 'message': 'Sistema de descargas automáticas detenido'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/auto-download/run-now', methods=['POST'])
+def auto_download_run_now():
+    """Ejecuta una descarga inmediata."""
+    if not AUTO_DOWNLOAD_AVAILABLE:
+        return jsonify({'success': False, 'message': 'Módulo de descargas automáticas no disponible'}), 404
+    
+    try:
+        data = request.get_json() or {}
+        fecha = data.get('fecha')
+        if fecha:
+            descargar_todos_los_reportes(fecha)
+        else:
+            descargar_todos_los_reportes()
+        log_gui_action("Ejecutar descarga manual automática")
+        return jsonify({'success': True, 'message': 'Descarga ejecutada'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 if __name__ == "__main__":

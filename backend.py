@@ -724,3 +724,47 @@ logger.info(
 )
 log_activity("Aplicación iniciada; monitoreo de campañas activo")
 console_message_heartbeat()
+
+
+# ========== INICIALIZAR DESCARGA AUTOMÁTICA ==========
+def init_auto_download_on_startup():
+    """Inicializa el sistema de descargas automáticas al iniciar la aplicación."""
+    try:
+        import importlib.util
+        spec = importlib.util.find_spec("download_auto")
+        if spec is not None:
+            from download_auto import iniciar_scheduler, estado_scheduler
+            
+            # Mostrar estado actual
+            estado = estado_scheduler()
+            logger.info("="*60)
+            logger.info("📦 SISTEMA DE DESCARGAS AUTOMÁTICAS")
+            logger.info("="*60)
+            logger.info(f"📁 Ruta base: {estado.get('base_dir')}")
+            logger.info(f"📋 Servidores configurados: {estado.get('servidores')}")
+            if estado.get('servidores_lista'):
+                for i, nombre in enumerate(estado.get('servidores_lista', []), 1):
+                    logger.info(f"   {i}. {nombre}")
+            logger.info(f"🕐 Horarios: {', '.join(estado.get('horarios', []))}")
+            logger.info(f"📊 Mapeo cortes: {estado.get('corte_mapeo', {})}")
+            
+            # Activar automáticamente al inicio
+            logger.info("\n🔄 Activando descargas automáticas...")
+            resultado = iniciar_scheduler()
+            if resultado:
+                logger.info("✅ Descargas automáticas ACTIVADAS")
+                logger.info(f"   Horarios configurados: {', '.join(estado.get('horarios', []))}")
+            else:
+                logger.warning("⚠️ No se pudieron activar las descargas automáticas")
+                logger.warning("   Posibles causas:")
+                logger.warning("   1. La ruta base no existe")
+                logger.warning("   2. No hay servidores configurados en config.json")
+                logger.warning("   3. Los tokens no están configurados")
+            logger.info("="*60)
+        else:
+            logger.info("Módulo download_auto no encontrado. Descargas automáticas desactivadas.")
+    except Exception as e:
+        logger.error(f"Error inicializando descargas automáticas: {e}")
+
+# Llamar a la función
+init_auto_download_on_startup()
