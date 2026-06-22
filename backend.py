@@ -38,7 +38,7 @@ UPLOAD_FOLDER = BASE_DIR / "uploads"
 DOWNLOAD_FOLDER = BASE_DIR / "downloads"
 LOG_FILE = BASE_DIR / "execution_log.txt"
 CONFIG_FILE = BASE_DIR / "config.json"
-allOWED_EXTENSIONS = {"csv"}
+ALLOWED_EXTENSIONS = {"csv"}
 CAMPAIGN_SCHEDULER_JOB_ID = "execute_pending_tasks"
 CONSOLE_MESSAGE_JOB_ID = "console_message_heartbeat"
 
@@ -485,7 +485,7 @@ def get_campaigns_due_for_execution(now: datetime) -> list[Campaign]:
 
 '''
 def allowed_file(filename: str) -> bool:
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in allOWED_EXTENSIONS
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 '''
 
 '''def read_csv_metadata(filepath: Path) -> dict:
@@ -768,11 +768,25 @@ def init_auto_download_on_startup():
 
 # ========== INICIALIZAR DESCARGA AUTOMÁTICA AMD (CAMPAÑAS) ==========
 # ========== INICIALIZAR DESCARGA AUTOMÁTICA ==========
+
+
+# ========== INICIALIZAR DESCARGA AUTOMÁTICA ==========
+# ========== INICIALIZAR DESCARGA AUTOMÁTICA ==========
 def init_auto_download_on_startup():
     """Inicializa los sistemas de descargas automáticas al iniciar la aplicación."""
     try:
-        from config import DESCARGAR_CDR, DESCARGAR_AMD
+        # IMPORTAR DESDE CONFIG.PY
+        from config import DESCARGAR_CDR, DESCARGAR_AMD, MODO_DESCARGA, HORARIOS_EJECUCION
         import importlib.util
+        
+        logger.info("="*60)
+        logger.info("📦 SISTEMA DE DESCARGAS AUTOMÁTICAS")
+        logger.info("="*60)
+        logger.info(f"📅 Modo: {MODO_DESCARGA}")
+        logger.info(f"📋 CDR: {'ACTIVADO' if DESCARGAR_CDR else 'DESACTIVADO'}")
+        logger.info(f"📋 AMD: {'ACTIVADO' if DESCARGAR_AMD else 'DESACTIVADO'}")
+        logger.info(f"🕐 Horarios: {', '.join(HORARIOS_EJECUCION)}")
+        logger.info("="*60)
         
         # Inicializar CDR si está activado
         if DESCARGAR_CDR:
@@ -786,8 +800,8 @@ def init_auto_download_on_startup():
                 logger.info(f"📁 Ruta base: {estado.get('base_dir')}")
                 logger.info(f"📋 Servidores: {estado.get('servidores')}")
                 logger.info(f"🕐 Horarios: {', '.join(estado.get('horarios', []))}")
-                logger.info(f"📅 Modo: {estado.get('modo', 'desconocido')}")
-                logger.info(f"📅 Fechas: {estado.get('fechas', [])}")
+                # El modo en CDR viene de config.py
+                logger.info(f"📅 Modo: {MODO_DESCARGA}")
                 logger.info("\n🔄 Activando descargas automáticas CDR...")
                 resultado = iniciar_scheduler()
                 if resultado:
@@ -812,7 +826,7 @@ def init_auto_download_on_startup():
                 logger.info(f"📁 Ruta base: {estado.get('base_dir')}")
                 logger.info(f"📋 Servidores: {estado.get('servidores')}")
                 logger.info(f"🕐 Horarios: {', '.join(estado.get('horarios', []))}")
-                logger.info(f"📅 Modo: {estado.get('modo_descarga', 'desconocido')}")
+                logger.info(f"📅 Modo: {estado.get('modo_descarga', MODO_DESCARGA)}")
                 logger.info(f"📅 Fechas: {estado.get('fechas', [])}")
                 logger.info("\n🔄 Activando descargas automáticas AMD...")
                 resultado = iniciar_scheduler_amd()
@@ -826,8 +840,19 @@ def init_auto_download_on_startup():
         else:
             logger.info("⏭️ Descargas AMD desactivadas en config.py")
             
+    except ImportError as e:
+        logger.error(f"Error importando config: {e}")
+        logger.info("Asegúrate de que config.py tenga todas las variables necesarias:")
+        logger.info("  - MODO_DESCARGA")
+        logger.info("  - DESCARGAR_CDR")
+        logger.info("  - DESCARGAR_AMD")
+        logger.info("  - HORARIOS_EJECUCION")
     except Exception as e:
         logger.error(f"Error inicializando descargas automáticas: {e}")
-# Llamar a la función
-# Llamar a la función
+        import traceback
+        traceback.print_exc()
+
+# Llamar a la función UNA SOLA VEZ
 init_auto_download_on_startup()
+# Llamar a la función
+# Llamar a la función

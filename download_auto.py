@@ -3,7 +3,7 @@
 
 """
 Módulo de descarga automática de reportes CDR (llamadas)
-Usa config.py para todas las configuraciones.
+Guarda los archivos XLSX en: BASE_DIR/YYYY-MM/YYYY-MM-DD/
 """
 
 import os
@@ -25,10 +25,9 @@ from config import (
     BASE_DIR,
     HORARIOS_EJECUCION,
     DESCARGAR_CDR,
+    MODO_DESCARGA,
     obtener_fechas_descarga,
     obtener_servidores,
-    obtener_token,
-    obtener_url_base,
     CONFIG_JSON
 )
 
@@ -53,6 +52,17 @@ CORTE_A_SERVIDOR = {
 _scheduler_running = False
 _scheduler_thread = None
 _descarga_lock = threading.Lock()
+
+# ========== VALIDACIÓN INICIAL ==========
+def validar_ruta_base():
+    if not os.path.exists(BASE_DIR):
+        logger.warning(f"⚠️ La ruta base {BASE_DIR} no existe")
+        return False
+    else:
+        logger.info(f"✅ Ruta base verificada: {BASE_DIR}")
+        return True
+
+validar_ruta_base()
 
 # ========== FUNCIONES ==========
 
@@ -220,18 +230,18 @@ def descargar_todos_los_reportes(fecha: str = None):
 
         time.sleep(3)
 
-    logger.info(f"\n📊 RESUMEN: ✅ {total_exitosos} exitosos, ❌ {total_fallidos} fallidos")
+    logger.info(f"\n📊 RESUMEN CDR: ✅ {total_exitosos} exitosos, ❌ {total_fallidos} fallidos")
 
 def descargar_segun_configuracion():
     """Descarga según la configuración del archivo config.py"""
+    if not DESCARGAR_CDR:
+        logger.info("⏭️ Descargas CDR desactivadas en config.py")
+        return
     fechas = obtener_fechas_descarga()
     for fecha in fechas:
         descargar_todos_los_reportes(fecha)
 
 def ejecutar_descarga_programada():
-    if not DESCARGAR_CDR:
-        logger.info("⏭️ Descargas CDR desactivadas en config.py")
-        return
     try:
         descargar_segun_configuracion()
     except Exception as e:
@@ -255,7 +265,9 @@ def iniciar_scheduler():
     def run_scheduler():
         global _scheduler_running
         _scheduler_running = True
+        logger.info("="*60)
         logger.info("🚀 INICIANDO SISTEMA DE DESCARGAS PROGRAMADAS (CDR)")
+        logger.info("="*60)
         logger.info(f"📋 Modo: {MODO_DESCARGA}")
         fechas = obtener_fechas_descarga()
         logger.info(f"📅 Fechas a descargar: {fechas}")
@@ -279,12 +291,15 @@ def detener_scheduler():
         return True
     return False
 
-def estado_scheduler():
+def estado_scheduler() -> Dict:
+    servidores = obtener_servidores_activos()
     return {
         "running": _scheduler_running,
         "horarios": HORARIOS_EJECUCION,
-        "servidores": len(obtener_servidores_activos()),
+        "servidores": len(servidores),
+        "servidores_lista": [s.get('name') for s in servidores],
         "base_dir": BASE_DIR,
+        "corte_mapeo": CORTE_A_SERVIDOR,
         "modo": MODO_DESCARGA,
         "fechas": obtener_fechas_descarga()
     }

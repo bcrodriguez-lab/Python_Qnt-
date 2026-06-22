@@ -17,7 +17,7 @@ import json
 MODO_DESCARGA = "rango"  
 
 # === CONFIGURACIÓN PARA MODO "rango" ===
-FECHA_INICIO_RANGO = "2026-06-19"  # Fecha inicio (YYYY-MM-DD)
+FECHA_INICIO_RANGO = "2026-06-11"  # Fecha inicio (YYYY-MM-DD)
 FECHA_FIN_RANGO = datetime.now().strftime("%Y-%m-%d")  # Siempre hasta hoy
 
 # === CONFIGURACIÓN PARA MODO "fecha_especifica" ===
@@ -31,7 +31,7 @@ DESCARGAR_AMD = True   # Reportes de campañas (download_campaign_detail.py)
 # === HORARIOS DE EJECUCIÓN ===
 HORARIOS_EJECUCION = [
     "08:16", "08:34","08:51", "09:14","09:26", "10:00", "10:38",
-    "11:00", "11:33", "12:00", "12:29", "14:00",
+    "11:00","11:22", "11:29","11:30", "11:33","12:00", "12:29", "14:00",
     "16:14", "16:25"
 ]
 
