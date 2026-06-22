@@ -38,7 +38,7 @@ UPLOAD_FOLDER = BASE_DIR / "uploads"
 DOWNLOAD_FOLDER = BASE_DIR / "downloads"
 LOG_FILE = BASE_DIR / "execution_log.txt"
 CONFIG_FILE = BASE_DIR / "config.json"
-ALLOWED_EXTENSIONS = {"csv"}
+allOWED_EXTENSIONS = {"csv"}
 CAMPAIGN_SCHEDULER_JOB_ID = "execute_pending_tasks"
 CONSOLE_MESSAGE_JOB_ID = "console_message_heartbeat"
 
@@ -485,7 +485,7 @@ def get_campaigns_due_for_execution(now: datetime) -> list[Campaign]:
 
 '''
 def allowed_file(filename: str) -> bool:
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in allOWED_EXTENSIONS
 '''
 
 '''def read_csv_metadata(filepath: Path) -> dict:
@@ -766,5 +766,68 @@ def init_auto_download_on_startup():
     except Exception as e:
         logger.error(f"Error inicializando descargas automáticas: {e}")
 
+# ========== INICIALIZAR DESCARGA AUTOMÁTICA AMD (CAMPAÑAS) ==========
+# ========== INICIALIZAR DESCARGA AUTOMÁTICA ==========
+def init_auto_download_on_startup():
+    """Inicializa los sistemas de descargas automáticas al iniciar la aplicación."""
+    try:
+        from config import DESCARGAR_CDR, DESCARGAR_AMD
+        import importlib.util
+        
+        # Inicializar CDR si está activado
+        if DESCARGAR_CDR:
+            spec = importlib.util.find_spec("download_auto")
+            if spec is not None:
+                from download_auto import iniciar_scheduler, estado_scheduler
+                estado = estado_scheduler()
+                logger.info("="*60)
+                logger.info("📦 SISTEMA DE DESCARGAS AUTOMÁTICAS CDR")
+                logger.info("="*60)
+                logger.info(f"📁 Ruta base: {estado.get('base_dir')}")
+                logger.info(f"📋 Servidores: {estado.get('servidores')}")
+                logger.info(f"🕐 Horarios: {', '.join(estado.get('horarios', []))}")
+                logger.info(f"📅 Modo: {estado.get('modo', 'desconocido')}")
+                logger.info(f"📅 Fechas: {estado.get('fechas', [])}")
+                logger.info("\n🔄 Activando descargas automáticas CDR...")
+                resultado = iniciar_scheduler()
+                if resultado:
+                    logger.info("✅ Descargas automáticas CDR ACTIVADAS")
+                else:
+                    logger.warning("⚠️ No se pudieron activar las descargas CDR")
+                logger.info("="*60)
+            else:
+                logger.info("Módulo download_auto no encontrado.")
+        else:
+            logger.info("⏭️ Descargas CDR desactivadas en config.py")
+        
+        # Inicializar AMD si está activado
+        if DESCARGAR_AMD:
+            spec = importlib.util.find_spec("download_campaign_detail")
+            if spec is not None:
+                from download_campaign_detail import iniciar_scheduler_amd, estado_scheduler_amd
+                estado = estado_scheduler_amd()
+                logger.info("="*60)
+                logger.info("📦 SISTEMA DE DESCARGAS AUTOMÁTICAS AMD")
+                logger.info("="*60)
+                logger.info(f"📁 Ruta base: {estado.get('base_dir')}")
+                logger.info(f"📋 Servidores: {estado.get('servidores')}")
+                logger.info(f"🕐 Horarios: {', '.join(estado.get('horarios', []))}")
+                logger.info(f"📅 Modo: {estado.get('modo_descarga', 'desconocido')}")
+                logger.info(f"📅 Fechas: {estado.get('fechas', [])}")
+                logger.info("\n🔄 Activando descargas automáticas AMD...")
+                resultado = iniciar_scheduler_amd()
+                if resultado:
+                    logger.info("✅ Descargas automáticas AMD ACTIVADAS")
+                else:
+                    logger.warning("⚠️ No se pudieron activar las descargas AMD")
+                logger.info("="*60)
+            else:
+                logger.info("Módulo download_campaign_detail no encontrado.")
+        else:
+            logger.info("⏭️ Descargas AMD desactivadas en config.py")
+            
+    except Exception as e:
+        logger.error(f"Error inicializando descargas automáticas: {e}")
+# Llamar a la función
 # Llamar a la función
 init_auto_download_on_startup()
