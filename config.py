@@ -5,8 +5,10 @@
 Archivo central de configuración para descargas automáticas.
 Todas las configuraciones se manejan desde aquí.
 """
-from  datetime  import datetime
+
+from datetime import datetime
 import json
+import os
 
 # ============================================================
 # CONFIGURACIÓN DE DESCARGA 
@@ -14,14 +16,14 @@ import json
 
 # === MODO DE DESCARGA ===
 # Opciones: "hoy", "rango", "fecha_especifica"
-MODO_DESCARGA = "rango"  
+MODO_DESCARGA = "rango"  # Cambiar según necesidad
 
 # === CONFIGURACIÓN PARA MODO "rango" ===
 FECHA_INICIO_RANGO = "2026-06-11"  # Fecha inicio (YYYY-MM-DD)
 FECHA_FIN_RANGO = datetime.now().strftime("%Y-%m-%d")  # Siempre hasta hoy
 
 # === CONFIGURACIÓN PARA MODO "fecha_especifica" ===
-#FECHA_ESPECIFICA = "2026-06-18"    # Fecha específica (YYYY-MM-DD)
+# FECHA_ESPECIFICA = "2026-06-18"    # Fecha específica (YYYY-MM-DD)
 
 # === SERVICIOS A EJECUTAR ===
 # Activar/desactivar descargas individuales
@@ -30,9 +32,7 @@ DESCARGAR_AMD = True   # Reportes de campañas (download_campaign_detail.py)
 
 # === HORARIOS DE EJECUCIÓN ===
 HORARIOS_EJECUCION = [
-    "08:16", "08:34","08:51", "09:14","09:26", "10:00", "10:38",
-    "11:00","11:22", "11:29","11:30", "11:33","12:00", "12:29", "14:00",
-    "16:14", "16:25"
+    "08:00", "10:00","11:34", "12:00", "14:00", "16:00", "18:00"
 ]
 
 # ============================================================
@@ -42,8 +42,20 @@ HORARIOS_EJECUCION = [
 def cargar_config_json():
     """Carga configuración desde config.json (tokens, servidores, etc.)"""
     try:
-        with open('config.json', 'r', encoding='utf-8') as f:
-            return json.load(f)
+        # Buscar config.json en la misma carpeta o en la carpeta del proyecto
+        rutas_posibles = [
+            'config.json',
+            os.path.join(os.path.dirname(__file__), 'config.json'),
+            os.path.join(os.path.dirname(__file__), '..', 'config.json')
+        ]
+        
+        for ruta in rutas_posibles:
+            if os.path.exists(ruta):
+                with open(ruta, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        
+        print("⚠️ No se encontró config.json")
+        return {}
     except Exception as e:
         print(f"Error cargando config.json: {e}")
         return {}
