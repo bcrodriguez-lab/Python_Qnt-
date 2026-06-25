@@ -165,3 +165,768 @@
 2026-05-28 08:39:51 - INFO - [API] Campaña id=19 flujo=26678 detectada como terminada
 2026-05-28 08:39:51 - INFO - [API] Parar campaña cuando el monitoreo detecta que terminó (id=19): OK
 2026-05-28 08:39:51 - INFO - [API] Secuencia Wolkvox finalizada campaña id=19
+2026-06-01 08:17:37 - INFO - [AUTO-CAMPAIGN] Iniciando id=1 nombre=Prueba-api
+2026-06-01 08:17:41 - ERROR - [AUTO-CAMPAIGN] id=1 lote fallido: Wolkvox HTTP 400
+2026-06-01 08:17:41 - INFO - [AUTO-CAMPAIGN] Finalizada id=1: fetched=1, sent=0, failed=1
+2026-06-01 08:17:47 - INFO - [AUTO-CAMPAIGN] Iniciando id=1 nombre=Prueba-api
+2026-06-01 08:17:50 - ERROR - [AUTO-CAMPAIGN] id=1 lote fallido: Wolkvox HTTP 400
+2026-06-01 08:17:50 - INFO - [AUTO-CAMPAIGN] Finalizada id=1: fetched=1, sent=0, failed=1
+2026-06-01 08:18:01 - INFO - [AUTO-CAMPAIGN] Iniciando id=1 nombre=Prueba-api
+2026-06-01 08:18:10 - ERROR - [AUTO-CAMPAIGN] id=1 lote fallido: Wolkvox HTTP 400
+2026-06-01 08:18:10 - INFO - [AUTO-CAMPAIGN] Finalizada id=1: fetched=1, sent=0, failed=1
+2026-06-01 08:20:07 - INFO - [AUTO-CAMPAIGN] Iniciando id=1 nombre=Prueba-api
+2026-06-01 08:20:09 - ERROR - [AUTO-CAMPAIGN] id=1 lote fallido: Wolkvox HTTP 400
+2026-06-01 08:20:09 - INFO - [AUTO-CAMPAIGN] Finalizada id=1: fetched=1, sent=0, failed=1
+2026-06-01 08:23:45 - INFO - [AUTO-CAMPAIGN] Iniciando id=1 nombre=Prueba-api
+2026-06-01 08:23:49 - ERROR - [AUTO-CAMPAIGN] id=1 lote fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'Campaign_id 26687 does not exist in your operation.'}
+2026-06-01 08:23:49 - INFO - [AUTO-CAMPAIGN] Finalizada id=1: fetched=1, sent=0, failed=1
+2026-06-01 08:25:02 - INFO - [AUTO-CAMPAIGN] Iniciando id=2 nombre=Prueba-api-2
+2026-06-01 08:25:03 - ERROR - [AUTO-CAMPAIGN] id=2 lote fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': '0 records has been added, please validate the data', 'data': [{'total_registers': '1', 'total_success': '0', 'total_errors': '1', 'array_errors': [{'error': 'CUSTOMER_ID is empty, object position 0', 'msg': 'CUSTOMER_ID is a required field, see schema for required fields'}]}]}
+2026-06-01 08:25:03 - INFO - [AUTO-CAMPAIGN] Finalizada id=2: fetched=1, sent=0, failed=1
+2026-06-01 08:25:12 - INFO - [AUTO-CAMPAIGN] Iniciando id=2 nombre=Prueba-api-2
+2026-06-01 08:25:14 - ERROR - [AUTO-CAMPAIGN] id=2 lote fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': '0 records has been added, please validate the data', 'data': [{'total_registers': '1', 'total_success': '0', 'total_errors': '1', 'array_errors': [{'error': 'CUSTOMER_ID is empty, object position 0', 'msg': 'CUSTOMER_ID is a required field, see schema for required fields'}]}]}
+2026-06-01 08:25:14 - INFO - [AUTO-CAMPAIGN] Finalizada id=2: fetched=1, sent=0, failed=1
+2026-06-01 08:27:44 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:27:47 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:27:48 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:27:51 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:29:02 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:29:04 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:29:19 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:29:21 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:29:33 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:29:36 - ERROR - [AUTO-CAMPAIGN] id=3 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'The campaign has not been started, please validate the data'}
+2026-06-01 08:29:36 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:29:56 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:29:59 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:30:23 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:30:26 - ERROR - [AUTO-CAMPAIGN] id=3 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'The campaign has not been started, please validate the data'}
+2026-06-01 08:30:26 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:31:03 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:31:05 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:31:07 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:31:10 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:32:38 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:32:40 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:32:56 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:32:58 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:33:08 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:33:11 - ERROR - [AUTO-CAMPAIGN] id=3 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'The campaign has not been started, please validate the data'}
+2026-06-01 08:33:11 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:33:27 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:33:30 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:33:35 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:33:38 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:48:30 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:48:34 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:48:51 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:48:53 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:49:04 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:49:08 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:49:17 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:49:24 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:49:53 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:49:56 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:50:29 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-01 08:50:32 - ERROR - [AUTO-CAMPAIGN] id=3 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'The campaign has not been started, please validate the data'}
+2026-06-01 08:50:32 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: fetched=1, sent=1, failed=0
+2026-06-01 08:58:22 - INFO - [AUTO-CAMPAIGN] Iniciando id=4 nombre=Prueba-api-4
+2026-06-01 08:58:26 - ERROR - [AUTO-CAMPAIGN] id=4 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'The campaign has not been started, please validate the data'}
+2026-06-01 08:58:26 - INFO - [AUTO-CAMPAIGN] Finalizada id=4: fetched=1, sent=1, failed=0
+2026-06-01 09:00:24 - INFO - [AUTO-CAMPAIGN] Iniciando id=4 nombre=Prueba-api-4
+2026-06-01 09:00:26 - INFO - [AUTO-CAMPAIGN] Finalizada id=4: fetched=1, sent=1, failed=0
+2026-06-01 09:00:42 - INFO - [AUTO-CAMPAIGN] Iniciando id=4 nombre=Prueba-api-4
+2026-06-01 09:00:44 - INFO - [AUTO-CAMPAIGN] Finalizada id=4: fetched=1, sent=1, failed=0
+2026-06-01 09:01:23 - INFO - [AUTO-CAMPAIGN] Iniciando id=4 nombre=Prueba-api-4
+2026-06-01 09:01:25 - INFO - [AUTO-CAMPAIGN] Finalizada id=4: fetched=1, sent=1, failed=0
+2026-06-01 09:12:08 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:12:11 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:13:15 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:13:18 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:13:41 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:13:49 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:14:18 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:14:20 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:15:20 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:15:22 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:15:37 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:15:39 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:15:46 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:15:50 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:16:39 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:16:42 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:16:52 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:16:55 - ERROR - [AUTO-CAMPAIGN] id=5 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'The campaign has not been started, please validate the data'}
+2026-06-01 09:16:55 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:17:07 - INFO - [AUTO-CAMPAIGN] Iniciando id=5 nombre=Prueba-api-3
+2026-06-01 09:17:10 - ERROR - [AUTO-CAMPAIGN] id=5 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'The campaign has not been started, please validate the data'}
+2026-06-01 09:17:10 - INFO - [AUTO-CAMPAIGN] Finalizada id=5: fetched=1, sent=1, failed=0
+2026-06-01 09:17:25 - INFO - [AUTO-CAMPAIGN] Iniciando id=4 nombre=Prueba-api-4
+2026-06-01 09:17:28 - INFO - [AUTO-CAMPAIGN] Finalizada id=4: fetched=1, sent=1, failed=0
+2026-06-04 09:01:47 - INFO - [AUTO-CAMPAIGN] Iniciando id=15 nombre=Prueba-api-3
+2026-06-04 09:01:50 - ERROR - [AUTO-CAMPAIGN] id=15 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 09:01:50 - INFO - [AUTO-CAMPAIGN] Finalizada id=15: fetched=3, sent=3, failed=0
+2026-06-04 09:03:24 - INFO - [AUTO-CAMPAIGN] Iniciando id=15 nombre=Prueba-api-3
+2026-06-04 09:03:28 - ERROR - [AUTO-CAMPAIGN] id=15 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 09:03:28 - INFO - [AUTO-CAMPAIGN] Finalizada id=15: fetched=3, sent=3, failed=0
+2026-06-04 09:03:43 - INFO - [AUTO-CAMPAIGN] Iniciando id=15 nombre=Prueba-api-3
+2026-06-04 09:03:46 - ERROR - [AUTO-CAMPAIGN] id=15 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 09:03:46 - INFO - [AUTO-CAMPAIGN] Finalizada id=15: fetched=3, sent=3, failed=0
+2026-06-04 09:05:48 - INFO - [AUTO-CAMPAIGN] Iniciando id=15 nombre=Prueba-api-3
+2026-06-04 09:05:51 - ERROR - [AUTO-CAMPAIGN] id=15 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 09:05:52 - INFO - [AUTO-CAMPAIGN] Finalizada id=15: fetched=3, sent=3, failed=0
+2026-06-04 09:16:21 - INFO - [AUTO-CAMPAIGN] Iniciando id=16 nombre=Prueba-api-3
+2026-06-04 09:16:24 - ERROR - [AUTO-CAMPAIGN] id=16 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 09:16:24 - INFO - [AUTO-CAMPAIGN] Finalizada id=16: fetched=3, sent=3, failed=0
+2026-06-04 09:16:30 - INFO - [AUTO-CAMPAIGN] Iniciando id=16 nombre=Prueba-api-3
+2026-06-04 09:16:33 - ERROR - [AUTO-CAMPAIGN] id=16 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 09:16:33 - INFO - [AUTO-CAMPAIGN] Finalizada id=16: fetched=3, sent=3, failed=0
+2026-06-04 10:08:11 - INFO - [AUTO-CAMPAIGN] Iniciando id=14 nombre=Prueba-api-3
+2026-06-04 10:08:17 - ERROR - [AUTO-CAMPAIGN] id=14 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 10:08:17 - INFO - [AUTO-CAMPAIGN] Finalizada id=14: fetched=3, sent=3, failed=0
+2026-06-04 10:18:25 - INFO - [AUTO-CAMPAIGN] Iniciando id=11 nombre=Prueba-api-3
+2026-06-04 10:18:28 - ERROR - [AUTO-CAMPAIGN] id=11 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 10:18:28 - INFO - [AUTO-CAMPAIGN] Finalizada id=11: fetched=3, sent=3, failed=0
+2026-06-04 10:31:00 - INFO - [AUTO-CAMPAIGN] Iniciando id=10 nombre=Prueba-api-3
+2026-06-04 10:31:04 - ERROR - [AUTO-CAMPAIGN] id=10 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 10:31:04 - INFO - [AUTO-CAMPAIGN] Finalizada id=10: fetched=3, sent=3, failed=0
+2026-06-04 10:33:45 - INFO - [AUTO-CAMPAIGN] Iniciando id=9 nombre=Prueba-api-3
+2026-06-04 10:33:48 - ERROR - [AUTO-CAMPAIGN] id=9 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 10:33:48 - INFO - [AUTO-CAMPAIGN] Finalizada id=9: fetched=3, sent=3, failed=0
+2026-06-04 10:33:54 - INFO - [AUTO-CAMPAIGN] Iniciando id=9 nombre=Prueba-api-3
+2026-06-04 10:33:58 - ERROR - [AUTO-CAMPAIGN] id=9 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 10:33:58 - INFO - [AUTO-CAMPAIGN] Finalizada id=9: fetched=3, sent=3, failed=0
+2026-06-04 10:34:58 - INFO - [AUTO-CAMPAIGN] Iniciando id=9 nombre=Prueba-api-3
+2026-06-04 10:35:03 - ERROR - [AUTO-CAMPAIGN] id=9 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 10:35:03 - INFO - [AUTO-CAMPAIGN] Finalizada id=9: fetched=3, sent=3, failed=0
+2026-06-04 10:43:12 - INFO - [AUTO-CAMPAIGN] Iniciando id=9 nombre=Prueba-api-3
+2026-06-04 10:43:15 - ERROR - [AUTO-CAMPAIGN] id=9 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 10:43:15 - INFO - [AUTO-CAMPAIGN] Finalizada id=9: fetched=3, sent=3, failed=0
+2026-06-04 11:20:29 - INFO - [AUTO-CAMPAIGN] Iniciando id=9 nombre=Prueba-api-3
+2026-06-04 11:20:33 - ERROR - [AUTO-CAMPAIGN] id=9 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 11:20:33 - INFO - [AUTO-CAMPAIGN] Finalizada id=9: fetched=1, sent=1, failed=0
+2026-06-04 11:46:36 - INFO - [AUTO-CAMPAIGN] Iniciando id=7 nombre=Prueba-api-3
+2026-06-04 11:46:39 - ERROR - [AUTO-CAMPAIGN] id=7 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 11:46:40 - INFO - [AUTO-CAMPAIGN] Finalizada id=7: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_164639.xlsx (fetched=1, sent=1, failed=0)
+2026-06-04 11:47:23 - INFO - [AUTO-CAMPAIGN] Iniciando id=7 nombre=Prueba-api-3
+2026-06-04 11:47:26 - ERROR - [AUTO-CAMPAIGN] id=7 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 11:47:27 - INFO - [AUTO-CAMPAIGN] Finalizada id=7: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_164726.xlsx (fetched=1, sent=1, failed=0)
+2026-06-04 11:55:06 - INFO - [AUTO-CAMPAIGN] Iniciando id=6 nombre=Prueba-api-3
+2026-06-04 11:55:09 - ERROR - [AUTO-CAMPAIGN] id=6 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 11:55:11 - INFO - [AUTO-CAMPAIGN] Finalizada id=6: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_165509.xlsx (fetched=1, sent=1, failed=0)
+2026-06-04 11:55:14 - INFO - [AUTO-CAMPAIGN] Iniciando id=6 nombre=Prueba-api-3
+2026-06-04 11:55:17 - ERROR - [AUTO-CAMPAIGN] id=6 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 11:55:18 - INFO - [AUTO-CAMPAIGN] Finalizada id=6: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_165517.xlsx (fetched=1, sent=1, failed=0)
+2026-06-04 11:56:35 - INFO - [AUTO-CAMPAIGN] Iniciando id=6 nombre=Prueba-api-3
+2026-06-04 11:56:38 - ERROR - [AUTO-CAMPAIGN] id=6 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 11:56:40 - INFO - [AUTO-CAMPAIGN] Finalizada id=6: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_165638.xlsx (fetched=1, sent=1, failed=0)
+2026-06-04 11:56:43 - INFO - [AUTO-CAMPAIGN] Iniciando id=6 nombre=Prueba-api-3
+2026-06-04 11:56:46 - ERROR - [AUTO-CAMPAIGN] id=6 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 11:56:48 - INFO - [AUTO-CAMPAIGN] Finalizada id=6: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_165646.xlsx (fetched=1, sent=1, failed=0)
+2026-06-04 11:56:53 - INFO - [AUTO-CAMPAIGN] Iniciando id=6 nombre=Prueba-api-3
+2026-06-04 11:56:56 - ERROR - [AUTO-CAMPAIGN] id=6 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 11:56:58 - INFO - [AUTO-CAMPAIGN] Finalizada id=6: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_165656.xlsx (fetched=1, sent=1, failed=0)
+2026-06-04 11:57:02 - INFO - [AUTO-CAMPAIGN] Iniciando id=6 nombre=Prueba-api-3
+2026-06-04 11:57:05 - ERROR - [AUTO-CAMPAIGN] id=6 inicio fallido: Wolkvox start HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You must turn off a predictive before starting this one, you currently have 2 active predictives'}
+2026-06-04 11:57:07 - INFO - [AUTO-CAMPAIGN] Finalizada id=6: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_165705.xlsx (fetched=1, sent=1, failed=0)
+2026-06-04 12:53:58 - INFO - [AUTO-CAMPAIGN] Iniciando id=6 nombre=Prueba-api-3
+2026-06-04 12:54:03 - INFO - [AUTO-CAMPAIGN] Finalizada id=6: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_175401.xlsx (fetched=3, sent=3, failed=0)
+2026-06-04 15:25:42 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-04 15:25:46 - ERROR - [AUTO-CAMPAIGN] id=3 lote fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-04 15:25:50 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_202546.xlsx (fetched=3, sent=0, failed=3)
+2026-06-04 15:25:54 - INFO - [AUTO-CAMPAIGN] Iniciando id=3 nombre=Prueba-api-3
+2026-06-04 15:25:58 - ERROR - [AUTO-CAMPAIGN] id=3 lote fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-04 15:26:08 - INFO - [AUTO-CAMPAIGN] Finalizada id=3: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_202558.xlsx (fetched=3, sent=0, failed=3)
+2026-06-04 15:35:30 - INFO - [AUTO-CAMPAIGN] Iniciando id=11 nombre=Prueba-api-3
+2026-06-04 15:35:32 - ERROR - [AUTO-CAMPAIGN] id=11 lote fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-04 15:35:34 - INFO - [AUTO-CAMPAIGN] Finalizada id=11: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_203532.xlsx (fetched=3, sent=0, failed=3)
+2026-06-04 15:37:01 - INFO - [AUTO-CAMPAIGN] Iniciando id=11 nombre=Prueba-api-3
+2026-06-04 15:37:03 - ERROR - [AUTO-CAMPAIGN] id=11 lote fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-04 15:37:05 - INFO - [AUTO-CAMPAIGN] Finalizada id=11: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_203703.xlsx (fetched=3, sent=0, failed=3)
+2026-06-04 15:37:13 - INFO - [AUTO-CAMPAIGN] Iniciando id=11 nombre=Prueba-api-3
+2026-06-04 15:37:15 - ERROR - [AUTO-CAMPAIGN] id=11 lote fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-04 15:37:17 - INFO - [AUTO-CAMPAIGN] Finalizada id=11: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_203715.xlsx (fetched=3, sent=0, failed=3)
+2026-06-04 15:39:09 - INFO - [AUTO-CAMPAIGN] Iniciando id=11 nombre=Prueba-api-3
+2026-06-04 15:39:11 - ERROR - [AUTO-CAMPAIGN] id=11 lote fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-04 15:39:13 - INFO - [AUTO-CAMPAIGN] Finalizada id=11: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_203911.xlsx (fetched=3, sent=0, failed=3)
+2026-06-04 15:42:04 - INFO - [AUTO-CAMPAIGN] Iniciando id=11 nombre=Prueba-api-3
+2026-06-04 15:42:06 - ERROR - [AUTO-CAMPAIGN] id=11 lote fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-04 15:42:09 - INFO - [AUTO-CAMPAIGN] Finalizada id=11: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_204206.xlsx (fetched=1, sent=0, failed=1)
+2026-06-04 15:44:51 - INFO - [AUTO-CAMPAIGN] Iniciando id=11 nombre=Prueba-api-3
+2026-06-04 15:44:53 - ERROR - [AUTO-CAMPAIGN] id=11 lote fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-04 15:44:56 - INFO - [AUTO-CAMPAIGN] Finalizada id=11: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_204453.xlsx (fetched=1, sent=0, failed=1)
+2026-06-04 15:45:40 - INFO - [AUTO-CAMPAIGN] Iniciando id=11 nombre=Prueba-api-3
+2026-06-04 15:45:42 - ERROR - [AUTO-CAMPAIGN] id=11 lote fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-04 15:45:45 - INFO - [AUTO-CAMPAIGN] Finalizada id=11: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_204542.xlsx (fetched=1, sent=0, failed=1)
+2026-06-04 15:47:04 - INFO - [AUTO-CAMPAIGN] Iniciando id=11 nombre=Prueba-api-3
+2026-06-04 15:47:07 - ERROR - [AUTO-CAMPAIGN] id=11 lote fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-04 15:47:10 - INFO - [AUTO-CAMPAIGN] Finalizada id=11: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_204707.xlsx (fetched=1, sent=0, failed=1)
+2026-06-04 15:47:11 - INFO - [AUTO-CAMPAIGN] Iniciando id=11 nombre=Prueba-api-3
+2026-06-04 15:47:13 - ERROR - [AUTO-CAMPAIGN] id=11 lote fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-04 15:47:16 - INFO - [AUTO-CAMPAIGN] Finalizada id=11: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_204713.xlsx (fetched=3, sent=0, failed=3)
+2026-06-04 15:47:32 - INFO - [AUTO-CAMPAIGN] Iniciando id=11 nombre=Prueba-api-3
+2026-06-04 15:47:34 - ERROR - [AUTO-CAMPAIGN] id=11 lote fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-04 15:47:38 - INFO - [AUTO-CAMPAIGN] Finalizada id=11: XLSX generado en C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_recaudo_blaster_Prueba-api-3_20260604_204734.xlsx (fetched=3, sent=0, failed=3)
+2026-06-05 09:00:24 - INFO - [AUTO-CAMPAIGN] Campaña id=11 iniciada en hilo de fondo
+2026-06-05 09:00:24 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=11 nombre=Prueba-api-3
+2026-06-05 09:00:25 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:00:25 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_11_20260605_090025.csv
+2026-06-05 09:00:26 - ERROR - [AUTO-CAMPAIGN] Lote 1 fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-05 09:00:26 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:00:26 - INFO - [AUTO-CAMPAIGN] Solicitando reporte CDR: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:00:27 - WARNING - [AUTO-CAMPAIGN] Error generando XLSX: 404 Client Error: Not Found for url: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:00:27 - WARNING - [AUTO-CAMPAIGN] Campaña id=11 finalizada. XLSX no disponible, se guardó JSON. (fetched=3, sent=0, failed=3)
+2026-06-05 09:01:43 - INFO - [AUTO-CAMPAIGN] Campaña id=11 iniciada en hilo de fondo
+2026-06-05 09:01:43 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=11 nombre=Prueba-api-3
+2026-06-05 09:01:44 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:01:44 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_11_20260605_090144.csv
+2026-06-05 09:01:45 - ERROR - [AUTO-CAMPAIGN] Lote 1 fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-05 09:01:45 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:01:45 - INFO - [AUTO-CAMPAIGN] Solicitando reporte CDR: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:01:46 - WARNING - [AUTO-CAMPAIGN] Error generando XLSX: 404 Client Error: Not Found for url: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:01:46 - WARNING - [AUTO-CAMPAIGN] Campaña id=11 finalizada. XLSX no disponible, se guardó JSON. (fetched=3, sent=0, failed=3)
+2026-06-05 09:01:48 - INFO - [AUTO-CAMPAIGN] Campaña id=11 iniciada en hilo de fondo
+2026-06-05 09:01:48 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=11 nombre=Prueba-api-3
+2026-06-05 09:01:49 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:01:49 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_11_20260605_090149.csv
+2026-06-05 09:01:50 - ERROR - [AUTO-CAMPAIGN] Lote 1 fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-05 09:01:50 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:01:50 - INFO - [AUTO-CAMPAIGN] Solicitando reporte CDR: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:01:51 - WARNING - [AUTO-CAMPAIGN] Error generando XLSX: 404 Client Error: Not Found for url: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:01:51 - WARNING - [AUTO-CAMPAIGN] Campaña id=11 finalizada. XLSX no disponible, se guardó JSON. (fetched=3, sent=0, failed=3)
+2026-06-05 09:05:42 - INFO - [AUTO-CAMPAIGN] Campaña id=11 iniciada en hilo de fondo
+2026-06-05 09:05:42 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=11 nombre=Prueba-api-3
+2026-06-05 09:05:43 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:05:43 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_11_20260605_090543.csv
+2026-06-05 09:05:45 - ERROR - [AUTO-CAMPAIGN] Lote 1 fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-05 09:05:45 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:05:45 - INFO - [AUTO-CAMPAIGN] Solicitando reporte CDR: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:05:46 - WARNING - [AUTO-CAMPAIGN] Error generando XLSX: 404 Client Error: Not Found for url: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:05:46 - WARNING - [AUTO-CAMPAIGN] Campaña id=11 finalizada. XLSX no disponible, se guardó JSON. (fetched=3, sent=0, failed=3)
+2026-06-05 09:09:26 - INFO - [AUTO-CAMPAIGN] Campaña id=11 iniciada en hilo de fondo
+2026-06-05 09:09:26 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=11 nombre=Prueba-api-3
+2026-06-05 09:09:27 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:09:27 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_11_20260605_090927.csv
+2026-06-05 09:09:28 - ERROR - [AUTO-CAMPAIGN] Lote 1 fallido: Wolkvox HTTP 404: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-05 09:09:28 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:09:28 - INFO - [AUTO-CAMPAIGN] Solicitando reporte CDR: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:09:29 - WARNING - [AUTO-CAMPAIGN] Error generando XLSX: 404 Client Error: Not Found for url: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:09:29 - WARNING - [AUTO-CAMPAIGN] Campaña id=11 finalizada. XLSX no disponible, se guardó JSON. (fetched=3, sent=0, failed=3)
+2026-06-05 09:10:09 - INFO - [AUTO-CAMPAIGN] Campaña id=11 iniciada en hilo de fondo
+2026-06-05 09:10:09 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=11 nombre=Prueba-api-3
+2026-06-05 09:10:10 - WARNING - [AUTO-CAMPAIGN] No se encontró la campaña 26678 en la respuesta
+2026-06-05 09:10:13 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:10:13 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_11_20260605_091013.csv
+2026-06-05 09:10:15 - ERROR - [AUTO-CAMPAIGN] Error de límite de licencias Wolkvox: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-05 09:10:15 - ERROR - [AUTO-CAMPAIGN] Lote 1 fallido: Límite de licencias Wolkvox excedido: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-05 09:10:15 - ERROR - [AUTO-CAMPAIGN] Deteniendo envío por límite de licencias
+2026-06-05 09:10:15 - INFO - [AUTO-CAMPAIGN] Reporte JSON guardado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_11_25.json
+2026-06-05 09:10:15 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:10:15 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:10:16 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959 respondió con 404
+2026-06-05 09:10:16 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=campaign_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:10:17 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=campaign_1&date_ini=20260605000000&date_end=20260605235959 respondió con 400
+2026-06-05 09:10:17 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/reports_manager.php?api=cdr_1&date_ini=2026-06-05&date_end=2026-06-05
+2026-06-05 09:10:18 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/reports_manager.php?api=cdr_1&date_ini=2026-06-05&date_end=2026-06-05 respondió con 404
+2026-06-05 09:10:18 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/reports_manager.php?api=campaign_1&campaign_id=26678&date_ini=2026-06-05&date_end=2026-06-05
+2026-06-05 09:10:19 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/reports_manager.php?api=campaign_1&campaign_id=26678&date_ini=2026-06-05&date_end=2026-06-05 respondió con 404
+2026-06-05 09:10:19 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=agent_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:10:20 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=agent_1&date_ini=20260605000000&date_end=20260605235959 respondió con 404
+2026-06-05 09:10:20 - WARNING - [AUTO-CAMPAIGN] No se pudieron obtener datos de ningún endpoint de reportes
+2026-06-05 09:10:20 - INFO - [AUTO-CAMPAIGN] XLSX generado exitosamente: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\reporte_campana_Qnt_recaudo_blaster_Prueba-api-3_20260605_141015.xlsx
+2026-06-05 09:10:20 - INFO - [AUTO-CAMPAIGN] Campaña id=11 finalizada exitosamente. XLSX: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\reporte_campana_Qnt_recaudo_blaster_Prueba-api-3_20260605_141015.xlsx (fetched=3, sent=0, failed=3)
+2026-06-05 09:14:26 - INFO - [AUTO-CAMPAIGN] Campaña id=11 iniciada en hilo de fondo
+2026-06-05 09:14:26 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=11 nombre=Prueba-api-3
+2026-06-05 09:14:27 - WARNING - [AUTO-CAMPAIGN] No se encontró la campaña 26678 en la respuesta
+2026-06-05 09:14:29 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:14:29 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_11_20260605_091429.csv
+2026-06-05 09:14:30 - ERROR - [AUTO-CAMPAIGN] Error de límite de licencias Wolkvox: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-05 09:14:30 - ERROR - [AUTO-CAMPAIGN] Lote 1 fallido: Límite de licencias Wolkvox excedido: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66401) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-05 09:14:30 - ERROR - [AUTO-CAMPAIGN] Deteniendo envío por límite de licencias
+2026-06-05 09:14:30 - INFO - [AUTO-CAMPAIGN] Reporte JSON guardado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_11_26.json
+2026-06-05 09:14:30 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:14:30 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:14:31 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959 respondió con 404
+2026-06-05 09:14:31 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=campaign_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:14:32 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=campaign_1&date_ini=20260605000000&date_end=20260605235959 respondió con 400
+2026-06-05 09:14:32 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/reports_manager.php?api=cdr_1&date_ini=2026-06-05&date_end=2026-06-05
+2026-06-05 09:14:33 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/reports_manager.php?api=cdr_1&date_ini=2026-06-05&date_end=2026-06-05 respondió con 404
+2026-06-05 09:14:33 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/reports_manager.php?api=campaign_1&campaign_id=26678&date_ini=2026-06-05&date_end=2026-06-05
+2026-06-05 09:14:34 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/reports_manager.php?api=campaign_1&campaign_id=26678&date_ini=2026-06-05&date_end=2026-06-05 respondió con 404
+2026-06-05 09:14:34 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=agent_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:14:36 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=agent_1&date_ini=20260605000000&date_end=20260605235959 respondió con 404
+2026-06-05 09:14:36 - WARNING - [AUTO-CAMPAIGN] No se pudieron obtener datos de ningún endpoint de reportes
+2026-06-05 09:14:36 - INFO - [AUTO-CAMPAIGN] XLSX generado exitosamente: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\reporte_campana_Qnt_recaudo_blaster_Prueba-api-3_20260605_141430.xlsx
+2026-06-05 09:14:36 - INFO - [AUTO-CAMPAIGN] Campaña id=11 finalizada exitosamente. XLSX: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\reporte_campana_Qnt_recaudo_blaster_Prueba-api-3_20260605_141430.xlsx (fetched=3, sent=0, failed=3)
+2026-06-05 09:16:09 - INFO - [AUTO-CAMPAIGN] Campaña id=11 iniciada en hilo de fondo
+2026-06-05 09:16:09 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=11 nombre=Prueba-api-3
+2026-06-05 09:16:10 - WARNING - [AUTO-CAMPAIGN] No se encontró la campaña 26678 en la respuesta
+2026-06-05 09:16:12 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:16:12 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_11_20260605_091612.csv
+2026-06-05 09:16:13 - ERROR - [AUTO-CAMPAIGN] Error de límite de licencias Wolkvox: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66397) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-05 09:16:13 - ERROR - [AUTO-CAMPAIGN] Lote 1 fallido: Límite de licencias Wolkvox excedido: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66397) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66397) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-05 09:16:13 - ERROR - [AUTO-CAMPAIGN] Deteniendo envío por límite de licencias
+2026-06-05 09:16:13 - INFO - [AUTO-CAMPAIGN] Reporte JSON guardado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_11_27.json
+2026-06-05 09:16:13 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:16:13 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:16:14 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959 respondió con 404
+2026-06-05 09:16:14 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=campaign_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:16:15 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=campaign_1&date_ini=20260605000000&date_end=20260605235959 respondió con 400
+2026-06-05 09:16:15 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/reports_manager.php?api=cdr_1&date_ini=2026-06-05&date_end=2026-06-05
+2026-06-05 09:16:16 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/reports_manager.php?api=cdr_1&date_ini=2026-06-05&date_end=2026-06-05 respondió con 404
+2026-06-05 09:16:16 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/reports_manager.php?api=campaign_1&campaign_id=26678&date_ini=2026-06-05&date_end=2026-06-05
+2026-06-05 09:16:17 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/reports_manager.php?api=campaign_1&campaign_id=26678&date_ini=2026-06-05&date_end=2026-06-05 respondió con 404
+2026-06-05 09:16:17 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=agent_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:16:18 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=agent_1&date_ini=20260605000000&date_end=20260605235959 respondió con 404
+2026-06-05 09:16:18 - WARNING - [AUTO-CAMPAIGN] No se pudieron obtener datos de ningún endpoint de reportes
+2026-06-05 09:16:18 - INFO - [AUTO-CAMPAIGN] XLSX generado exitosamente: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\reporte_campana_Qnt_recaudo_blaster_Prueba-api-3_20260605_141613.xlsx
+2026-06-05 09:16:18 - INFO - [AUTO-CAMPAIGN] Campaña id=11 finalizada exitosamente. XLSX: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\reporte_campana_Qnt_recaudo_blaster_Prueba-api-3_20260605_141613.xlsx (fetched=3, sent=0, failed=3)
+2026-06-05 09:21:42 - INFO - [AUTO-CAMPAIGN] Campaña id=12 iniciada en hilo de fondo
+2026-06-05 09:21:42 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=12 nombre=Prueba-api-3
+2026-06-05 09:21:43 - WARNING - [AUTO-CAMPAIGN] No se encontró la campaña 26667 en la respuesta
+2026-06-05 09:21:45 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:21:45 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_12_20260605_092145.csv
+2026-06-05 09:21:46 - ERROR - [AUTO-CAMPAIGN] Error de límite de licencias Wolkvox: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66397) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-05 09:21:46 - ERROR - [AUTO-CAMPAIGN] Lote 1 fallido: Límite de licencias Wolkvox excedido: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66397) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66397) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-05 09:21:46 - ERROR - [AUTO-CAMPAIGN] Deteniendo envío por límite de licencias
+2026-06-05 09:21:46 - INFO - [AUTO-CAMPAIGN] Reporte JSON guardado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_12_28.json
+2026-06-05 09:21:46 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:21:46 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:21:47 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959 respondió con 404
+2026-06-05 09:21:47 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=campaign_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:21:48 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=campaign_1&date_ini=20260605000000&date_end=20260605235959 respondió con 400
+2026-06-05 09:21:48 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/reports_manager.php?api=cdr_1&date_ini=2026-06-05&date_end=2026-06-05
+2026-06-05 09:21:49 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/reports_manager.php?api=cdr_1&date_ini=2026-06-05&date_end=2026-06-05 respondió con 404
+2026-06-05 09:21:49 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/reports_manager.php?api=campaign_1&campaign_id=26667&date_ini=2026-06-05&date_end=2026-06-05
+2026-06-05 09:21:51 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/reports_manager.php?api=campaign_1&campaign_id=26667&date_ini=2026-06-05&date_end=2026-06-05 respondió con 404
+2026-06-05 09:21:51 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=agent_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:21:52 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=agent_1&date_ini=20260605000000&date_end=20260605235959 respondió con 404
+2026-06-05 09:21:52 - WARNING - [AUTO-CAMPAIGN] No se pudieron obtener datos de ningún endpoint de reportes
+2026-06-05 09:21:52 - INFO - [AUTO-CAMPAIGN] XLSX generado exitosamente: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\reporte_campana_Qnt_recaudo_blaster_Prueba-api-3_20260605_142146.xlsx
+2026-06-05 09:21:52 - INFO - [AUTO-CAMPAIGN] Campaña id=12 finalizada exitosamente. XLSX: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\reporte_campana_Qnt_recaudo_blaster_Prueba-api-3_20260605_142146.xlsx (fetched=3, sent=0, failed=3)
+2026-06-05 09:23:26 - INFO - [AUTO-CAMPAIGN] Campaña id=12 iniciada en hilo de fondo
+2026-06-05 09:23:26 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=12 nombre=Prueba-api-3
+2026-06-05 09:23:27 - WARNING - [AUTO-CAMPAIGN] No se encontró la campaña 26667 en la respuesta
+2026-06-05 09:23:29 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:23:29 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_12_20260605_092329.csv
+2026-06-05 09:23:31 - ERROR - [AUTO-CAMPAIGN] Error de límite de licencias Wolkvox: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66397) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-05 09:23:31 - ERROR - [AUTO-CAMPAIGN] Lote 1 fallido: Límite de licencias Wolkvox excedido: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66397) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66397) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-05 09:23:31 - ERROR - [AUTO-CAMPAIGN] Deteniendo envío por límite de licencias
+2026-06-05 09:23:31 - INFO - [AUTO-CAMPAIGN] Reporte JSON guardado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_12_29.json
+2026-06-05 09:23:31 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:23:31 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:23:32 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959 respondió con 404
+2026-06-05 09:23:32 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=campaign_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:23:34 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=campaign_1&date_ini=20260605000000&date_end=20260605235959 respondió con 400
+2026-06-05 09:23:34 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/reports_manager.php?api=cdr_1&date_ini=2026-06-05&date_end=2026-06-05
+2026-06-05 09:23:35 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/reports_manager.php?api=cdr_1&date_ini=2026-06-05&date_end=2026-06-05 respondió con 404
+2026-06-05 09:23:35 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/reports_manager.php?api=campaign_1&campaign_id=26667&date_ini=2026-06-05&date_end=2026-06-05
+2026-06-05 09:23:36 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/reports_manager.php?api=campaign_1&campaign_id=26667&date_ini=2026-06-05&date_end=2026-06-05 respondió con 404
+2026-06-05 09:23:36 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=agent_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:23:38 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=agent_1&date_ini=20260605000000&date_end=20260605235959 respondió con 404
+2026-06-05 09:23:38 - WARNING - [AUTO-CAMPAIGN] No se pudieron obtener datos de ningún endpoint de reportes
+2026-06-05 09:23:38 - INFO - [AUTO-CAMPAIGN] XLSX generado exitosamente: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\reporte_campana_Qnt_recaudo_blaster_Prueba-api-3_20260605_142331.xlsx
+2026-06-05 09:23:38 - INFO - [AUTO-CAMPAIGN] Campaña id=12 finalizada exitosamente. XLSX: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\reporte_campana_Qnt_recaudo_blaster_Prueba-api-3_20260605_142331.xlsx (fetched=3, sent=0, failed=3)
+2026-06-05 09:23:38 - INFO - [AUTO-CAMPAIGN] Campaña id=12 iniciada en hilo de fondo
+2026-06-05 09:23:38 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=12 nombre=Prueba-api-3
+2026-06-05 09:23:39 - WARNING - [AUTO-CAMPAIGN] No se encontró la campaña 26667 en la respuesta
+2026-06-05 09:23:41 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:23:41 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_12_20260605_092341.csv
+2026-06-05 09:23:42 - ERROR - [AUTO-CAMPAIGN] Error de límite de licencias Wolkvox: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66397) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-05 09:23:42 - ERROR - [AUTO-CAMPAIGN] Lote 1 fallido: Límite de licencias Wolkvox excedido: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66397) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}: {'code': '404', 'error': 'Not Found', 'msg': 'You are uploading (66397) records to the system. According to quantity active licenses, You can upload 50000 records. Try again.'}
+2026-06-05 09:23:42 - ERROR - [AUTO-CAMPAIGN] Deteniendo envío por límite de licencias
+2026-06-05 09:23:42 - INFO - [AUTO-CAMPAIGN] Reporte JSON guardado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_12_30.json
+2026-06-05 09:23:42 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:23:42 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:23:44 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959 respondió con 404
+2026-06-05 09:23:44 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=campaign_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:23:45 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=campaign_1&date_ini=20260605000000&date_end=20260605235959 respondió con 400
+2026-06-05 09:23:45 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/reports_manager.php?api=cdr_1&date_ini=2026-06-05&date_end=2026-06-05
+2026-06-05 09:23:47 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/reports_manager.php?api=cdr_1&date_ini=2026-06-05&date_end=2026-06-05 respondió con 404
+2026-06-05 09:23:47 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/reports_manager.php?api=campaign_1&campaign_id=26667&date_ini=2026-06-05&date_end=2026-06-05
+2026-06-05 09:23:49 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/reports_manager.php?api=campaign_1&campaign_id=26667&date_ini=2026-06-05&date_end=2026-06-05 respondió con 404
+2026-06-05 09:23:49 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=agent_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:23:50 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0017.wolkvox.com/api/v2/reports_manager.php?api=agent_1&date_ini=20260605000000&date_end=20260605235959 respondió con 404
+2026-06-05 09:23:50 - WARNING - [AUTO-CAMPAIGN] No se pudieron obtener datos de ningún endpoint de reportes
+2026-06-05 09:23:50 - INFO - [AUTO-CAMPAIGN] XLSX generado exitosamente: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\reporte_campana_Qnt_recaudo_blaster_Prueba-api-3_20260605_142342.xlsx
+2026-06-05 09:23:50 - INFO - [AUTO-CAMPAIGN] Campaña id=12 finalizada exitosamente. XLSX: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\reporte_campana_Qnt_recaudo_blaster_Prueba-api-3_20260605_142342.xlsx (fetched=3, sent=0, failed=3)
+2026-06-05 09:25:18 - INFO - [AUTO-CAMPAIGN] Campaña id=12 iniciada en hilo de fondo
+2026-06-05 09:25:18 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=12 nombre=Prueba-api-3
+2026-06-05 09:25:20 - WARNING - [AUTO-CAMPAIGN] No se encontró la campaña 24298 en la respuesta
+2026-06-05 09:25:21 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:25:21 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_12_20260605_092521.csv
+2026-06-05 09:25:23 - INFO - [AUTO-CAMPAIGN] Lote 1 enviado: 0 registros
+2026-06-05 09:25:23 - INFO - [AUTO-CAMPAIGN] Reporte JSON guardado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_12_31.json
+2026-06-05 09:25:23 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:25:23 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:25:24 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959 respondió con 404
+2026-06-05 09:25:24 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=campaign_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:25:25 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=campaign_1&date_ini=20260605000000&date_end=20260605235959 respondió con 400
+2026-06-05 09:25:25 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0022.wolkvox.com/api/reports_manager.php?api=cdr_1&date_ini=2026-06-05&date_end=2026-06-05
+2026-06-05 09:25:27 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0022.wolkvox.com/api/reports_manager.php?api=cdr_1&date_ini=2026-06-05&date_end=2026-06-05 respondió con 404
+2026-06-05 09:25:27 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0022.wolkvox.com/api/reports_manager.php?api=campaign_1&campaign_id=24298&date_ini=2026-06-05&date_end=2026-06-05
+2026-06-05 09:25:29 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0022.wolkvox.com/api/reports_manager.php?api=campaign_1&campaign_id=24298&date_ini=2026-06-05&date_end=2026-06-05 respondió con 404
+2026-06-05 09:25:29 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=agent_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:25:30 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=agent_1&date_ini=20260605000000&date_end=20260605235959 respondió con 404
+2026-06-05 09:25:30 - WARNING - [AUTO-CAMPAIGN] No se pudieron obtener datos de ningún endpoint de reportes
+2026-06-05 09:25:30 - INFO - [AUTO-CAMPAIGN] XLSX generado exitosamente: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\reporte_campana_Qnt_RBK_blaster_Prueba-api-3_20260605_142523.xlsx
+2026-06-05 09:25:30 - INFO - [AUTO-CAMPAIGN] Campaña id=12 finalizada exitosamente. XLSX: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\reporte_campana_Qnt_RBK_blaster_Prueba-api-3_20260605_142523.xlsx (fetched=3, sent=0, failed=0)
+2026-06-05 09:27:45 - INFO - [AUTO-CAMPAIGN] Campaña id=12 iniciada en hilo de fondo
+2026-06-05 09:27:46 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=12 nombre=Prueba-api-3
+2026-06-05 09:27:46 - WARNING - [AUTO-CAMPAIGN] No se encontró la campaña 24298 en la respuesta
+2026-06-05 09:27:51 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:27:51 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_12_20260605_092751.csv
+2026-06-05 09:27:52 - INFO - [AUTO-CAMPAIGN] Lote 1 enviado: 0 registros
+2026-06-05 09:27:52 - INFO - [AUTO-CAMPAIGN] Reporte JSON guardado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_12_32.json
+2026-06-05 09:27:52 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:27:52 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:27:53 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959 respondió con 404
+2026-06-05 09:27:53 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=campaign_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:27:54 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=campaign_1&date_ini=20260605000000&date_end=20260605235959 respondió con 400
+2026-06-05 09:27:54 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0022.wolkvox.com/api/reports_manager.php?api=cdr_1&date_ini=2026-06-05&date_end=2026-06-05
+2026-06-05 09:27:56 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0022.wolkvox.com/api/reports_manager.php?api=cdr_1&date_ini=2026-06-05&date_end=2026-06-05 respondió con 404
+2026-06-05 09:27:56 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0022.wolkvox.com/api/reports_manager.php?api=campaign_1&campaign_id=24298&date_ini=2026-06-05&date_end=2026-06-05
+2026-06-05 09:27:57 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0022.wolkvox.com/api/reports_manager.php?api=campaign_1&campaign_id=24298&date_ini=2026-06-05&date_end=2026-06-05 respondió con 404
+2026-06-05 09:27:57 - INFO - [AUTO-CAMPAIGN] Intentando obtener reporte desde: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=agent_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:27:58 - WARNING - [AUTO-CAMPAIGN] Endpoint https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=agent_1&date_ini=20260605000000&date_end=20260605235959 respondió con 404
+2026-06-05 09:27:58 - WARNING - [AUTO-CAMPAIGN] No se pudieron obtener datos de ningún endpoint de reportes
+2026-06-05 09:27:58 - INFO - [AUTO-CAMPAIGN] XLSX generado exitosamente: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\reporte_campana_Qnt_RBK_blaster_Prueba-api-3_20260605_142752.xlsx
+2026-06-05 09:27:58 - INFO - [AUTO-CAMPAIGN] Campaña id=12 finalizada exitosamente. XLSX: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\reporte_campana_Qnt_RBK_blaster_Prueba-api-3_20260605_142752.xlsx (fetched=3, sent=0, failed=0)
+2026-06-05 09:31:49 - INFO - [AUTO-CAMPAIGN] Campaña id=12 iniciada en hilo de fondo
+2026-06-05 09:31:49 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=12 nombre=Prueba-api-3
+2026-06-05 09:31:50 - WARNING - [AUTO-CAMPAIGN] No se encontró la campaña 24298 en la respuesta
+2026-06-05 09:31:51 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:31:51 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_12_20260605_093151.csv
+2026-06-05 09:32:32 - INFO - [AUTO-CAMPAIGN] Campaña id=12 iniciada en hilo de fondo
+2026-06-05 09:32:32 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=12 nombre=Prueba-api-3
+2026-06-05 09:32:33 - WARNING - [AUTO-CAMPAIGN] No se encontró la campaña 24298 en la respuesta
+2026-06-05 09:32:36 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:32:36 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_12_20260605_093236.csv
+2026-06-05 09:32:37 - INFO - [AUTO-CAMPAIGN] Lote 1 enviado: 0 registros
+2026-06-05 09:32:37 - INFO - [AUTO-CAMPAIGN] Reporte JSON guardado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_12_34.json
+2026-06-05 09:32:37 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:32:37 - INFO - [AUTO-CAMPAIGN] Solicitando reporte CDR: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:32:39 - WARNING - [AUTO-CAMPAIGN] Error generando XLSX: 404 Client Error: Not Found for url: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:32:39 - INFO - [AUTO-CAMPAIGN] XLSX de respaldo generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_143237.xlsx
+2026-06-05 09:32:39 - INFO - [AUTO-CAMPAIGN] Campaña id=12 finalizada exitosamente. XLSX: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_143237.xlsx (fetched=3, sent=0, failed=0)
+2026-06-05 09:33:23 - INFO - [AUTO-CAMPAIGN] Campaña id=12 iniciada en hilo de fondo
+2026-06-05 09:33:23 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=12 nombre=Prueba-api-3
+2026-06-05 09:33:24 - WARNING - [AUTO-CAMPAIGN] No se encontró la campaña 24298 en la respuesta
+2026-06-05 09:33:26 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:33:26 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_12_20260605_093326.csv
+2026-06-05 09:33:26 - INFO - [AUTO-CAMPAIGN] Lote 1 enviado: 0 registros
+2026-06-05 09:33:27 - INFO - [AUTO-CAMPAIGN] Reporte JSON guardado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_12_35.json
+2026-06-05 09:33:27 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:33:27 - INFO - [AUTO-CAMPAIGN] Solicitando reporte CDR: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:33:27 - WARNING - [AUTO-CAMPAIGN] Error generando XLSX: 404 Client Error: Not Found for url: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:33:27 - INFO - [AUTO-CAMPAIGN] XLSX de respaldo generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_143326.xlsx
+2026-06-05 09:33:27 - INFO - [AUTO-CAMPAIGN] Campaña id=12 finalizada exitosamente. XLSX: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_143326.xlsx (fetched=3, sent=0, failed=0)
+2026-06-05 09:35:29 - INFO - [AUTO-CAMPAIGN] Campaña id=12 iniciada en hilo de fondo
+2026-06-05 09:35:29 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=12 nombre=Prueba-api-3
+2026-06-05 09:35:30 - WARNING - [AUTO-CAMPAIGN] No se encontró la campaña 24298 en la respuesta
+2026-06-05 09:35:33 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:35:33 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_12_20260605_093533.csv
+2026-06-05 09:35:34 - INFO - [AUTO-CAMPAIGN] Lote 1 enviado: 0 registros
+2026-06-05 09:35:34 - INFO - [AUTO-CAMPAIGN] Reporte JSON guardado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_12_36.json
+2026-06-05 09:35:34 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:35:34 - INFO - [AUTO-CAMPAIGN] Solicitando reporte CDR: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:35:35 - WARNING - [AUTO-CAMPAIGN] Error generando XLSX desde API: 404 Client Error: Not Found for url: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:35:35 - WARNING - [AUTO-CAMPAIGN] Campaña id=12 finalizada. XLSX no disponible, se guardó JSON. (fetched=3, sent=0, failed=0)
+2026-06-05 09:35:38 - INFO - [AUTO-CAMPAIGN] Campaña id=12 iniciada en hilo de fondo
+2026-06-05 09:35:38 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=12 nombre=Prueba-api-3
+2026-06-05 09:35:39 - WARNING - [AUTO-CAMPAIGN] No se encontró la campaña 24298 en la respuesta
+2026-06-05 09:35:40 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:35:40 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_12_20260605_093540.csv
+2026-06-05 09:35:42 - INFO - [AUTO-CAMPAIGN] Lote 1 enviado: 0 registros
+2026-06-05 09:35:42 - INFO - [AUTO-CAMPAIGN] Reporte JSON guardado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_12_37.json
+2026-06-05 09:35:42 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:35:42 - INFO - [AUTO-CAMPAIGN] Solicitando reporte CDR: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:35:43 - WARNING - [AUTO-CAMPAIGN] Error generando XLSX desde API: 404 Client Error: Not Found for url: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:35:43 - WARNING - [AUTO-CAMPAIGN] Campaña id=12 finalizada. XLSX no disponible, se guardó JSON. (fetched=3, sent=0, failed=0)
+2026-06-05 09:38:21 - INFO - [AUTO-CAMPAIGN] Campaña id=12 iniciada en hilo de fondo
+2026-06-05 09:38:21 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=12 nombre=Prueba-api-3
+2026-06-05 09:38:22 - WARNING - [AUTO-CAMPAIGN] No se encontró la campaña 24298 en la respuesta
+2026-06-05 09:38:25 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:38:25 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_12_20260605_093825.csv
+2026-06-05 09:38:26 - INFO - [AUTO-CAMPAIGN] Lote 1 enviado: 0 registros
+2026-06-05 09:38:26 - INFO - [AUTO-CAMPAIGN] Reporte JSON guardado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_12_38.json
+2026-06-05 09:38:26 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:38:26 - INFO - [AUTO-CAMPAIGN] ============================================================
+2026-06-05 09:38:26 - INFO - [AUTO-CAMPAIGN] INICIANDO GENERACIÓN DE XLSX
+2026-06-05 09:38:26 - INFO - [AUTO-CAMPAIGN] Paso 1: Verificando importaciones...
+2026-06-05 09:38:26 - INFO - [AUTO-CAMPAIGN]   ✅ excel_report_builder importado
+2026-06-05 09:38:26 - INFO - [AUTO-CAMPAIGN]   ✅ backend importado
+2026-06-05 09:38:26 - INFO - [AUTO-CAMPAIGN] Paso 2: Datos - server=Qnt_RBK_blaster, campaign=Prueba-api-3, fecha=2026-06-05 14:38:26.105893
+2026-06-05 09:38:26 - INFO - [AUTO-CAMPAIGN] Paso 3: Fechas - ini=2026-06-05, end=2026-06-05
+2026-06-05 09:38:26 - INFO - [AUTO-CAMPAIGN] Paso 4: Timestamps - ini=20260605000000, end=20260605235959
+2026-06-05 09:38:26 - INFO - [AUTO-CAMPAIGN] Paso 5: Obteniendo configuración del servidor...
+2026-06-05 09:38:26 - INFO - [AUTO-CAMPAIGN]   Servidor encontrado: {'name': 'Qnt_RBK_blaster', 'url': 'https://wv0022.wolkvox.com/', 'token': '7b69645f6469737472697d2d3230323630353232303832373234', 'created_at': '2026-05-25T16:09:27.715872'}
+2026-06-05 09:38:26 - INFO - [AUTO-CAMPAIGN] Paso 6: URL construida: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:38:26 - INFO - [AUTO-CAMPAIGN] Paso 7: Headers obtenidos (token presente: True)
+2026-06-05 09:38:26 - INFO - [AUTO-CAMPAIGN] Paso 8: Haciendo request a Wolkvox...
+2026-06-05 09:38:27 - INFO - [AUTO-CAMPAIGN]   Response status: 404
+2026-06-05 09:38:27 - INFO - [AUTO-CAMPAIGN]   Response length: 84 caracteres
+2026-06-05 09:38:27 - INFO - [AUTO-CAMPAIGN]   Response preview: {
+    "code": "404",
+    "error": "Not Found",
+    "msg": "Validate dates entered"
+}...
+2026-06-05 09:38:27 - ERROR - [AUTO-CAMPAIGN] ❌ ERROR en paso de generación XLSX: HTTPError: 404 Client Error: Not Found for url: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:38:27 - INFO - [AUTO-CAMPAIGN]   Detalle completo: HTTPError('404 Client Error: Not Found for url: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959')
+2026-06-05 09:38:27 - ERROR - [AUTO-CAMPAIGN]   Traceback: Traceback (most recent call last):
+  File "C:\Users\bcrodriguez\Desarollo\Python_Qnt-\auto_campaign_executor.py", line 645, in _generate_xlsx_report
+    resp.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\bcrodriguez\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 404 Client Error: Not Found for url: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+
+2026-06-05 09:38:27 - INFO - [AUTO-CAMPAIGN] ============================================================
+2026-06-05 09:38:27 - WARNING - [AUTO-CAMPAIGN] Campaña id=12 finalizada. XLSX no disponible, se guardó JSON. (fetched=3, sent=0, failed=0)
+2026-06-05 09:38:27 - INFO - [AUTO-CAMPAIGN] Campaña id=12 iniciada en hilo de fondo
+2026-06-05 09:38:27 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=12 nombre=Prueba-api-3
+2026-06-05 09:38:28 - WARNING - [AUTO-CAMPAIGN] No se encontró la campaña 24298 en la respuesta
+2026-06-05 09:38:29 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:38:29 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_12_20260605_093829.csv
+2026-06-05 09:38:30 - INFO - [AUTO-CAMPAIGN] Lote 1 enviado: 0 registros
+2026-06-05 09:38:30 - INFO - [AUTO-CAMPAIGN] Reporte JSON guardado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_12_39.json
+2026-06-05 09:38:30 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:38:30 - INFO - [AUTO-CAMPAIGN] ============================================================
+2026-06-05 09:38:30 - INFO - [AUTO-CAMPAIGN] INICIANDO GENERACIÓN DE XLSX
+2026-06-05 09:38:30 - INFO - [AUTO-CAMPAIGN] Paso 1: Verificando importaciones...
+2026-06-05 09:38:30 - INFO - [AUTO-CAMPAIGN]   ✅ excel_report_builder importado
+2026-06-05 09:38:30 - INFO - [AUTO-CAMPAIGN]   ✅ backend importado
+2026-06-05 09:38:30 - INFO - [AUTO-CAMPAIGN] Paso 2: Datos - server=Qnt_RBK_blaster, campaign=Prueba-api-3, fecha=2026-06-05 14:38:30.433016
+2026-06-05 09:38:30 - INFO - [AUTO-CAMPAIGN] Paso 3: Fechas - ini=2026-06-05, end=2026-06-05
+2026-06-05 09:38:30 - INFO - [AUTO-CAMPAIGN] Paso 4: Timestamps - ini=20260605000000, end=20260605235959
+2026-06-05 09:38:30 - INFO - [AUTO-CAMPAIGN] Paso 5: Obteniendo configuración del servidor...
+2026-06-05 09:38:30 - INFO - [AUTO-CAMPAIGN]   Servidor encontrado: {'name': 'Qnt_RBK_blaster', 'url': 'https://wv0022.wolkvox.com/', 'token': '7b69645f6469737472697d2d3230323630353232303832373234', 'created_at': '2026-05-25T16:09:27.715872'}
+2026-06-05 09:38:30 - INFO - [AUTO-CAMPAIGN] Paso 6: URL construida: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:38:30 - INFO - [AUTO-CAMPAIGN] Paso 7: Headers obtenidos (token presente: True)
+2026-06-05 09:38:30 - INFO - [AUTO-CAMPAIGN] Paso 8: Haciendo request a Wolkvox...
+2026-06-05 09:38:31 - INFO - [AUTO-CAMPAIGN]   Response status: 404
+2026-06-05 09:38:31 - INFO - [AUTO-CAMPAIGN]   Response length: 84 caracteres
+2026-06-05 09:38:31 - INFO - [AUTO-CAMPAIGN]   Response preview: {
+    "code": "404",
+    "error": "Not Found",
+    "msg": "Validate dates entered"
+}...
+2026-06-05 09:38:31 - ERROR - [AUTO-CAMPAIGN] ❌ ERROR en paso de generación XLSX: HTTPError: 404 Client Error: Not Found for url: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:38:31 - INFO - [AUTO-CAMPAIGN]   Detalle completo: HTTPError('404 Client Error: Not Found for url: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959')
+2026-06-05 09:38:31 - ERROR - [AUTO-CAMPAIGN]   Traceback: Traceback (most recent call last):
+  File "C:\Users\bcrodriguez\Desarollo\Python_Qnt-\auto_campaign_executor.py", line 645, in _generate_xlsx_report
+    resp.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\bcrodriguez\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 404 Client Error: Not Found for url: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+
+2026-06-05 09:38:31 - INFO - [AUTO-CAMPAIGN] ============================================================
+2026-06-05 09:38:31 - WARNING - [AUTO-CAMPAIGN] Campaña id=12 finalizada. XLSX no disponible, se guardó JSON. (fetched=3, sent=0, failed=0)
+2026-06-05 09:43:57 - INFO - [AUTO-CAMPAIGN] Campaña id=12 iniciada en hilo de fondo
+2026-06-05 09:43:57 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=12 nombre=Prueba-api-3
+2026-06-05 09:43:58 - WARNING - [AUTO-CAMPAIGN] No se encontró la campaña 24298 en la respuesta
+2026-06-05 09:44:00 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:44:00 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_12_20260605_094400.csv
+2026-06-05 09:44:01 - INFO - [AUTO-CAMPAIGN] Lote 1 enviado: 0 registros
+2026-06-05 09:44:01 - INFO - [AUTO-CAMPAIGN] Reporte JSON guardado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_12_40.json
+2026-06-05 09:44:01 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:44:01 - INFO - [AUTO-CAMPAIGN] ============================================================
+2026-06-05 09:44:01 - INFO - [AUTO-CAMPAIGN] INICIANDO GENERACIÓN DE XLSX
+2026-06-05 09:44:01 - INFO - [AUTO-CAMPAIGN] Paso 1: Verificando importaciones...
+2026-06-05 09:44:01 - INFO - [AUTO-CAMPAIGN]   ✅ excel_report_builder importado
+2026-06-05 09:44:01 - INFO - [AUTO-CAMPAIGN]   ✅ backend importado
+2026-06-05 09:44:01 - INFO - [AUTO-CAMPAIGN] Paso 2: Datos - server=Qnt_RBK_blaster, campaign=Prueba-api-3, fecha=2026-06-05 14:44:01.189951
+2026-06-05 09:44:01 - INFO - [AUTO-CAMPAIGN] Paso 3: Fechas - ini=2026-06-05, end=2026-06-05
+2026-06-05 09:44:01 - INFO - [AUTO-CAMPAIGN] Paso 4: Timestamps - ini=20260605000000, end=20260605235959
+2026-06-05 09:44:01 - INFO - [AUTO-CAMPAIGN] Paso 5: Obteniendo configuración del servidor...
+2026-06-05 09:44:01 - INFO - [AUTO-CAMPAIGN]   Servidor encontrado: {'name': 'Qnt_RBK_blaster', 'url': 'https://wv0022.wolkvox.com/', 'token': '7b69645f6469737472697d2d3230323630353232303832373234', 'created_at': '2026-05-25T16:09:27.715872'}
+2026-06-05 09:44:01 - INFO - [AUTO-CAMPAIGN] Paso 6: URL construida: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:44:01 - INFO - [AUTO-CAMPAIGN] Paso 7: Headers obtenidos (token presente: True)
+2026-06-05 09:44:01 - INFO - [AUTO-CAMPAIGN] Paso 8: Haciendo request a Wolkvox...
+2026-06-05 09:44:02 - INFO - [AUTO-CAMPAIGN]   Response status: 200
+2026-06-05 09:44:02 - INFO - [AUTO-CAMPAIGN]   Response length: 2969 caracteres
+2026-06-05 09:44:02 - INFO - [AUTO-CAMPAIGN]   Response preview: {
+    "code": "200",
+    "error": null,
+    "msg": "4 records were found",
+    "data": [
+        {
+            "agent_name": "",
+            "date": "2026-06-05 09:28:42",
+            "destiny": "",
+            "telephone": "91573223189873",
+            "cost": "0.00",
+            "time_seg": "2",
+ ...
+2026-06-05 09:44:02 - INFO - [AUTO-CAMPAIGN] Paso 9: Parseando JSON...
+2026-06-05 09:44:02 - INFO - [AUTO-CAMPAIGN]   Tipo de datos: <class 'dict'>
+2026-06-05 09:44:02 - INFO - [AUTO-CAMPAIGN]   Keys disponibles: ['code', 'error', 'msg', 'data']
+2026-06-05 09:44:02 - INFO - [AUTO-CAMPAIGN]   Datos desde 'data': 4 elementos
+2026-06-05 09:44:02 - INFO - [AUTO-CAMPAIGN] Paso 10: Total registros extraídos: 4
+2026-06-05 09:44:02 - INFO - [AUTO-CAMPAIGN]   Primer registro preview: {'agent_name': '', 'date': '2026-06-05 09:28:42', 'destiny': '', 'telephone': '91573223189873', 'cost': '0.00'}
+2026-06-05 09:44:02 - INFO - [AUTO-CAMPAIGN] Paso 11: Generando archivo XLSX...
+2026-06-05 09:44:02 - INFO - [AUTO-CAMPAIGN]   Nombre archivo: auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_144401.xlsx
+2026-06-05 09:44:02 - INFO - [AUTO-CAMPAIGN]   Ruta salida: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_144401.xlsx
+2026-06-05 09:44:02 - INFO - [AUTO-CAMPAIGN] Paso 12: ✅ XLSX generado exitosamente: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_144401.xlsx
+2026-06-05 09:44:02 - INFO - [AUTO-CAMPAIGN] ============================================================
+2026-06-05 09:44:02 - INFO - [AUTO-CAMPAIGN] Campaña id=12 finalizada exitosamente. XLSX: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_144401.xlsx (fetched=3, sent=0, failed=0)
+2026-06-05 09:45:07 - INFO - [AUTO-CAMPAIGN] Campaña id=12 iniciada en hilo de fondo
+2026-06-05 09:45:07 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=12 nombre=Prueba-api-3
+2026-06-05 09:45:08 - WARNING - [AUTO-CAMPAIGN] No se encontró la campaña 24298 en la respuesta
+2026-06-05 09:45:10 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:45:10 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_12_20260605_094510.csv
+2026-06-05 09:45:10 - INFO - [AUTO-CAMPAIGN] Lote 1 enviado: 0 registros
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN] Reporte JSON guardado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_12_41.json
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN] ============================================================
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN] INICIANDO GENERACIÓN DE XLSX
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN] Paso 1: Verificando importaciones...
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN]   ✅ excel_report_builder importado
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN]   ✅ backend importado
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN] Paso 2: Datos - server=Qnt_RBK_blaster, campaign=Prueba-api-3, fecha=2026-06-05 14:45:10.986710
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN] Paso 3: Fechas - ini=2026-06-05, end=2026-06-05
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN] Paso 4: Timestamps - ini=20260605000000, end=20260605235959
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN] Paso 5: Obteniendo configuración del servidor...
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN]   Servidor encontrado: {'name': 'Qnt_RBK_blaster', 'url': 'https://wv0022.wolkvox.com/', 'token': '7b69645f6469737472697d2d3230323630353232303832373234', 'created_at': '2026-05-25T16:09:27.715872'}
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN] Paso 6: URL construida: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN] Paso 7: Headers obtenidos (token presente: True)
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN] Paso 8: Haciendo request a Wolkvox...
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN]   Response status: 200
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN]   Response length: 2969 caracteres
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN]   Response preview: {
+    "code": "200",
+    "error": null,
+    "msg": "4 records were found",
+    "data": [
+        {
+            "agent_name": "",
+            "date": "2026-06-05 09:28:42",
+            "destiny": "",
+            "telephone": "91573223189873",
+            "cost": "0.00",
+            "time_seg": "2",
+ ...
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN] Paso 9: Parseando JSON...
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN]   Tipo de datos: <class 'dict'>
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN]   Keys disponibles: ['code', 'error', 'msg', 'data']
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN]   Datos desde 'data': 4 elementos
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN] Paso 10: Total registros extraídos: 4
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN]   Primer registro preview: {'agent_name': '', 'date': '2026-06-05 09:28:42', 'destiny': '', 'telephone': '91573223189873', 'cost': '0.00'}
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN] Paso 11: Generando archivo XLSX...
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN]   Nombre archivo: auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_144510.xlsx
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN]   Ruta salida: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_144510.xlsx
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN] Paso 12: ✅ XLSX generado exitosamente: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_144510.xlsx
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN] ============================================================
+2026-06-05 09:45:11 - INFO - [AUTO-CAMPAIGN] Campaña id=12 finalizada exitosamente. XLSX: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_144510.xlsx (fetched=3, sent=0, failed=0)
+2026-06-05 09:47:02 - INFO - [AUTO-CAMPAIGN] Campaña id=12 iniciada en hilo de fondo
+2026-06-05 09:47:02 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=12 nombre=Prueba-api-3
+2026-06-05 09:47:03 - WARNING - [AUTO-CAMPAIGN] No se encontró la campaña 24298 en la respuesta
+2026-06-05 09:47:04 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 09:47:04 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_12_20260605_094704.csv
+2026-06-05 09:47:05 - INFO - [AUTO-CAMPAIGN] Lote 1 enviado: 0 registros
+2026-06-05 09:47:05 - INFO - [AUTO-CAMPAIGN] Reporte JSON guardado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_12_42.json
+2026-06-05 09:47:05 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 09:47:05 - INFO - [AUTO-CAMPAIGN] ============================================================
+2026-06-05 09:47:05 - INFO - [AUTO-CAMPAIGN] INICIANDO GENERACIÓN DE XLSX
+2026-06-05 09:47:05 - INFO - [AUTO-CAMPAIGN] Paso 1: Verificando importaciones...
+2026-06-05 09:47:05 - INFO - [AUTO-CAMPAIGN]   ✅ excel_report_builder importado
+2026-06-05 09:47:05 - INFO - [AUTO-CAMPAIGN]   ✅ backend importado
+2026-06-05 09:47:05 - INFO - [AUTO-CAMPAIGN] Paso 2: Datos - server=Qnt_RBK_blaster, campaign=Prueba-api-3, fecha=2026-06-05 14:47:05.733782
+2026-06-05 09:47:05 - INFO - [AUTO-CAMPAIGN] Paso 3: Fechas - ini=2026-06-05, end=2026-06-05
+2026-06-05 09:47:05 - INFO - [AUTO-CAMPAIGN] Paso 4: Timestamps - ini=20260605000000, end=20260605235959
+2026-06-05 09:47:05 - INFO - [AUTO-CAMPAIGN] Paso 5: Obteniendo configuración del servidor...
+2026-06-05 09:47:05 - INFO - [AUTO-CAMPAIGN]   Servidor encontrado: {'name': 'Qnt_RBK_blaster', 'url': 'https://wv0022.wolkvox.com/', 'token': '7b69645f6469737472697d2d3230323630353232303832373234', 'created_at': '2026-05-25T16:09:27.715872'}
+2026-06-05 09:47:05 - INFO - [AUTO-CAMPAIGN] Paso 6: URL construida: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 09:47:05 - INFO - [AUTO-CAMPAIGN] Paso 7: Headers obtenidos (token presente: True)
+2026-06-05 09:47:05 - INFO - [AUTO-CAMPAIGN] Paso 8: Haciendo request a Wolkvox...
+2026-06-05 09:47:06 - INFO - [AUTO-CAMPAIGN]   Response status: 200
+2026-06-05 09:47:06 - INFO - [AUTO-CAMPAIGN]   Response length: 2969 caracteres
+2026-06-05 09:47:06 - INFO - [AUTO-CAMPAIGN]   Response preview: {
+    "code": "200",
+    "error": null,
+    "msg": "4 records were found",
+    "data": [
+        {
+            "agent_name": "",
+            "date": "2026-06-05 09:28:42",
+            "destiny": "",
+            "telephone": "91573223189873",
+            "cost": "0.00",
+            "time_seg": "2",
+ ...
+2026-06-05 09:47:06 - INFO - [AUTO-CAMPAIGN] Paso 9: Parseando JSON...
+2026-06-05 09:47:06 - INFO - [AUTO-CAMPAIGN]   Tipo de datos: <class 'dict'>
+2026-06-05 09:47:06 - INFO - [AUTO-CAMPAIGN]   Keys disponibles: ['code', 'error', 'msg', 'data']
+2026-06-05 09:47:06 - INFO - [AUTO-CAMPAIGN]   Datos desde 'data': 4 elementos
+2026-06-05 09:47:06 - INFO - [AUTO-CAMPAIGN] Paso 10: Total registros extraídos: 4
+2026-06-05 09:47:06 - INFO - [AUTO-CAMPAIGN]   Primer registro preview: {'agent_name': '', 'date': '2026-06-05 09:28:42', 'destiny': '', 'telephone': '91573223189873', 'cost': '0.00'}
+2026-06-05 09:47:06 - INFO - [AUTO-CAMPAIGN] Paso 11: Generando archivo XLSX...
+2026-06-05 09:47:06 - INFO - [AUTO-CAMPAIGN]   Nombre archivo: auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_144705.xlsx
+2026-06-05 09:47:06 - INFO - [AUTO-CAMPAIGN]   Ruta salida: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_144705.xlsx
+2026-06-05 09:47:06 - INFO - [AUTO-CAMPAIGN] Paso 12: ✅ XLSX generado exitosamente: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_144705.xlsx
+2026-06-05 09:47:06 - INFO - [AUTO-CAMPAIGN] ============================================================
+2026-06-05 09:47:06 - INFO - [AUTO-CAMPAIGN] Campaña id=12 finalizada exitosamente. XLSX: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_144705.xlsx (fetched=3, sent=0, failed=0)
+2026-06-05 10:05:04 - INFO - [AUTO-CAMPAIGN] Campaña id=12 iniciada en hilo de fondo
+2026-06-05 10:05:04 - INFO - [AUTO-CAMPAIGN] Iniciando campaña automática id=12 nombre=Prueba-api-3
+2026-06-05 10:05:05 - WARNING - [AUTO-CAMPAIGN] No se encontró la campaña 24298 en la respuesta
+2026-06-05 10:05:07 - INFO - [AUTO-CAMPAIGN] Registros obtenidos de BigQuery: 3
+2026-06-05 10:05:07 - INFO - [AUTO-CAMPAIGN] CSV generado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_12_20260605_100507.csv
+2026-06-05 10:05:08 - INFO - [AUTO-CAMPAIGN] Lote 1 enviado: 0 registros
+2026-06-05 10:05:08 - INFO - [AUTO-CAMPAIGN] Reporte JSON guardado: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_12_43.json
+2026-06-05 10:05:08 - INFO - [AUTO-CAMPAIGN] Generando reporte XLSX...
+2026-06-05 10:05:08 - INFO - [AUTO-CAMPAIGN] ============================================================
+2026-06-05 10:05:08 - INFO - [AUTO-CAMPAIGN] INICIANDO GENERACIÓN DE XLSX
+2026-06-05 10:05:08 - INFO - [AUTO-CAMPAIGN] Paso 1: Verificando importaciones...
+2026-06-05 10:05:08 - INFO - [AUTO-CAMPAIGN]   ✅ excel_report_builder importado
+2026-06-05 10:05:08 - INFO - [AUTO-CAMPAIGN]   ✅ backend importado
+2026-06-05 10:05:08 - INFO - [AUTO-CAMPAIGN] Paso 2: Datos - server=Qnt_RBK_blaster, campaign=Prueba-api-3, fecha=2026-06-05 15:05:08.410391
+2026-06-05 10:05:08 - INFO - [AUTO-CAMPAIGN] Paso 3: Fechas - ini=2026-06-05, end=2026-06-05
+2026-06-05 10:05:08 - INFO - [AUTO-CAMPAIGN] Paso 4: Timestamps - ini=20260605000000, end=20260605235959
+2026-06-05 10:05:08 - INFO - [AUTO-CAMPAIGN] Paso 5: Obteniendo configuración del servidor...
+2026-06-05 10:05:08 - INFO - [AUTO-CAMPAIGN]   Servidor encontrado: {'name': 'Qnt_RBK_blaster', 'url': 'https://wv0022.wolkvox.com/', 'token': '7b69645f6469737472697d2d3230323630353232303832373234', 'created_at': '2026-05-25T16:09:27.715872'}
+2026-06-05 10:05:08 - INFO - [AUTO-CAMPAIGN] Paso 6: URL construida: https://wv0022.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini=20260605000000&date_end=20260605235959
+2026-06-05 10:05:08 - INFO - [AUTO-CAMPAIGN] Paso 7: Headers obtenidos (token presente: True)
+2026-06-05 10:05:08 - INFO - [AUTO-CAMPAIGN] Paso 8: Haciendo request a Wolkvox...
+2026-06-05 10:05:09 - INFO - [AUTO-CAMPAIGN]   Response status: 200
+2026-06-05 10:05:09 - INFO - [AUTO-CAMPAIGN]   Response length: 13123 caracteres
+2026-06-05 10:05:09 - INFO - [AUTO-CAMPAIGN]   Response preview: {
+    "code": "200",
+    "error": null,
+    "msg": "18 records were found",
+    "data": [
+        {
+            "agent_name": "",
+            "date": "2026-06-05 09:47:28",
+            "destiny": "",
+            "telephone": "91573144051619",
+            "cost": "0.00",
+            "time_seg": "10",...
+2026-06-05 10:05:09 - INFO - [AUTO-CAMPAIGN] Paso 9: Parseando JSON...
+2026-06-05 10:05:09 - INFO - [AUTO-CAMPAIGN]   Tipo de datos: <class 'dict'>
+2026-06-05 10:05:09 - INFO - [AUTO-CAMPAIGN]   Keys disponibles: ['code', 'error', 'msg', 'data']
+2026-06-05 10:05:09 - INFO - [AUTO-CAMPAIGN]   Datos desde 'data': 18 elementos
+2026-06-05 10:05:09 - INFO - [AUTO-CAMPAIGN] Paso 10: Total registros extraídos: 18
+2026-06-05 10:05:09 - INFO - [AUTO-CAMPAIGN]   Primer registro preview: {'agent_name': '', 'date': '2026-06-05 09:47:28', 'destiny': '', 'telephone': '91573144051619', 'cost': '0.00'}
+2026-06-05 10:05:09 - INFO - [AUTO-CAMPAIGN] Paso 11: Generando archivo XLSX...
+2026-06-05 10:05:09 - INFO - [AUTO-CAMPAIGN]   Nombre archivo: auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_150508.xlsx
+2026-06-05 10:05:09 - INFO - [AUTO-CAMPAIGN]   Ruta salida: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_150508.xlsx
+2026-06-05 10:05:09 - INFO - [AUTO-CAMPAIGN] Paso 12: ✅ XLSX generado exitosamente: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_150508.xlsx
+2026-06-05 10:05:09 - INFO - [AUTO-CAMPAIGN] ============================================================
+2026-06-05 10:05:09 - INFO - [AUTO-CAMPAIGN] Campaña id=12 finalizada exitosamente. XLSX: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\uploads\auto_campaigns\auto_campaign_report_Qnt_RBK_blaster_Prueba-api-3_20260605_150508.xlsx (fetched=3, sent=0, failed=0)
+2026-06-24 11:37:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-06-24...
+2026-06-24 11:39:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-06-24...
+2026-06-24 11:40:51 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-06-24
+2026-06-24 11:42:21 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-06-24
+2026-06-24 12:05:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-06-24...
+2026-06-24 12:05:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-06-24...
+2026-06-24 12:08:20 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-06-24
+2026-06-24 12:08:23 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-06-24
+2026-06-24 14:05:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-06-24...
+2026-06-24 14:05:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-06-24...
+2026-06-24 14:09:17 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-06-24
+2026-06-24 14:09:20 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-06-24
+2026-06-24 16:05:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-06-24...
+2026-06-24 16:05:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-06-24...
+2026-06-24 16:09:45 - ERROR - ❌ bigquery_processor.py falló con código 1
+2026-06-24 16:09:45 - ERROR - ❌ bigquery_processor.py falló con código 1

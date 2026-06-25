@@ -2,54 +2,75 @@ import subprocess
 import pandas as pd
 import pandas_gbq
 from google.cloud import bigquery
-from google.api_core.exceptions import NotFound # Importa NotFound aquí
+from google.api_core.exceptions import NotFound
 import gspread
 import os
 from pathlib import Path
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
-
-from google.api_core.exceptions import NotFound # Importa NotFound aquí
 from google.oauth2 import service_account
 
 # Ruta a tu llave JSON de Google Cloud (MUY IMPORTANTE)
 BASE_DIR = Path(__file__).resolve().parent
-PATH_TO_JSON_KEY = str(BASE_DIR / "config" / "google_key.json")
+CONFIG_DIR = BASE_DIR / "config"
+CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+PROJECT_ID = "capable-arbor-209819"
+PATH_TO_JSON_KEY = CONFIG_DIR / "google_key.json"
 
-project_id = "capable-arbor-209819"
+# Paths de credenciales y fallback
+ENV_CREDENTIAL_PATH = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or os.environ.get("GOOGLE_KEY_PATH")
+CREDENTIAL_PATHS = []
+if ENV_CREDENTIAL_PATH:
+    CREDENTIAL_PATHS.append(Path(ENV_CREDENTIAL_PATH))
+CREDENTIAL_PATHS.extend([
+    PATH_TO_JSON_KEY,
+    BASE_DIR / "google_key.json",
+])
 
-# Cargar las credenciales desde tu archivo JSON
 creds = None
 client = None
-
-try:
-    creds = service_account.Credentials.from_service_account_file(PATH_TO_JSON_KEY)
-    client = bigquery.Client(credentials=creds, project=project_id)
-    print(f"[OK] Credenciales cargadas desde: {PATH_TO_JSON_KEY}")
-except FileNotFoundError as e:
-    print(f"[ERROR] Archivo de credenciales no encontrado en {PATH_TO_JSON_KEY}")
-    print(f"        Detalle: {e}")
-except Exception as e:
-    print(f"[ERROR] Error al cargar credenciales: {e}")
-
-# Autenticar gcloud (opcional) si el cliente JSON no se pudo cargar
-if client is not None:
-    print("[OK] Cliente BigQuery inicializado con credenciales del JSON")
-else:
+selected_key_path = None
+for key_path in CREDENTIAL_PATHS:
     try:
-        if PATH_TO_JSON_KEY:
-            print(f"[INFO] Intentando autenticar gcloud con: {PATH_TO_JSON_KEY}")
+        if key_path and key_path.exists():
+            selected_key_path = key_path
+            creds = service_account.Credentials.from_service_account_file(str(key_path))
+            client = bigquery.Client(credentials=creds, project=PROJECT_ID)
+            print(f"[OK] Credenciales cargadas desde: {key_path}")
+            break
+    except Exception as e:
+        print(f"[ERROR] Error al cargar credenciales desde {key_path}: {e}")
+        selected_key_path = None
+        client = None
+
+if client is None:
+    tried_paths = [str(path) for path in CREDENTIAL_PATHS]
+    print("[ERROR] No se pudo inicializar el cliente de BigQuery.")
+    print("        Se intentaron estas rutas de credenciales:")
+    for path in tried_paths:
+        print(f"        - {path}")
+    if ENV_CREDENTIAL_PATH:
+        print("        Usa GOOGLE_APPLICATION_CREDENTIALS o GOOGLE_KEY_PATH para indicar la ruta correcta.")
+    else:
+        print("        Coloca tu archivo google_key.json en config/ o en la raíz del proyecto.")
+    try:
+        auth_path = ENV_CREDENTIAL_PATH or str(PATH_TO_JSON_KEY)
+        if ENV_CREDENTIAL_PATH or Path(auth_path).exists():
+            print(f"[INFO] Intentando autenticar gcloud con: {auth_path}")
             subprocess.check_call([
-                    "gcloud", "auth", "activate-service-account",
-                    f"--key-file={PATH_TO_JSON_KEY}"
+                "gcloud", "auth", "activate-service-account",
+                f"--key-file={auth_path}"
             ])
             print("[OK] gcloud autenticado")
+            creds = service_account.Credentials.from_service_account_file(auth_path)
+            client = bigquery.Client(credentials=creds, project=PROJECT_ID)
+            print("[OK] Cliente BigQuery inicializado con gcloud.")
     except FileNotFoundError:
-        print("[WARN] gcloud no esta instalado o no esta en el PATH")
-        print("       La aplicacion usara las credenciales del JSON si estan disponibles")
+        print("[WARN] gcloud no está instalado o no está en el PATH")
+        print("       La aplicación usará las credenciales del JSON si están disponibles.")
     except Exception as e:
-        print(f"[WARN] Error de autenticacion gcloud: {e}")
+        print(f"[WARN] Error de autenticación gcloud: {e}")
 
 # 1. Definir Scopes y nombre de archivo de sesión
 SCOPES = [
@@ -90,6 +111,7 @@ def get_bigquery_client():
     if client is None:
         raise RuntimeError(
             f"Cliente de BigQuery no inicializado. "
-            f"Verifica que el archivo de credenciales exista en: {PATH_TO_JSON_KEY}"
+            f"Verifica que el archivo de credenciales exista en: {PATH_TO_JSON_KEY} "
+            f"o define GOOGLE_APPLICATION_CREDENTIALS/GOOGLE_KEY_PATH."
         )
     return client

@@ -59,7 +59,13 @@ document.getElementById('reportForm').addEventListener('submit', async function(
       return;
     }
 
+    // Debug extra: mostrar si la respuesta parece inválida
     const blob = await resp.blob();
+    if(!blob || blob.size === 0){
+      feedback.innerHTML = `<div class="alert alert-danger">La respuesta llegó vacía (size=0). Revisa logs del servidor.</div>`;
+      return;
+    }
+
     // Intentar obtener filename desde cabecera
     const cd = resp.headers.get('Content-Disposition') || '';
     let filename = 'reporte.xlsx';

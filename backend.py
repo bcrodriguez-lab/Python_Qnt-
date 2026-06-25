@@ -1,6 +1,7 @@
 import csv
 import json
 import logging
+import os
 import shutil
 import threading
 from collections import deque
@@ -9,9 +10,11 @@ from datetime import datetime
 from pathlib import Path
 from flask import Flask
 from database import db, init_db, Campaign, ScheduledCSV, APIEndpoint, ScheduledQuery
+from auto_campaigns import check_auto_campaigns_schedule
 from werkzeug.utils import secure_filename
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.cron import CronTrigger
 from bigquery import count_query_results, escribir_resultados_campana
 from conexion_bigquery import client, get_bigquery_client
 from general_params import (
@@ -20,6 +23,7 @@ from general_params import (
     get_log_retention_hours,
 )
 from servers import get_server
+
 # - ScheduledCSV: Modelo para tareas CSV programadas
 # - APIEndpoint: Modelo para endpoints API configurables
 # - upload_csv_to_api(): Carga CSV a API
@@ -184,6 +188,7 @@ def _attach_execution_log_handler():
     handler.setFormatter(logging.Formatter(LOG_FORMAT, datefmt=LOG_DATEFMT))
     execution_logger.addHandler(handler)
 
+
 app = Flask(__name__)
 app.config["JSON_SORT_KEYS"] = False
 app.config["SECRET_KEY"] = "change-this-secret-key"
@@ -203,10 +208,7 @@ load_config()
 
 
 def reschedule_campaign_check_job(seconds: int | None = None) -> int:
-    """
-    Reprograma el job de revisión de campañas sin reiniciar la aplicación.
-    Retorna el intervalo en segundos aplicado.
-    """
+    """Reprograma el job de revisión de campañas sin reiniciar la aplicación."""
     interval = int(seconds) if seconds is not None else get_campaign_check_interval_seconds()
     scheduler.reschedule_job(
         CAMPAIGN_SCHEDULER_JOB_ID,
@@ -217,10 +219,7 @@ def reschedule_campaign_check_job(seconds: int | None = None) -> int:
 
 
 def reschedule_console_message_job(seconds: int | None = None) -> int:
-    """
-    Reprograma el mensaje en consola (job independiente de execute_pending_tasks).
-    Por defecto cada 60 segundos (1 minuto).
-    """
+    """Reprograma el mensaje en consola."""
     interval = (
         int(seconds)
         if seconds is not None
@@ -235,51 +234,17 @@ def reschedule_console_message_job(seconds: int | None = None) -> int:
 
 
 def get_wolkvox_params() -> dict:
-    """Parametros extra para peticiones Wolkvox (ajustar segun integracion)."""
+    """Parametros extra para peticiones Wolkvox."""
     return {}
 
 
 def upload_csv_to_api(filename: str, api_url: str):
     """Carga un CSV de uploads/ a la API indicada."""
-    # filepath = UPLOAD_FOLDER / filename
-    # if not filepath.exists():
-    #     logger.error(f"Archivo {filename} no encontrado.")
-    #     return
-    # try:
-    #     logger.info(f"Iniciando carga de archivo {filename} a API {api_url}")
-    #     headers = get_authorization_headers()
-    #     with filepath.open("rb") as f:
-    #         files = {"file": f}
-    #         response = requests.post(
-    #             api_url, files=files, headers=headers, params=get_wolkvox_params()
-    #         )
-    #         if response.status_code == 200:
-    #             logger.info(f"Carga de {filename} a {api_url}: Éxito")
-    #         else:
-    #             logger.warning(f"Carga de {filename} a {api_url}: Error {response.status_code}")
-    # except Exception as e:
-    #     logger.error(f"Error cargando {filename} a {api_url}: {e}")
     pass
 
 
 def consume_api(endpoint_id: int):
     """Consume un endpoint registrado en APIEndpoint."""
-    # endpoint = APIEndpoint.query.get(endpoint_id)
-    # if not endpoint:
-    #     logger.error(f"Endpoint {endpoint_id} no encontrado.")
-    #     return
-    # try:
-    #     logger.info(f"Iniciando consumo de API {endpoint.url} (id={endpoint_id})")
-    #     headers = get_authorization_headers()
-    #     response = requests.get(
-    #         endpoint.url, headers=headers, params=get_wolkvox_params()
-    #     )
-    #     if response.status_code == 200:
-    #         logger.info(f"Consumiendo {endpoint.url}: Éxito")
-    #     else:
-    #         logger.warning(f"Consumiendo {endpoint.url}: Error {response.status_code}")
-    # except Exception as e:
-    #     logger.error(f"Error consumiendo {endpoint.url}: {e}")
     pass
 
 
@@ -314,10 +279,7 @@ def campaign_to_log_dict(campaign: Campaign) -> dict:
 
 
 def get_client_count_from_query(campaign: Campaign) -> tuple[int | None, str | None]:
-    """
-    Obtiene cuantos clientes debe procesar la campaña segun su consulta BigQuery.
-    Retorna (total, mensaje_error).
-    """
+    """Obtiene cuantos clientes debe procesar la campaña segun su consulta BigQuery."""
     consulta = (campaign.consulta or "").strip()
     if not consulta:
         return None, "La campaña no tiene consulta definida."
@@ -346,7 +308,6 @@ def format_campaign_execution_line(
     clientes_query: int | None = None,
     nota: str = "",
 ) -> str:
-    """Una sola línea con todos los campos de la campaña."""
     data = campaign_to_log_dict(campaign)
     if clientes_query is not None:
         data["clientes_a_ejecutar_query"] = clientes_query
@@ -367,7 +328,6 @@ def log_campaign_execution_line(
     nota: str = "",
     level: str = "INFO",
 ) -> None:
-    """Registra campaña en una línea: terminal, archivo y tablero web."""
     line = format_campaign_execution_line(
         campaign,
         prefix=prefix,
@@ -379,7 +339,7 @@ def log_campaign_execution_line(
 
 
 def get_campaigns_scheduled_for_today(now: datetime) -> list[Campaign]:
-    """Campañas programadas para el dia calendario actual (cualquier hora)."""
+    """Campañas programadas para el dia calendario actual."""
     day_start, day_end = _today_range(now)
     return (
         Campaign.query.filter(
@@ -393,7 +353,7 @@ def get_campaigns_scheduled_for_today(now: datetime) -> list[Campaign]:
 
 
 def get_past_unexecuted_campaigns(now: datetime) -> list[Campaign]:
-    """Campañas de dias anteriores que no se ejecutaron (no se volveran a ejecutar)."""
+    """Campañas de dias anteriores que no se ejecutaron."""
     day_start, _ = _today_range(now)
     return (
         Campaign.query.filter(
@@ -407,10 +367,7 @@ def get_past_unexecuted_campaigns(now: datetime) -> list[Campaign]:
 
 
 def run_campaign_api_consumption(campaign: Campaign) -> bool:
-    """
-    Inicia la secuencia Wolkvox definida en campaign_execution.get_campaign_execution_rules().
-    Retorna True si se lanzó el workflow en segundo plano.
-    """
+    """Inicia la secuencia Wolkvox definida."""
     from campaign_execution import requires_wolkvox_execution, start_campaign_wolkvox_workflow_async
 
     load_config()
@@ -437,7 +394,7 @@ def run_campaign_api_consumption(campaign: Campaign) -> bool:
 
 
 def execute_campaign(campaign: Campaign):
-    """Ejecuta una campaña del dia: conteo BigQuery y secuencia de APIs Wolkvox."""
+    """Ejecuta una campaña del dia."""
     clientes_query, count_error = get_client_count_from_query(campaign)
     level = "WARNING" if count_error else "INFO"
     if not count_error and clientes_query is not None:
@@ -464,10 +421,7 @@ def execute_campaign(campaign: Campaign):
 
 
 def get_campaigns_due_for_execution(now: datetime) -> list[Campaign]:
-    """
-    Campañas de HOY cuya hora ya llegó y aún no se ejecutaron.
-    No incluye campañas de días anteriores (fecha ya pasó).
-    """
+    """Campañas de HOY cuya hora ya llegó y aún no se ejecutaron."""
     day_start, day_end = _today_range(now)
     return (
         Campaign.query.filter(
@@ -482,34 +436,11 @@ def get_campaigns_due_for_execution(now: datetime) -> list[Campaign]:
     )
 
 
-'''
-def allowed_file(filename: str) -> bool:
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
-'''
-
-'''def read_csv_metadata(filepath: Path) -> dict:
-    metadata = {"rows": 0, "columns": 0}
-    try:
-        with filepath.open(newline="", encoding="utf-8") as csvfile:
-            reader = csv.reader(csvfile)
-            for index, row in enumerate(reader, start=1):
-                metadata["rows"] = index
-                if index == 1:
-                    metadata["columns"] = len(row)
-    except Exception:
-        metadata = {"rows": 0, "columns": 0}
-    return metadata
-'''
-
-
 LOG_BACKUP_GLOB = "execution_log_backup_*.txt"
 
 
 def cleanup_old_log_files() -> list[str]:
-    """
-    Elimina archivos de log rotados más antiguos que log_retention_hours (config.json).
-    No borra execution_log.txt activo.
-    """
+    """Elimina archivos de log rotados más antiguos que log_retention_hours."""
     retention_hours = get_log_retention_hours()
     cutoff_ts = datetime.now().timestamp() - (retention_hours * 3600)
     deleted: list[str] = []
@@ -532,7 +463,7 @@ def cleanup_old_log_files() -> list[str]:
 
 
 def read_recent_log_lines(limit: int = 20) -> list[str]:
-    """Últimas líneas de actividad para el tablero (memoria, no el archivo en disco)."""
+    """Últimas líneas de actividad para el tablero."""
     with _activity_lock:
         if not _activity_log:
             return []
@@ -540,7 +471,7 @@ def read_recent_log_lines(limit: int = 20) -> list[str]:
 
 
 def rotate_log_if_needed():
-    """Rota execution_log.txt al superar LOG_MAX_LINES (cierra el handler en Windows)."""
+    """Rota execution_log.txt al superar LOG_MAX_LINES."""
     with _log_io_lock:
         if not LOG_FILE.exists():
             return
@@ -559,7 +490,6 @@ def rotate_log_if_needed():
         )
         _close_execution_log_handlers()
         try:
-            # En Windows rename falla si el archivo está abierto; copiar y borrar es más fiable.
             shutil.copy2(LOG_FILE, backup_file)
             LOG_FILE.unlink(missing_ok=True)
             _attach_execution_log_handler()
@@ -569,33 +499,23 @@ def rotate_log_if_needed():
             _attach_execution_log_handler()
             logger.error(f"No se pudo rotar el log: {e}")
 
-def execute_scheduled_query(query_id: int):
-    """
-    Ejecuta una consulta HTTP programada (modelo ScheduledQuery).
 
-    Hace GET a query.api_url con token Wolkvox, guarda la respuesta en
-    downloads/ y actualiza en BD el estado de la ultima ejecucion.
-    La invoca execute_pending_tasks cuando toca por frecuencia o es la primera vez.
-    """
-    # Cargar registro de la query; si fue borrada, no hay nada que ejecutar.
+def execute_scheduled_query(query_id: int):
+    """Ejecuta una consulta HTTP programada."""
     query = ScheduledQuery.query.get(query_id)
     if not query:
         log_task(f"Query {query_id} no encontrada.", level="ERROR")
         return
     try:
         log_task(f"Iniciando ejecución de consulta a API {query.api_url} (query_id={query_id})")
-        # Token Bearer / wolkvox-token desde config.json.
         headers = get_authorization_headers()
-        # GET a la URL configurada; params extras de Wolkvox (si aplica).
         response = requests.get(query.api_url, headers=headers, params=get_wolkvox_params())
         if response.status_code == 200:
-            # Respuesta OK: persistir JSON en downloads/ con nombre unico por timestamp.
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"query_{query_id}_{timestamp}.json"
             filepath = DOWNLOAD_FOLDER / filename
             with filepath.open("w", encoding="utf-8") as f:
                 f.write(response.text)
-            # Marcar ejecucion exitosa; last_run alimenta el control de frecuencia.
             query.last_run = datetime.utcnow()
             query.last_status = "EXEC"
             query.last_error = None
@@ -603,7 +523,6 @@ def execute_scheduled_query(query_id: int):
             db.session.commit()
             log_task(f"[EXEC] Query a {query.api_url}: Éxito, guardado en {filename}")
         else:
-            # HTTP distinto de 200: registrar fallo sin guardar archivo.
             error_msg = f"HTTP {response.status_code}"
             query.last_status = "FAILED"
             query.last_error = error_msg
@@ -611,7 +530,6 @@ def execute_scheduled_query(query_id: int):
             db.session.commit()
             log_task(f"[EXEC] Query a {query.api_url}: Error {response.status_code}", level="WARNING")
     except Exception as e:
-        # Red, timeout, JSON invalido, etc.: mismo esquema de estado FAILED.
         error_msg = str(e)
         query.last_status = "FAILED"
         query.last_error = error_msg
@@ -620,13 +538,8 @@ def execute_scheduled_query(query_id: int):
         log_task(f"[EXEC] Error ejecutando query a {query.api_url}: {e}", level="ERROR")
 
 
-
-
 def console_message_heartbeat():
-    """
-    Mensaje fijo en consola cada N segundos (config: console_message_interval_seconds).
-    No ejecuta campañas; es independiente de execute_pending_tasks.
-    """
+    """Mensaje fijo en consola cada N segundos."""
     print(
         f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Consultando campañas programadas...",
         flush=True,
@@ -634,31 +547,14 @@ def console_message_heartbeat():
 
 
 def execute_pending_tasks():
-    """
-    Orquestador del scheduler de campañas (intervalo en general_parameters, segundos).
-
-    En cada ciclo:
-      1) Mantiene el log (rotación por líneas y borrado de backups por retención).
-      2) Recarga config.json (token, parámetros generales).
-      3) Registra en log todo lo programado para hoy (sin ejecutar fechas pasadas).
-      4) Ejecuta campañas del día cuya hora ya llegó y aún no están marcadas ejecutada.
-
-    Lo invoca APScheduler según campaign_check_interval_seconds.
-    El mensaje periódico en consola lo hace console_message_heartbeat (job aparte).
-    """
-    # Flask-SQLAlchemy requiere contexto de app fuera de una petición HTTP.
+    """Orquestador del scheduler de campañas."""
     with app.app_context():
-        # --- 1) Mantenimiento de archivos de log ---
         try:
-            # Rota execution_log.txt si supera LOG_MAX_LINES (genera backup).
             rotate_log_if_needed()
-            # Elimina execution_log_backup_*.txt más viejos que log_retention_hours.
             cleanup_old_log_files()
         except Exception as e:
-            # Un fallo aquí no detiene la revisión de campañas.
             logger.error(f"Error en rotación de log (se continúa el ciclo): {e}")
 
-        # --- 2) Configuración en memoria ---
         load_config()
         now = datetime.now()
 
@@ -687,7 +583,187 @@ def execute_pending_tasks():
                 )
                 db.session.rollback()
 
+        try:
+            auto_result = check_auto_campaigns_schedule(app)
+            if auto_result.get("due"):
+                log_activity(
+                    f"Scheduler automático: {auto_result.get('started', 0)} iniciada(s), "
+                    f"{auto_result.get('skipped', 0)} omitida(s)"
+                )
+        except Exception as e:
+            log_task(f"Error revisando campañas automáticas: {e}", level="ERROR")
+            db.session.rollback()
 
+
+# ========== EJECUTAR BIGQUERY_PROCESSOR ==========
+def ejecutar_bigquery_processor(fecha: str = None):
+    """
+    Ejecuta bigquery_processor.py para procesar los datos descargados.
+    """
+    import subprocess
+    import sys
+    from datetime import datetime
+    
+    if fecha is None:
+        fecha = datetime.now().strftime("%Y-%m-%d")
+    
+    try:
+        # Verificar que el archivo existe
+        if not os.path.exists("bigquery_processor.py"):
+            log_task(f"❌ No se encontró bigquery_processor.py", level="ERROR")
+            return False
+        
+        log_task(f"🔄 Ejecutando bigquery_processor.py para {fecha}...")
+        
+        resultado = subprocess.run(
+            [sys.executable, "bigquery_processor.py", fecha],
+            capture_output=False,
+            text=True,
+            timeout=3600  # 1 hora máximo
+        )
+        
+        if resultado.returncode == 0:
+            log_task(f"✅ bigquery_processor.py completado exitosamente para {fecha}")
+            return True
+        else:
+            log_task(f"❌ bigquery_processor.py falló con código {resultado.returncode}", level="ERROR")
+            return False
+            
+    except subprocess.TimeoutExpired:
+        log_task(f"❌ bigquery_processor.py excedió el tiempo límite (1 hora)", level="ERROR")
+        return False
+    except Exception as e:
+        log_task(f"❌ Error ejecutando bigquery_processor.py: {e}", level="ERROR")
+        return False
+
+
+def programar_bigquery_processor():
+    """
+    Programa bigquery_processor.py para ejecutarse después de cada descarga.
+    """
+    from config import HORARIOS_EJECUCION
+    
+    if not os.path.exists("bigquery_processor.py"):
+        logger.warning("⚠️ bigquery_processor.py no encontrado")
+        return
+    
+    logger.info("="*60)
+    logger.info("📦 PROGRAMANDO BIGQUERY_PROCESSOR")
+    logger.info("="*60)
+    
+    for horario in HORARIOS_EJECUCION:
+        hora, minuto = horario.split(":")
+        # Sumar 5 minutos al horario de descarga
+        minuto_ajustado = int(minuto) + 5
+        if minuto_ajustado >= 60:
+            minuto_ajustado = minuto_ajustado - 60
+            hora_ajustada = int(hora) + 1
+        else:
+            hora_ajustada = int(hora)
+        
+        if hora_ajustada >= 24:
+            hora_ajustada = hora_ajustada - 24
+        
+        hora_str = f"{hora_ajustada:02d}:{minuto_ajustado:02d}"
+        
+        trigger = CronTrigger(hour=hora_ajustada, minute=minuto_ajustado)
+        scheduler.add_job(
+            ejecutar_bigquery_processor,
+            trigger=trigger,
+            id=f"bigquery_processor_{horario}",
+            replace_existing=True,
+            args=[None]  # fecha=None = hoy
+        )
+        logger.info(f"   ✅ bigquery_processor programado a las {hora_str} (después de descarga a las {horario})")
+    
+    logger.info("="*60)
+
+
+# ========== INICIALIZAR DESCARGA AUTOMÁTICA ==========
+def init_auto_download_on_startup():
+    """Inicializa los sistemas de descargas automáticas al iniciar la aplicación."""
+    try:
+        # IMPORTAR DESDE CONFIG.PY
+        from config import DESCARGAR_CDR, DESCARGAR_AMD, MODO_DESCARGA, HORARIOS_EJECUCION
+        import importlib.util
+        
+        logger.info("="*60)
+        logger.info("📦 SISTEMA DE DESCARGAS AUTOMÁTICAS")
+        logger.info("="*60)
+        logger.info(f"📅 Modo: {MODO_DESCARGA}")
+        logger.info(f"📋 CDR: {'ACTIVADO' if DESCARGAR_CDR else 'DESACTIVADO'}")
+        logger.info(f"📋 AMD: {'ACTIVADO' if DESCARGAR_AMD else 'DESACTIVADO'}")
+        logger.info(f"🕐 Horarios: {', '.join(HORARIOS_EJECUCION)}")
+        logger.info("="*60)
+        
+        # ===== PROGRAMAR BIGQUERY_PROCESSOR =====
+        programar_bigquery_processor()
+        
+        # Inicializar CDR si está activado
+        if DESCARGAR_CDR:
+            spec = importlib.util.find_spec("download_auto")
+            if spec is not None:
+                from download_auto import iniciar_scheduler, estado_scheduler
+                estado = estado_scheduler()
+                logger.info("="*60)
+                logger.info("📦 SISTEMA DE DESCARGAS AUTOMÁTICAS CDR")
+                logger.info("="*60)
+                logger.info(f"📁 Ruta base: {estado.get('base_dir')}")
+                logger.info(f"📋 Servidores: {estado.get('servidores')}")
+                logger.info(f"🕐 Horarios: {', '.join(estado.get('horarios', []))}")
+                logger.info(f"📅 Modo: {MODO_DESCARGA}")
+                logger.info("\n🔄 Activando descargas automáticas CDR...")
+                resultado = iniciar_scheduler()
+                if resultado:
+                    logger.info("✅ Descargas automáticas CDR ACTIVADAS")
+                else:
+                    logger.warning("⚠️ No se pudieron activar las descargas CDR")
+                logger.info("="*60)
+            else:
+                logger.info("Módulo download_auto no encontrado.")
+        else:
+            logger.info("⏭️ Descargas CDR desactivadas en config.py")
+        
+        # Inicializar AMD si está activado
+        if DESCARGAR_AMD:
+            spec = importlib.util.find_spec("download_campaign_detail")
+            if spec is not None:
+                from download_campaign_detail import iniciar_scheduler_amd, estado_scheduler_amd
+                estado = estado_scheduler_amd()
+                logger.info("="*60)
+                logger.info("📦 SISTEMA DE DESCARGAS AUTOMÁTICAS AMD")
+                logger.info("="*60)
+                logger.info(f"📁 Ruta base: {estado.get('base_dir')}")
+                logger.info(f"📋 Servidores: {estado.get('servidores')}")
+                logger.info(f"🕐 Horarios: {', '.join(estado.get('horarios', []))}")
+                logger.info(f"📅 Modo: {estado.get('modo_descarga', MODO_DESCARGA)}")
+                logger.info(f"📅 Fechas: {estado.get('fechas', [])}")
+                logger.info("\n🔄 Activando descargas automáticas AMD...")
+                resultado = iniciar_scheduler_amd()
+                if resultado:
+                    logger.info("✅ Descargas automáticas AMD ACTIVADAS")
+                else:
+                    logger.warning("⚠️ No se pudieron activar las descargas AMD")
+                logger.info("="*60)
+            else:
+                logger.info("Módulo download_campaign_detail no encontrado.")
+        else:
+            logger.info("⏭️ Descargas AMD desactivadas en config.py")
+            
+    except ImportError as e:
+        logger.error(f"Error importando config: {e}")
+        logger.info("Asegúrate de que config.py tenga todas las variables necesarias:")
+        logger.info("  - MODO_DESCARGA")
+        logger.info("  - DESCARGAR_CDR")
+        logger.info("  - DESCARGAR_AMD")
+        logger.info("  - HORARIOS_EJECUCION")
+    except Exception as e:
+        logger.error(f"Error inicializando descargas automáticas: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+# ========== INICIALIZAR SCHEDULER ==========
 _initial_interval = get_campaign_check_interval_seconds()
 _console_interval = get_console_message_interval_seconds()
 _now = datetime.now()
@@ -712,3 +788,6 @@ logger.info(
 )
 log_activity("Aplicación iniciada; monitoreo de campañas activo")
 console_message_heartbeat()
+
+# ========== INICIAR DESCARGAS AUTOMÁTICAS ==========
+init_auto_download_on_startup()

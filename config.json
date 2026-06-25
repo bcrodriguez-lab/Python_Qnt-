@@ -5,6 +5,12 @@
     "log_retention_hours": 1,
     "updated_at": "2026-05-20T13:40:56.371826"
   },
+  "bigquery": {
+    "project_id": "capable-arbor-209819",
+    "dataset_id": "Temporal",
+    "table_name": "Temporal_Robot_Campañas",
+    "enabled": true
+  },
   "wolkvox-token": "7b69645f6469737472697d2d3230323630353232303832353338",
   "servidor": "https://wv0051.wolkvox.com",
   "servers": [

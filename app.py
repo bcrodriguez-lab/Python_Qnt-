@@ -3,6 +3,12 @@ from flask import jsonify, render_template, request, send_from_directory, send_f
 import io
 import csv
 from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.filters import AutoFilter
+from excel_report_builder import build_wolkvox_excel, _safe_filename
+
+
 import json
 import requests
 import re
@@ -27,7 +33,7 @@ from backend import (
 )
 from general_params import load_general_parameters, save_general_parameters
 from conexion_bigquery import get_bigquery_client
-from bigquery import escribir_resultados_campana, count_query_results, sync_campaigns_to_bigquery
+from bigquery import escribir_resultados_campana, count_query_results, sync_campaigns_to_bigquery, validate_query_columns
 from campaigns import (
     list_campaigns,
     get_campaign,
@@ -71,9 +77,37 @@ from api_runner import (
 from servers import get_config_servidor_default
 from server_apis import load_assignment_matrix, set_server_api_active
 from dashboard import get_dashboard_data, refresh_dashboard_from_wolkvox
+from auto_campaigns import (
+    create_auto_campaign,
+    delete_auto_campaign,
+    get_auto_campaign,
+    list_auto_campaigns,
+    list_execution_logs,
+    parse_auto_campaign_id,
+    update_auto_campaign,
+)
+from auto_campaign_executor import (
+    is_auto_campaign_running,
+    request_stop_auto_campaign,
+    start_auto_campaign_async,
+)
 
 # Crear conexión global a BigQuery al iniciar la aplicación
 bq_client = None
+
+
+def _to_wolkvox_ts(s: str, is_end: bool = False) -> str:
+    if not s:
+        return ''
+    try:
+        if 'T' in s or len(s) > 10:
+            dt = datetime.fromisoformat(s)
+        else:
+            d = date.fromisoformat(s)
+            dt = datetime(d.year, d.month, d.day, 23, 59, 59) if is_end else datetime(d.year, d.month, d.day, 0, 0, 0)
+        return dt.strftime('%Y%m%d%H%M%S')
+    except Exception:
+        return s
 
 
 @app.context_processor
@@ -298,114 +332,31 @@ def reports_download():
     # Procesar respuesta
     # =========================================================
 
-    rows = []
-    headers_row = []
+    # Usamos el builder nuevo (con formato) reutilizando lógica actual
+    # Nota: respetamos el formato/orden del Excel pero minimizamos duplicación.
 
     try:
-
         data_json = resp.json()
-
         if isinstance(data_json, list):
-
             rows = data_json
-
         elif isinstance(data_json, dict):
-
             if 'data' in data_json and isinstance(data_json['data'], list):
-
                 rows = data_json['data']
-
             elif 'files' in data_json and isinstance(data_json['files'], list):
-
                 rows = data_json['files']
-
             else:
-
                 rows = [data_json]
-
-    except Exception:
-
-        text = resp.text
-
-        try:
-
-            reader = csv.reader(io.StringIO(text))
-
-            csv_rows = list(reader)
-
-            if csv_rows:
-
-                headers_row = csv_rows[0]
-
-                rows = [
-                    dict(zip(headers_row, r))
-                    for r in csv_rows[1:]
-                ]
-
-        except Exception:
-
-            rows = [{
-                'raw': resp.text
-            }]
-
-    # =========================================================
-    # Obtener columnas
-    # =========================================================
-
-    all_keys = []
-
-    for r in rows:
-
-        if isinstance(r, dict):
-
-            for k in r.keys():
-
-                if k not in all_keys:
-
-                    all_keys.append(k)
-
-    # =========================================================
-    # Crear Excel
-    # =========================================================
-
-    wb = Workbook()
-
-    ws = wb.active
-
-    ws.title = 'report'
-
-    # Cabecera
-    ws.append(all_keys or ['raw'])
-
-    # Datos
-    for r in rows:
-
-        if isinstance(r, dict):
-
-            row = [r.get(k, '') for k in all_keys]
-
         else:
-
-            row = [str(r)]
-
-        ws.append(row)
-
-    # =========================================================
-    # Guardar archivo
-    # =========================================================
-
-    bio = io.BytesIO()
-
-    wb.save(bio)
-
-    bio.seek(0)
+            rows = [{'raw': resp.text}]
+    except Exception:
+        rows = [{'raw': resp.text}]
 
     # Nombre de archivo solicitado: "1. Detalle de las llamadas.YYYYMMDD-<Servidor>.xlsx"
     today_str = datetime.utcnow().strftime('%Y%m%d')
-    safe_server = (server or 'server').strip()
-    # Reemplazar caracteres no seguros por guión bajo
-    safe_server = re.sub(r'[^0-9A-Za-z._-]', '_', safe_server)
+    safe_server = _safe_filename(server or 'server')
     filename = f"1. Detalle de las llamadas.{today_str}-{safe_server}.xlsx"
+
+    bio, _ = build_wolkvox_excel(rows=rows, filename=filename)
 
     return send_file(
         bio,
@@ -413,6 +364,8 @@ def reports_download():
         download_name=filename,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
+
 
 @app.route("/api/invoke", methods=["POST"])
 def invoke_api():
@@ -945,6 +898,459 @@ def test_bigquery_query():
         return jsonify(result)
     log_gui_action("Probar conteo BigQuery fallo", mensaje=result.get("message"))
     return jsonify(result), 400
+
+
+@app.route("/auto-campaigns", methods=["GET"])
+def auto_campaigns_index():
+    campaigns = list_auto_campaigns()
+    return render_template("auto_campaigns/index.html", campaigns=campaigns)
+
+
+def _auto_campaign_form_context(campaign=None, logs=None):
+    servers_result = load_servers()
+    servers = servers_result.get("servers", []) if servers_result.get("success") else []
+    options = servers_result.get("options", {}) if servers_result.get("success") else {}
+    return {
+        "campaign": campaign,
+        "logs": logs or [],
+        "servers": servers,
+        "operaciones": options.get("operaciones", []),
+        "tipos": options.get("tipos", []),
+        "usuarios": options.get("usuarios", []),
+        "tipos_campana": TIPO_CAMPANA_OPTIONS,
+        "tipos_campana_con_flujo": TIPO_CAMPANA_CON_FLUJO,
+    }
+
+
+@app.route("/auto-campaigns/new", methods=["GET"])
+def auto_campaigns_new():
+    return render_template("auto_campaigns/form.html", **_auto_campaign_form_context())
+
+
+@app.route("/auto-campaigns", methods=["POST"])
+def auto_campaigns_create():
+    data = request.get_json(silent=True) or request.form.to_dict()
+    result = create_auto_campaign(data)
+    if not result.get("success"):
+        return jsonify(result), 400
+    log_gui_action("Crear campaña automática", id=result.get("campaign", {}).get("id"))
+    return jsonify(result)
+
+
+@app.route("/auto-campaigns/test-count", methods=["POST"])
+def auto_campaigns_test_count():
+    data = request.get_json() or {}
+    query = (data.get("query") or "").strip()
+    if not query:
+        return jsonify({"success": False, "message": "La consulta SQL es obligatoria."}), 400
+
+    global bq_client
+    if bq_client is None:
+        init_bigquery()
+    if bq_client is None:
+        return jsonify({"success": False, "message": "No se pudo inicializar el cliente de BigQuery."}), 500
+
+    field_mapping = None
+    if "field_mapping" in data and data.get("field_mapping"):
+        raw_mapping = data.get("field_mapping")
+        if isinstance(raw_mapping, str):
+            try:
+                field_mapping = json.loads(raw_mapping)
+            except json.JSONDecodeError:
+                return jsonify({"success": False, "message": "field_mapping debe ser JSON válido."}), 400
+        elif isinstance(raw_mapping, dict):
+            field_mapping = raw_mapping
+
+    if field_mapping:
+        validation = validate_query_columns(bq_client, query, field_mapping)
+        if not validation.get("success"):
+            log_gui_action("Preconteo campaña automática fallo", mensaje=validation.get("message"))
+            return jsonify(validation), 400
+
+    result = count_query_results(bq_client, query)
+    if not result.get("success"):
+        log_gui_action("Preconteo campaña automática fallo", mensaje=result.get("message"))
+        return jsonify(result), 400
+
+    # Si la validación devolvió advertencias, propágalas en la respuesta final
+    if field_mapping and 'validation' in locals() and validation.get('warning'):
+        result['warning'] = validation.get('warning')
+        # Asegurar que el mensaje principal incluya la advertencia
+        result['message'] = validation.get('warning') + (" - " + result.get('message', '') if result.get('message') else "")
+
+    campaign_id = parse_auto_campaign_id(data.get("campaign_id") or data.get("id"))
+    if campaign_id is not None:
+        from database import AutoCampaign
+
+        campaign = AutoCampaign.query.get(campaign_id)
+        if campaign:
+            campaign.last_precount = int(result.get("total") or 0)
+            db.session.commit()
+            result["last_precount_saved"] = True
+
+    log_gui_action("Preconteo campaña automática", total=result.get("total"), campaign_id=campaign_id)
+    return jsonify(result)
+
+
+@app.route("/auto-campaigns/validate-query-fields", methods=["POST"])
+def auto_campaigns_validate_query_fields():
+    """
+    Valida que una consulta BigQuery tenga los campos requeridos.
+    
+    Retorna:
+    - Los campos detectados en la consulta
+    - Los campos requeridos que faltan (si los hay)
+    - Las variaciones de nombres aceptadas
+    """
+    from services.query_validator import (
+        validate_and_normalize,
+        describe_field_aliases,
+        map_column_name,
+    )
+    
+    data = request.get_json() or {}
+    query = (data.get("query") or "").strip()
+    
+    if not query:
+        return jsonify({
+            "success": False,
+            "message": "La consulta SQL es obligatoria."
+        }), 400
+
+    global bq_client
+    if bq_client is None:
+        init_bigquery()
+    if bq_client is None:
+        return jsonify({
+            "success": False,
+            "message": "No se pudo inicializar el cliente de BigQuery."
+        }), 500
+
+    try:
+        # Ejecutar consulta
+        query_text = query.strip().rstrip(";")
+        if not re.match(r"^(SELECT|WITH)\b", query_text, re.IGNORECASE):
+            return jsonify({
+                "success": False,
+                "message": "Solo se permiten consultas SELECT o WITH."
+            }), 400
+
+        job = bq_client.query(query_text)
+        result = job.result(max_results=1)
+        rows = list(result)
+        
+        if not rows:
+            return jsonify({
+                "success": False,
+                "message": "La consulta no retorna resultados."
+            }), 400
+
+        # Validar y mapear campos
+        success, normalized_rows, error_msg = validate_and_normalize(rows)
+        
+        # Obtener información de campos detectados
+        raw_columns = list(rows[0].keys()) if rows else []
+        mapped_columns = {}
+        
+        for col in raw_columns:
+            mapped = map_column_name(col)
+            mapped_columns[col] = mapped or "NO_MAPEADO"
+        
+        response = {
+            "success": success,
+            "message": error_msg or "Consulta válida.",
+            "detected_columns": raw_columns,
+            "column_mapping": mapped_columns,
+            "field_aliases": describe_field_aliases(),
+            "sample_row": rows[0] if rows else None,
+        }
+        
+        if not success:
+            response["error"] = error_msg
+            return jsonify(response), 400
+        
+        return jsonify(response)
+    
+    except Exception as exc:
+        error_msg = f"Error validando consulta: {str(exc)}"
+        logger.error(error_msg)
+        return jsonify({
+            "success": False,
+            "message": error_msg
+        }), 500
+
+
+@app.route("/auto-campaigns/<int:campaign_id>", methods=["GET"])
+def auto_campaigns_detail(campaign_id):
+    campaign = get_auto_campaign(campaign_id)
+    if not campaign:
+        return jsonify({"success": False, "message": "No se encontró la campaña automática."}), 404
+    logs = list_execution_logs(campaign_id)
+    if request.headers.get("Accept", "").find("application/json") >= 0:
+        return jsonify({"success": True, "campaign": campaign, "logs": logs})
+    return render_template("auto_campaigns/form.html", **_auto_campaign_form_context(campaign, logs))
+
+
+@app.route("/auto-campaigns/<int:campaign_id>", methods=["PUT", "POST"])
+def auto_campaigns_update(campaign_id):
+    data = request.get_json(silent=True) or request.form.to_dict()
+    result = update_auto_campaign(campaign_id, data)
+    if not result.get("success"):
+        return jsonify(result), 400
+    log_gui_action("Actualizar campaña automática", id=campaign_id)
+    return jsonify(result)
+
+
+@app.route("/auto-campaigns/<int:campaign_id>/download-report-before-edit", methods=["POST"])
+def auto_campaigns_download_report_before_edit(campaign_id):
+    """Descarga XLSX previo a edición (servidor + campaña + fin) sin borrar la campaña."""
+    from database import AutoCampaign, AutoCampaignExecutionLog
+
+    campaign = AutoCampaign.query.get(campaign_id)
+    if not campaign:
+        return jsonify({"success": False, "message": "No se encontró la campaña automática."}), 404
+
+    server_name = (campaign.server_name or "").strip()
+    campaign_name = (campaign.name or "").strip() or f"campaign_{campaign_id}"
+
+    log = (
+        AutoCampaignExecutionLog.query.filter_by(auto_campaign_id=campaign_id)
+        .order_by(AutoCampaignExecutionLog.end_time.desc())
+        .first()
+    )
+
+    end_dt = log.end_time if log and log.end_time else campaign.last_run
+    if not end_dt:
+        end_dt = datetime.utcnow()
+
+    # Rango para Wolkvox: mismo criterio que delete-report
+    date_ini = end_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    date_end = end_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    date_ini_str = date_ini.strftime("%Y-%m-%d")
+    date_end_str = date_end.strftime("%Y-%m-%d")
+
+    if not server_name:
+        return jsonify({"success": False, "message": "La campaña no tiene server_name configurado."}), 400
+
+    try:
+        rows = _wolkvox_report_rows(server_name, date_ini_str, date_end_str)
+    except Exception as exc:
+        return jsonify({"success": False, "message": f"Error generando reporte previo a edición: {exc}"}), 502
+
+    safe_server = _safe_filename(server_name)
+    safe_campaign = _safe_filename(campaign_name)
+    end_file_ts = end_dt.strftime("%Y%m%d_%H%M%S")
+    filename = f"reporte_{safe_server}_{safe_campaign}_finalizado_{end_file_ts}.xlsx"
+
+    bio, _ = build_wolkvox_excel(rows=rows, filename=filename)
+
+    return send_file(
+        bio,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+
+@app.route("/auto-campaigns/<int:campaign_id>/delete-report", methods=["POST"])
+def auto_campaigns_delete_report(campaign_id):
+    """Elimina la campaña automática descargando un XLSX (servidor + campaña + fin)."""
+    from database import AutoCampaign, AutoCampaignExecutionLog
+
+    campaign = AutoCampaign.query.get(campaign_id)
+    if not campaign:
+        return jsonify({"success": False, "message": "No se encontró la campaña automática."}), 404
+
+    if campaign.running:
+        return jsonify({"success": False, "message": "No se puede borrar una campaña en ejecución."}), 409
+
+    server_name = (campaign.server_name or "").strip()
+    campaign_name = (campaign.name or "").strip() or f"campaign_{campaign_id}"
+
+    # Tomar fecha/hora de finalización desde el último log (si existe)
+    log = (
+        AutoCampaignExecutionLog.query.filter_by(auto_campaign_id=campaign_id)
+        .order_by(AutoCampaignExecutionLog.end_time.desc())
+        .first()
+    )
+
+    end_dt = log.end_time if log and log.end_time else campaign.last_run
+    if not end_dt:
+        # fallback: usar ahora UTC
+        end_dt = datetime.utcnow()
+
+    end_str = end_dt.strftime("%Y-%m-%dT%H:%M:%S")
+
+    # Ventana para reportes: 1 día hacia atrás (ajustable)
+    date_ini = (end_dt.replace(hour=0, minute=0, second=0, microsecond=0))
+    date_end = (end_dt.replace(hour=23, minute=59, second=59, microsecond=999999))
+
+    date_ini_str = date_ini.strftime("%Y-%m-%d")
+    date_end_str = date_end.strftime("%Y-%m-%d")
+
+    if not server_name:
+        return jsonify({"success": False, "message": "La campaña no tiene server_name configurado."}), 400
+
+    # Llamar a Wolkvox y generar Excel con formato
+    try:
+        rows = _wolkvox_report_rows(server_name, date_ini_str, date_end_str)
+    except Exception as exc:
+        return jsonify({"success": False, "message": f"Error generando reporte para eliminación: {exc}"}), 502
+
+    safe_server = _safe_filename(server_name)
+    safe_campaign = _safe_filename(campaign_name)
+    end_file_ts = end_dt.strftime("%Y%m%d_%H%M%S")
+    filename = f"reporte_{safe_server}_{safe_campaign}_finalizado_{end_file_ts}.xlsx"
+
+    bio, _ = build_wolkvox_excel(rows=rows, filename=filename)
+
+    # Enviar el archivo ANTES de eliminar (para no perder metadatos)
+    # Luego eliminamos la campaña y logs.
+    result = delete_auto_campaign(campaign_id)
+    if not result.get("success"):
+        # Si falló el delete, igual preferimos no romper descarga; pero avisamos
+        log_gui_action("Eliminar campaña automática fallo (post report)", id=campaign_id)
+
+    log_gui_action("Eliminar campaña automática con descarga", id=campaign_id, server=server_name, nombre=campaign_name, end=end_str)
+
+    from flask import make_response
+    resp = make_response(send_file(
+        bio,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ))
+    return resp
+
+
+@app.route("/auto-campaigns/<int:campaign_id>", methods=["DELETE"])
+def auto_campaigns_delete(campaign_id):
+    # Mantener compatibilidad: eliminación normal sin reporte
+    result = delete_auto_campaign(campaign_id)
+    if not result.get("success"):
+        return jsonify(result), 400
+    log_gui_action("Eliminar campaña automática", id=campaign_id)
+    return jsonify(result)
+
+
+
+@app.route("/auto-campaigns/<int:campaign_id>/run", methods=["POST"])
+def auto_campaigns_run(campaign_id):
+    if is_auto_campaign_running(campaign_id):
+        return jsonify({"success": False, "message": "La campaña ya está en ejecución."}), 409
+    started = start_auto_campaign_async(campaign_id, app)
+    if not started:
+        return jsonify({"success": False, "message": "La campaña ya está en ejecución."}), 409
+    log_gui_action("Ejecutar campaña automática", id=campaign_id)
+    return jsonify({"success": True, "message": "Ejecución iniciada en segundo plano."})
+
+
+@app.route("/auto-campaigns/<int:campaign_id>/stop", methods=["POST"])
+def auto_campaigns_stop(campaign_id):
+    stopped = request_stop_auto_campaign(campaign_id)
+    if not stopped:
+        return jsonify({"success": False, "message": "La campaña no está en ejecución en este proceso."}), 404
+    log_gui_action("Detener campaña automática", id=campaign_id)
+    return jsonify({"success": True, "message": "Solicitud de detención enviada."})
+
+
+@app.route("/auto-campaigns/<int:campaign_id>/report", methods=["GET"])
+def auto_campaigns_report(campaign_id):
+    from database import AutoCampaignExecutionLog
+
+    execution_id = parse_auto_campaign_id(request.args.get("execution_id"))
+    query = AutoCampaignExecutionLog.query.filter_by(auto_campaign_id=campaign_id)
+    if execution_id is not None:
+        query = query.filter_by(id=execution_id)
+    log = query.order_by(AutoCampaignExecutionLog.start_time.desc()).first()
+    if not log:
+        return jsonify({"success": False, "message": "No hay informes para esta campaña."}), 404
+
+    payload = {
+        "execution_id": log.id,
+        "auto_campaign_id": log.auto_campaign_id,
+        "start_time": log.start_time.strftime("%Y-%m-%d %H:%M:%S") if log.start_time else "",
+        "end_time": log.end_time.strftime("%Y-%m-%d %H:%M:%S") if log.end_time else "",
+        "records_fetched": log.records_fetched,
+        "records_sent": log.records_sent,
+        "records_failed": log.records_failed,
+        "error_message": log.error_message or "",
+        "csv_file_path": log.csv_file_path or "",
+        "report_file_path": log.report_file_path or "",
+    }
+    bio = io.BytesIO(json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8"))
+    return send_file(
+        bio,
+        as_attachment=True,
+        download_name=f"auto_campaign_{campaign_id}_execution_{log.id}.json",
+        mimetype="application/json",
+    )
+
+
+@app.route("/auto-campaigns/<int:campaign_id>/records", methods=["DELETE"])
+def auto_campaigns_delete_records(campaign_id):
+    from database import AutoCampaign, AutoCampaignExecutionLog
+
+    campaign = AutoCampaign.query.get(campaign_id)
+    if not campaign:
+        return jsonify({"success": False, "message": "No se encontró la campaña automática."}), 404
+
+    remote_result = None
+    endpoint = (campaign.wolkvox_delete_records_endpoint or "").strip()
+    if endpoint:
+        token = (get_authorization_headers(campaign.server_name or None) or {}).get("wolkvox-token", "")
+        url = endpoint.replace("{{campaign_id}}", campaign.wolkvox_campaign_id)
+        if "{{servidor}}" in url or "{{server}}" in url:
+            server_value = campaign.server_name or ""
+            server = get_server(campaign.server_name) if campaign.server_name else None
+            if server:
+                server_value = (server.get("url") or "").rstrip("/")
+                if server_value and not server_value.startswith(("http://", "https://")):
+                    server_value = f"https://wv{server_value}.wolkvox.com"
+            url = url.replace("{{servidor}}", server_value).replace("{{server}}", server_value)
+        try:
+            response = requests.delete(url, headers={"wolkvox-token": token} if token else {}, timeout=60)
+            remote_result = {"status": response.status_code, "ok": response.ok, "text": response.text[:1000]}
+            if not response.ok:
+                return jsonify({
+                    "success": False,
+                    "message": "Wolkvox respondió error al borrar registros.",
+                    "remote": remote_result,
+                }), 502
+        except Exception as exc:
+            return jsonify({"success": False, "message": str(exc)}), 502
+
+    deleted_logs = AutoCampaignExecutionLog.query.filter_by(auto_campaign_id=campaign_id).delete()
+    db.session.commit()
+    log_gui_action("Borrar registros campaña automática", id=campaign_id, logs=deleted_logs)
+    return jsonify({
+        "success": True,
+        "message": "Registros remotos borrados si había endpoint configurado; logs locales eliminados.",
+        "deleted_logs": deleted_logs,
+        "remote": remote_result,
+    })
+
+
+@app.route("/auto-campaigns/<int:campaign_id>/reset", methods=["POST"])
+def auto_campaigns_reset(campaign_id):
+    from auto_campaigns import calculate_next_run
+    from database import AutoCampaign
+
+    campaign = AutoCampaign.query.get(campaign_id)
+    if not campaign:
+        return jsonify({"success": False, "message": "No se encontró la campaña automática."}), 404
+    if campaign.running:
+        return jsonify({"success": False, "message": "Detenga la campaña antes de reiniciar el ciclo."}), 409
+    campaign.next_run = calculate_next_run(campaign.schedule_type, campaign.schedule_value)
+    campaign.last_run = None
+    db.session.commit()
+    log_gui_action("Reiniciar ciclo campaña automática", id=campaign_id)
+    return jsonify({
+        "success": True,
+        "message": "Ciclo reiniciado.",
+        "next_run": campaign.next_run.strftime("%Y-%m-%d %H:%M:%S") if campaign.next_run else "",
+    })
 
 
 @app.route('/config-general')
@@ -1510,6 +1916,87 @@ def reportes():
         default_start=default_start,
         default_end=default_end,
     )
+# ========== INTEGRACIÓN CON DESCARGA AUTOMÁTICA ==========
+try:
+    from download_auto import iniciar_scheduler, detener_scheduler, estado_scheduler, descargar_todos_los_reportes
+    AUTO_DOWNLOAD_AVAILABLE = True
+except ImportError:
+    AUTO_DOWNLOAD_AVAILABLE = False
+    logger.warning("Módulo download_auto no disponible")
+
+# Variable global para controlar si el scheduler está activo
+auto_download_active = False
+
+@app.route('/api/auto-download/status', methods=['GET'])
+def auto_download_status():
+    """Retorna el estado del sistema de descargas automáticas."""
+    if not AUTO_DOWNLOAD_AVAILABLE:
+        return jsonify({'success': False, 'message': 'Módulo de descargas automáticas no disponible'}), 404
+    
+    return jsonify({
+        'success': True,
+        'status': estado_scheduler(),
+        'active': auto_download_active
+    })
+
+@app.route('/api/auto-download/start', methods=['POST'])
+def auto_download_start():
+    """Inicia el sistema de descargas automáticas."""
+    global auto_download_active
+    
+    if not AUTO_DOWNLOAD_AVAILABLE:
+        return jsonify({'success': False, 'message': 'Módulo de descargas automáticas no disponible'}), 404
+    
+    if auto_download_active:
+        return jsonify({'success': False, 'message': 'El sistema ya está activo'}), 400
+    
+    try:
+        resultado = iniciar_scheduler()
+        if resultado:
+            auto_download_active = True
+            log_gui_action("Iniciar descargas automáticas")
+            return jsonify({'success': True, 'message': 'Sistema de descargas automáticas iniciado'})
+        else:
+            return jsonify({'success': False, 'message': 'Error al iniciar el sistema'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/auto-download/stop', methods=['POST'])
+def auto_download_stop():
+    """Detiene el sistema de descargas automáticas."""
+    global auto_download_active
+    
+    if not AUTO_DOWNLOAD_AVAILABLE:
+        return jsonify({'success': False, 'message': 'Módulo de descargas automáticas no disponible'}), 404
+    
+    if not auto_download_active:
+        return jsonify({'success': False, 'message': 'El sistema no está activo'}), 400
+    
+    try:
+        detener_scheduler()
+        auto_download_active = False
+        log_gui_action("Detener descargas automáticas")
+        return jsonify({'success': True, 'message': 'Sistema de descargas automáticas detenido'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/auto-download/run-now', methods=['POST'])
+def auto_download_run_now():
+    """Ejecuta una descarga inmediata."""
+    if not AUTO_DOWNLOAD_AVAILABLE:
+        return jsonify({'success': False, 'message': 'Módulo de descargas automáticas no disponible'}), 404
+    
+    try:
+        data = request.get_json() or {}
+        fecha = data.get('fecha')
+        if fecha:
+            descargar_todos_los_reportes(fecha)
+        else:
+            descargar_todos_los_reportes()
+        log_gui_action("Ejecutar descarga manual automática")
+        return jsonify({'success': True, 'message': 'Descarga ejecutada'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 if __name__ == "__main__":
