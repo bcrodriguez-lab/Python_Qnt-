@@ -5,16 +5,6 @@
 bigquery_processor.py  (v10.10 — DEFINITIVO CON CAMPANAS_DESAROLLO)
 ===============================================================================
 PROCESA TODOS LOS CDR CON TODOS LOS DATOS
-
-FUENTES DE DATOS:
-- Operado_Por__c, Entidad_principal → Campanas_intradia (JOIN por Contacto__c)
-- campaign_name → Excel de campañas, fallback a campanas_desarollo (BQ)
-- Nombre_Campana → Excel de campañas, fallback a campanas_desarollo (BQ)
-- servidor → Excel de CDR (columna servidor)
-- Gestion_Humano, Contacto_Identificado_Humano, Venta → Tablas auxiliares BQ
-- Ultimo_Contacto → GestionesTitular (BQ)
-- Gestion_Marcador → Campanas_Marcador (BQ)
-- localizado_historico → Calculado
 """
 
 from __future__ import annotations
@@ -69,6 +59,10 @@ RETRY_BASE_SEC = 5
 SCHEMA_POSITIVOS = {
     "Fecha_dia":                    "STRING",
     "DATE":                         "DATETIME",
+    "Rango_Horario":                "STRING",
+    "Hora":                         "INT64",
+    "Dia_Semana":                   "STRING",
+    "Numero_Dia_Semana":            "INT64",
     "TELEPHONE":                    "INT64",
     "COD_ACT":                      "STRING",
     "Grupo_Operador":               "STRING",
@@ -78,14 +72,13 @@ SCHEMA_POSITIVOS = {
     "campaign_id":                  "STRING",
     "campaign_name":                "STRING",
     "servidor":                     "STRING",
-    "Ultimo_Contacto":              "STRING",
+    "Gestion_Marcador":             "INT64",
     "Entidad_principal":            "STRING",
     "localizado_historico":         "STRING",
     "Contacto_Identificado_Robot":  "INT64",
     "Gestion_Humano":               "INT64",
     "Contacto_Identificado_Humano": "INT64",
     "Venta_Humano_Identificado":    "INT64",
-    "Gestion_Marcador":             "INT64",
 }
 
 COLUMNAS_A_ELIMINAR = [
@@ -560,6 +553,37 @@ def procesar_datos(
         df["Contacto__c"] = df["Contacto__c"].astype(str).str.strip()
     if "COD_ACT" in df.columns:
         df["COD_ACT"] = df["COD_ACT"].astype(str).str.strip()
+    
+    #Mapeo de fechas horas dias de la seman y rangos horarios
+    if "DATE" in df.columns:
+        # Hora: número entero (0-23) para cálculos
+        df["Hora"] = df["DATE"].dt.hour
+        
+        # Rango Horario (basado en número)
+        def get_rango_horario(hora):
+            if 8 <= hora < 10:
+                return "8-10 AM"
+            elif 10 <= hora < 12:
+                return "10-12 AM"
+            elif 12 <= hora < 14:
+                return "12-2 PM"
+            elif 14 <= hora < 16:
+                return "2-4 PM"
+            elif 16 <= hora < 18:
+                return "4-6 PM"
+            else:
+                return "6-8 PM"
+        
+        df["Rango_Horario"] = df["Hora"].apply(get_rango_horario)
+        
+        # Día de la semana (en inglés, puedes cambiar a español)
+        df["Dia_Semana"] = df["DATE"].dt.day_name(locale='es_ES')
+        df["Dia_Semana"] = df["Dia_Semana"].str.capitalize()  
+        
+        df["Numero_Dia_Semana"] = df["DATE"].dt.weekday 
+        
+        logger.info(f"   📋 Hora calculada: {df['Hora'].min()} - {df['Hora'].max()}")
+        logger.info(f"   📋 Rangos: {df['Rango_Horario'].unique().tolist()}")
 
     df["Fecha_dia"] = fecha
 
@@ -569,9 +593,9 @@ def procesar_datos(
     df["Venta_Humano"] = 0
     df["campaign_id"] = None
     df["campaign_name"] = None
+    df["Nombre_Campana"] = None
     df["Operado_Por__c"] = None
     df["Entidad_principal"] = None
-    df["Ultimo_Contacto"] = None
     df["Gestion_Marcador"] = 0
     df["localizado_historico"] = "NO_LOCALIZADO"
 
@@ -669,16 +693,19 @@ def procesar_datos(
         )
         
         if "campaign_name_desarollo" in df.columns:
-            # Sobrescribir campaign_name si está vacío
-            df["campaign_name"] = df["campaign_name_desarollo"]
-            df["Nombre_Campana"] = df["campaign_name_desarollo"]
+            # Solo sobrescribir si NO está vacío
+            mask = df["campaign_name_desarollo"].notna() & (df["campaign_name_desarollo"] != "")
+            df["campaign_name"] = df["campaign_name"].where(
+                ~mask,
+                df["campaign_name_desarollo"]
+            )
+            df["Nombre_Campana"] = df["Nombre_Campana"].where(
+                ~mask,
+                df["campaign_name_desarollo"]
+            )
             df.drop(columns=["campaign_name_desarollo"], inplace=True)
             
-            logger.info(f"   📋 campaign_name enriquecido desde campanas_desarollo: {df['campaign_name'].notna().sum():,} con dato")
-            
-            # Mostrar ejemplo
-            if df['campaign_name'].notna().sum() > 0:
-                logger.info(f"   📋 Ejemplo: {df[df['campaign_name'].notna()][['campaign_id', 'campaign_name']].head(5).to_dict('records')}")
+            logger.info(f"   📋 campaign_name enriquecido desde campanas_desarollo: {mask.sum():,} con dato")
 
     # ── 4. Enriquecer con Intradia (Operado_Por__c y Entidad_principal) ──
     df_intradia = auxiliares.get("intradia", pd.DataFrame())
@@ -891,14 +918,14 @@ def _convertir_tipos_bq(df: pd.DataFrame) -> pd.DataFrame:
     # STRING
     for col in ["Operado_Por__c", "CONN_ID", "Contacto__c", "COD_ACT",
                 "Grupo_Operador", "campaign_id", "campaign_name", "Nombre_Campana",
-                "Fecha_dia", "servidor", "Ultimo_Contacto", "Entidad_principal", "localizado_historico"]:
+                "Fecha_dia", "servidor", "Ultimo_Contacto", "Entidad_principal", "localizado_historico","Rango_Horario", "Dia_Semana", ]:
         if col in df.columns:
             df[col] = df[col].astype(str).replace({'nan': None, 'None': None, '': None})
 
     # INT64 metricas
     for col in ["Contacto_Identificado_Robot", "Gestion_Humano",
                 "Contacto_Identificado_Humano", "Venta_Humano_Identificado",
-                "Gestion_Marcador"]:
+                "Gestion_Marcador","Hora","Numero_Dia_Semana" ]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype("int64")
 
@@ -954,7 +981,10 @@ def subir_a_embudo_consolidado(df_cdr: pd.DataFrame, fecha: str, client) -> bool
     if "DATE" in df_subir.columns:
         df_subir["DATE"] = pd.to_datetime(df_subir["DATE"], errors="coerce")
 
-    for col in ["Operado_Por__c", "CONN_ID", "Contacto__c", "COD_ACT",
+
+    #COLUMNAS QUE SE VAN A SUBIR
+
+    for col in ["Operado_Por__c","Hora","Dia_Semana", "Rango_Horario","Numero_Dia_Semana","CONN_ID", "Contacto__c", "COD_ACT",
                 "tipo_reporte", "Fecha_dia", "campaign_id"]:
         if col in df_subir.columns:
             df_subir[col] = df_subir[col].astype(str).replace({'nan': None, 'None': None, '': None})
@@ -993,10 +1023,10 @@ def subir_a_embudo_consolidado(df_cdr: pd.DataFrame, fecha: str, client) -> bool
         traceback.print_exc()
         return False
 
+
 # ─────────────────────────────────────────────────────────────────────────────
 # SUBIR A POSITIVOS ROBOT TEST (TODOS LOS REGISTROS)
 # ─────────────────────────────────────────────────────────────────────────────
-
 def subir_a_embudo_positivo(
     df_procesado: pd.DataFrame,
     fecha: str,
@@ -1009,6 +1039,18 @@ def subir_a_embudo_positivo(
     df_todos = df_procesado.copy()
 
     logger.info(f"   📤 Subiendo TODOS los {len(df_todos):,} registros")
+    
+    # VERIFICAR campaign_name ANTES DE SUBIR
+    if 'campaign_name' in df_todos.columns:
+        logger.info(f"   📋 campaign_name en df: {df_todos['campaign_name'].notna().sum():,} con dato")
+        logger.info(f"   📋 Ejemplo campaign_name: {df_todos['campaign_name'].head(3).tolist()}")
+    else:
+        logger.warning("   ⚠️ campaign_name NO está en el DataFrame")
+        # Crear campaign_name desde campaign_id
+        df_todos['campaign_name'] = df_todos['campaign_id'].apply(
+            lambda x: f"Campaña {x}" if pd.notna(x) else None
+        )
+        logger.info(f"   📋 campaign_name creado desde campaign_id")
 
     # TODAS las columnas del schema
     columnas_subir = list(SCHEMA_POSITIVOS.keys())
