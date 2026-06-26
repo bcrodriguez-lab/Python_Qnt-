@@ -32,7 +32,7 @@ DESCARGAR_AMD = True   # Reportes de campañas (download_campaign_detail.py)
 
 # === HORARIOS DE EJECUCIÓN ===
 HORARIOS_EJECUCION = [
-    "08:00", "10:00","11:34", "12:00", "14:00", "16:00", "18:00"
+    "08:00", "11:11","11:34", "12:00", "14:00", "16:00", "18:00"
 ]
 
 # ============================================================
