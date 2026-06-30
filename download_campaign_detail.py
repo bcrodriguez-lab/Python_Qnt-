@@ -2,271 +2,296 @@
 # -*- coding: utf-8 -*-
 
 """
-Módulo para descarga automática de reportes de detalle de campañas (AMD)
+Script para descargar reportes AMD (campaign_7) con nombres de campaña.
 """
 
 import os
-import sys
 import json
 import requests
-import pandas as pd
-import logging
-from datetime import datetime, timedelta
+import io
+import re
 import time
-from config import (
-    BASE_DIR, obtener_fechas_descarga, obtener_servidores,
-    obtener_token, obtener_url_base, HORARIOS_EJECUCION
-)
-from excel_report_builder import build_wolkvox_excel
+import schedule
+import threading
+from datetime import datetime, timedelta
+from pathlib import Path
 
-# Configurar logging
+# Configuración de logging
+import logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
     handlers=[
-        logging.FileHandler('download_campaign_detail.log', encoding='utf-8'),
+        logging.FileHandler("download_campaign_detail.log", encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
 
+# ========== CONFIGURACIÓN ==========
+BASE_DIR = Path(__file__).resolve().parent
 
-def obtener_nombres_campanas(servidor: dict) -> dict:
-    """
-    Obtiene el mapeo de campaign_id a campaign_name para un servidor
-    """
+try:
+    from config import (
+        BASE_DIR as CONFIG_BASE_DIR,
+        HORARIOS_EJECUCION,
+        DESCARGAR_AMD,
+        MODO_DESCARGA,
+        obtener_fechas_descarga,
+        obtener_servidores,
+        CONFIG_JSON
+    )
+    if CONFIG_BASE_DIR:
+        BASE_DIR = Path(CONFIG_BASE_DIR)
+    logger.info("✅ Configuración cargada desde config.py")
+except ImportError as e:
+    logger.warning(f"⚠️ No se encontró config.py: {e}")
+    CONFIG_JSON = {}
+    HORARIOS_EJECUCION = ["08:00", "12:00", "18:00"]
+    DESCARGAR_AMD = True
+    MODO_DESCARGA = "hoy"
+    
+    def obtener_fechas_descarga():
+        return [datetime.now().strftime("%Y-%m-%d")]
+    
+    def obtener_servidores():
+        return []
+
+SERVIDORES = [
+    "operacion-interna",
+    "qnt_juridico_blaster",
+    "qnt_cobro_blaster",
+    "Qnt_RBK_blaster",
+    "Qnt_recaudo_blaster",
+    "qnt_digital"
+]
+
+_scheduler_running_amd = False
+_scheduler_thread_amd = None
+_descarga_lock_amd = threading.Lock()
+
+# ========== FUNCIONES ==========
+
+def get_server(name):
+    for s in CONFIG_JSON.get('servers', []):
+        if s.get('name') == name:
+            url = s.get('url', '').strip().rstrip('/')
+            token = s.get('token') or CONFIG_JSON.get('wolkvox-token')
+            if url and token:
+                return {'name': name, 'url': url, 'token': token}
+    return None
+
+def obtener_nombre_campana_especifica(servidor, campaign_id):
     try:
-        nombre = servidor.get('name', '')
-        url_base = obtener_url_base(nombre)
-        token = obtener_token(nombre)
-        
-        url = f"{url_base}/api/v1/real_time.php?api=campaigns"
-        
-        headers = {
-            'Authorization': f'Bearer {token}',
-            'Content-Type': 'application/json'
-        }
-        
-        response = requests.get(url, headers=headers, timeout=30)
-        
-        if response.status_code != 200:
-            logger.warning(f"   ⚠️ Error obteniendo campañas: {response.status_code}")
-            return {}
-        
-        try:
-            data = response.json()
-            campaigns = {}
-            if isinstance(data, list):
-                for camp in data:
-                    if 'id' in camp and 'name' in camp:
-                        campaigns[str(camp['id'])] = camp['name']
-            return campaigns
-        except json.JSONDecodeError:
-            logger.warning(f"   ⚠️ Respuesta no es JSON válido")
-            return {}
-            
+        camp_id_clean = re.sub(r'[^0-9]', '', str(campaign_id))
+        if not camp_id_clean:
+            return None
+
+        url = f"{servidor['url']}/api/v2/real_time.php?api=campaigns&campaign_id={campaign_id}"
+        headers = {"wolkvox-token": servidor['token']}
+
+        resp = requests.get(url, headers=headers, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            campaigns = data.get('data', [])
+            for camp in campaigns:
+                camp_str = camp.get('campaign', '')
+                if camp_str and camp_str.startswith(camp_id_clean):
+                    parts = camp_str.split(' - ', 1)
+                    nombre = parts[1] if len(parts) > 1 else camp_str
+                    nombre_limpio = re.sub(r'\s*-\s*Strategy\s*\([^)]*\)\s*$', '', nombre)
+                    nombre_limpio = re.sub(r'\s*-\s*[a-zA-Z0-9_]+\s*\([^)]*\)\s*$', '', nombre_limpio)
+                    return nombre_limpio if nombre_limpio else nombre
+        return None
     except Exception as e:
-        logger.warning(f"   ⚠️ Error obteniendo nombres de campañas: {e}")
-        return {}
+        logger.debug(f"Error: {e}")
+        return None
 
-
-def descargar_reporte_amd(servidor: dict, fecha: str, campaign_id: str = "ALL") -> dict:
-    """
-    Descarga el reporte AMD para un servidor y fecha específica
-    """
+def to_ts(fecha, is_end=False):
     try:
-        nombre = servidor.get('name', '')
-        url_base = obtener_url_base(nombre)
-        token = obtener_token(nombre)
-        
-        url = f"{url_base}/api/v1/report/campaign_details"
-        
-        headers = {
-            'Authorization': f'Bearer {token}',
-            'Content-Type': 'application/json'
-        }
-        
-        data = {
-            'date': fecha,
-            'campaign_id': campaign_id,
-            'type': 'json'
-        }
-        
-        response = requests.post(url, headers=headers, json=data, timeout=300)
-        
-        if response.status_code != 200:
-            logger.error(f"   ❌ Error {response.status_code}: {response.text[:200]}")
-            return {'success': False, 'data': None, 'servidor': nombre}
-        
-        try:
-            data_json = response.json()
-        except json.JSONDecodeError:
-            logger.error(f"   ❌ Respuesta no es JSON válido")
-            return {'success': False, 'data': None, 'servidor': nombre}
-        
-        return {
-            'success': True,
-            'data': data_json,
-            'servidor': nombre
-        }
-        
+        d = datetime.strptime(fecha, '%Y-%m-%d')
+        dt = datetime(d.year, d.month, d.day, 23, 59, 59) if is_end else datetime(d.year, d.month, d.day, 0, 0, 0)
+        return dt.strftime('%Y%m%d%H%M%S')
+    except:
+        return fecha
+
+def descargar_reporte(servidor, fecha):
+    url = f"{servidor['url']}/api/v2/reports_manager.php?api=campaign_7&campaign_id=ALL&date_ini={to_ts(fecha)}&date_end={to_ts(fecha, True)}"
+    try:
+        resp = requests.get(url, headers={"wolkvox-token": servidor['token']}, timeout=60)
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get('data'):
+                return resp.content
+        return None
     except Exception as e:
-        logger.error(f"   ❌ Error descargando AMD: {e}")
-        return {'success': False, 'data': None, 'servidor': servidor.get('name', '')}
+        logger.error(f"Error descargando: {e}")
+        return None
 
-
-def guardar_reporte_amd(data: dict, servidor: str, fecha: str, campaign_name: str = "ALL"):
-    """
-    Guarda el reporte AMD en formato Excel
-    """
+def guardar_excel_simple(contenido, servidor, fecha):
+    """Guarda el contenido como Excel simple usando pandas"""
     try:
-        # Crear estructura de carpetas (subcarpeta 'campanas')
-        mes = fecha[:7]
-        carpeta_dia = os.path.join(BASE_DIR, mes, fecha, "campanas")
-        os.makedirs(carpeta_dia, exist_ok=True)
-        
-        # Nombre del archivo
-        nombre_archivo = f"{servidor}_campaign_{campaign_name}_{fecha}.xlsx"
-        ruta_archivo = os.path.join(carpeta_dia, nombre_archivo)
-        
-        # Extraer datos
-        if isinstance(data, dict) and 'data' in data:
-            rows = data['data']
-        elif isinstance(data, list):
-            rows = data
-        else:
-            rows = []
+        import pandas as pd
+        data = json.loads(contenido)
+        rows = data.get('data', [])
         
         if not rows:
-            logger.warning(f"   ⚠️ No hay datos para {servidor} - {fecha}")
             return False
         
-        # Convertir a DataFrame
         df = pd.DataFrame(rows)
         
-        # Agregar columna de servidor
-        df['servidor'] = servidor
+        mes = fecha[:7]
+        dir_path = os.path.join(str(BASE_DIR), mes, fecha, "campanas")
+        os.makedirs(dir_path, exist_ok=True)
+        ruta = os.path.join(dir_path, f"{servidor}_campaign_ALL_{fecha}.xlsx")
         
-        # Guardar como Excel
-        build_wolkvox_excel(df, ruta_archivo)
-        
-        logger.info(f"      ✅ Guardado: {nombre_archivo}")
+        df.to_excel(ruta, index=False)
+        logger.info(f"   💾 Guardado: {os.path.basename(ruta)}")
         return True
-        
     except Exception as e:
-        logger.error(f"   ❌ Error guardando reporte AMD: {e}")
+        logger.error(f"   ❌ Error guardando: {e}")
         return False
-
 
 def descargar_todos_los_reportes_amd(fecha: str = None):
-    """
-    Descarga reportes AMD para todos los servidores y una fecha específica
-    """
-    if fecha is None:
-        fecha = datetime.now().strftime("%Y-%m-%d")
-    
-    logger.info("\n" + "="*60)
-    logger.info("📥 INICIANDO DESCARGA DE REPORTES (AMD)")
-    logger.info(f"📅 Fecha: {fecha}")
-    logger.info("="*60)
-    
-    servidores = obtener_servidores()
-    
-    if not servidores:
-        logger.error("❌ No hay servidores configurados en config.json")
-        return False
-    
-    descargados = 0
-    fallidos = 0
-    
-    for servidor in servidores:
-        nombre = servidor.get('name', '')
-        if not nombre:
-            continue
-            
-        logger.info(f"\n📂 Procesando servidor: {nombre}")
-        
-        # Obtener nombres de campañas
-        campanas = obtener_nombres_campanas(servidor)
-        
-        if campanas:
-            logger.info(f"   📋 {len(campanas)} campañas encontradas")
-        
-        # Descargar reporte general (ALL)
-        logger.info(f"   📡 Descargando ALL para {nombre}")
-        resultado = descargar_reporte_amd(servidor, fecha, "ALL")
-        
-        if resultado['success']:
-            if guardar_reporte_amd(resultado['data'], nombre, fecha, "ALL"):
-                descargados += 1
-        else:
-            fallidos += 1
-        
-        time.sleep(2)
-    
-    logger.info("\n" + "="*60)
-    logger.info(f"📊 RESUMEN AMD: {descargados} descargados, {fallidos} fallidos")
-    logger.info("="*60)
-    
-    return descargados > 0
+    with _descarga_lock_amd:
+        if fecha is None:
+            fecha = datetime.now().strftime("%Y-%m-%d")
 
+        logger.info(f"\n{'='*60}")
+        logger.info(f"📥 INICIANDO DESCARGA DE REPORTES AMD")
+        logger.info(f"📅 Fecha: {fecha}")
+        logger.info(f"{'='*60}")
 
-def descargar_segun_configuracion_amd():
-    """
-    Descarga AMD según la configuración
-    """
-    fechas = obtener_fechas_descarga()
-    logger.info(f"📋 Fechas a descargar (AMD): {fechas}")
-    
-    for fecha in fechas:
-        descargar_todos_los_reportes_amd(fecha)
+        if not os.path.exists(str(BASE_DIR)):
+            logger.error(f"❌ La ruta base {BASE_DIR} no existe")
+            return
 
+        total_exitosos = 0
+        total_fallidos = 0
 
-def iniciar_scheduler_amd():
-    """
-    Inicia el scheduler para ejecutar descargas automáticas de AMD
-    """
+        for nombre in SERVIDORES:
+            servidor = get_server(nombre)
+            if not servidor:
+                logger.warning(f"⚠️ Servidor {nombre} no configurado")
+                continue
+
+            logger.info(f"\n📡 Servidor: {nombre}")
+            contenido = descargar_reporte(servidor, fecha)
+            if contenido is None:
+                logger.info(f"   ⏭️ Sin datos para {nombre}")
+                total_fallidos += 1
+                continue
+
+            if guardar_excel_simple(contenido, nombre, fecha):
+                total_exitosos += 1
+            else:
+                total_fallidos += 1
+
+            time.sleep(1)
+
+        logger.info(f"\n📊 RESUMEN AMD - Fecha {fecha}")
+        logger.info(f"  ✅ Éxitos: {total_exitosos}")
+        logger.info(f"  ❌ Fallos: {total_fallidos}")
+        
+        # ===== EJECUTAR BIGQUERY PROCESSOR =====
+        if total_exitosos > 0:
+            try:
+                from bigquery_processor import procesar_y_actualizar_bigquery
+                logger.info(f"\n🔄 Procesando BigQuery para {fecha}...")
+                procesar_y_actualizar_bigquery(fecha=fecha)
+            except Exception as e:
+                logger.error(f"❌ Error en BigQuery: {e}")
+
+# ========== FUNCIONES PARA BACKEND ==========
+
+def iniciar_scheduler_amd():  # ← Este es el nombre que espera backend.py
+    global _scheduler_running_amd, _scheduler_thread_amd
+    if _scheduler_running_amd:
+        logger.info("⚠️ El scheduler AMD ya está en ejecución")
+        return True
+
     try:
-        import schedule
-        import threading
-        from datetime import datetime
-        
-        logger.info("="*60)
-        logger.info("⏰ INICIANDO SCHEDULER DE AMD")
-        logger.info(f"📋 Horarios configurados: {HORARIOS_EJECUCION}")
-        logger.info("="*60)
-        
         def ejecutar_descarga():
             logger.info(f"\n⏰ Ejecución programada AMD a las {datetime.now().strftime('%H:%M')}")
             try:
                 descargar_segun_configuracion_amd()
             except Exception as e:
-                logger.error(f"❌ Error en descarga programada AMD: {e}")
+                logger.error(f"❌ Error en descarga AMD: {e}")
         
         for horario in HORARIOS_EJECUCION:
             schedule.every().day.at(horario).do(ejecutar_descarga)
-            logger.info(f"   ✅ Programada AMD a las {horario}")
+            logger.info(f"   ✅ AMD programada a las {horario}")
         
-        logger.info("\n🚀 Ejecutando descarga inicial AMD...")
-        ejecutar_descarga()
+        _scheduler_running_amd = True
         
-        logger.info("\n🔄 Scheduler de AMD en ejecución...")
-        while True:
-            schedule.run_pending()
-            time.sleep(30)
+        def run_scheduler_amd():
+            while _scheduler_running_amd:
+                schedule.run_pending()
+                time.sleep(30)
+        
+        _scheduler_thread_amd = threading.Thread(target=run_scheduler_amd, daemon=True)
+        _scheduler_thread_amd.start()
+        
+        logger.info("✅ Scheduler AMD iniciado")
+        return True
             
-    except ImportError:
-        logger.error("❌ Error: schedule no está instalado. Ejecuta: pip install schedule")
-        return
-    except KeyboardInterrupt:
-        logger.info("\n⏹️ Scheduler de AMD detenido manualmente")
+    except Exception as e:
+        logger.error(f"❌ Error iniciando scheduler AMD: {e}")
+        return False
 
+def detener_scheduler_amd():  # ← Este es el nombre que espera backend.py
+    global _scheduler_running_amd
+    _scheduler_running_amd = False
+    logger.info("⏹️ Scheduler AMD detenido")
+    return True
+
+def estado_scheduler_amd():  # ← Este es el nombre que espera backend.py
+    try:
+        trabajos = schedule.get_jobs()
+        proximos = []
+        for job in trabajos:
+            if hasattr(job, 'next_run') and job.next_run:
+                proximos.append({
+                    'horario': job.next_run.strftime('%H:%M'),
+                    'fecha': job.next_run.strftime('%Y-%m-%d %H:%M:%S')
+                })
+        
+        return {
+            'running': _scheduler_running_amd,
+            'horarios': HORARIOS_EJECUCION,
+            'proximos': proximos,
+            'modo_descarga': MODO_DESCARGA,
+            'base_dir': str(BASE_DIR),
+            'fechas': obtener_fechas_descarga(),
+            'servidores': SERVIDORES
+        }
+    except Exception as e:
+        return {
+            'running': False,
+            'error': str(e),
+            'horarios': HORARIOS_EJECUCION,
+            'modo_descarga': MODO_DESCARGA
+        }
+
+def init_auto_download_amd():  # ← Este es el nombre que espera backend.py
+    return iniciar_scheduler_amd()
+
+def descargar_segun_configuracion_amd():
+    if not DESCARGAR_AMD:
+        logger.info("⏭️ Descargas AMD desactivadas")
+        return
+    fechas = obtener_fechas_descarga()
+    for fecha in fechas:
+        descargar_todos_los_reportes_amd(fecha)
+
+# ========== EJECUCIÓN DIRECTA ==========
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        if sys.argv[1] == "--scheduler":
-            iniciar_scheduler_amd()
-        else:
-            descargar_todos_los_reportes_amd(sys.argv[1])
-    else:
-        descargar_segun_configuracion_amd()
+    init_auto_download_amd()
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        detener_scheduler_amd()
+        logger.info("Script AMD finalizado")
