@@ -33,7 +33,8 @@ from backend import (
 )
 from general_params import load_general_parameters, save_general_parameters
 from conexion_bigquery import get_bigquery_client
-from bigquery import escribir_resultados_campana, count_query_results, sync_campaigns_to_bigquery, validate_query_columns
+from bigquery import escribir_resultados_campana, count_query_results, fetch_sms_query_rows, sync_campaigns_to_bigquery, validate_query_columns
+from services.sms_service import SmsServiceError, enviar_sms_desde_filas, preview_sms
 from campaigns import (
     list_campaigns,
     get_campaign,
@@ -898,6 +899,57 @@ def test_bigquery_query():
         return jsonify(result)
     log_gui_action("Probar conteo BigQuery fallo", mensaje=result.get("message"))
     return jsonify(result), 400
+
+
+def _get_sms_rows(query):
+    global bq_client
+    if bq_client is None:
+        init_bigquery()
+    if bq_client is None:
+        return None, (jsonify({"success": False, "message": "No se pudo inicializar BigQuery."}), 500)
+    result = fetch_sms_query_rows(bq_client, query)
+    if not result.get("success"):
+        return None, (jsonify(result), 400)
+    return result["rows"], None
+
+
+@app.route("/config-sms")
+def config_sms():
+    return render_template("config_sms.html")
+
+
+@app.route("/api/sms/preview", methods=["POST"])
+def sms_preview():
+    data = request.get_json() or {}
+    query, plantilla = (data.get("query") or "").strip(), (data.get("plantilla") or "").strip()
+    if not query or not plantilla:
+        return jsonify({"success": False, "message": "La consulta SQL y la plantilla son obligatorias."}), 400
+    rows, error_response = _get_sms_rows(query)
+    if error_response:
+        return error_response
+    try:
+        result = preview_sms(rows, plantilla)
+        log_gui_action("Vista previa SMS", total=result["total_validos"])
+        return jsonify({"success": True, **result})
+    except SmsServiceError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.route("/api/sms/enviar", methods=["POST"])
+def sms_send():
+    data = request.get_json() or {}
+    query, plantilla = (data.get("query") or "").strip(), (data.get("plantilla") or "").strip()
+    if not query or not plantilla:
+        return jsonify({"success": False, "message": "La consulta SQL y la plantilla son obligatorias."}), 400
+    rows, error_response = _get_sms_rows(query)
+    if error_response:
+        return error_response
+    try:
+        result = enviar_sms_desde_filas(rows, plantilla, (CONFIG or load_config()).get("infobip", {}))
+        log_gui_action("Envio SMS", preparados=result["total_preparados"], lotes=result["lotes_enviados"])
+        return jsonify({"success": result["lotes_fallidos"] == 0, **result})
+    except SmsServiceError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
 
 
 @app.route("/auto-campaigns", methods=["GET"])

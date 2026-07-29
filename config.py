@@ -16,11 +16,11 @@ import os
 
 # === MODO DE DESCARGA ===
 # Opciones: "hoy", "rango", "fecha_especifica"
-MODO_DESCARGA = "hoy"  # Cambiar según necesidad
+MODO_DESCARGA = "rango"  # Cambiar según necesidad
 
 # === CONFIGURACIÓN PARA MODO "rango" ===
-#FECHA_INICIO_RANGO = "2026-06-01"  # Fecha inicio (YYYY-MM-DD)
-#FECHA_FIN_RANGO = datetime.now().strftime("%Y-%m-%d")  # Siempre hasta hoy
+FECHA_INICIO_RANGO = "2026-07-28"  # Fecha inicio (YYYY-MM-DD)
+FECHA_FIN_RANGO = datetime.now().strftime("%Y-%m-%d")  # Siempre hasta hoy
 
 # === CONFIGURACIÓN PARA MODO "fecha_especifica" ===
 # FECHA_ESPECIFICA = "2026-06-18"    # Fecha específica (YYYY-MM-DD)
@@ -32,7 +32,7 @@ DESCARGAR_AMD = True   # Reportes de campañas (download_campaign_detail.py)
 
 # === HORARIOS DE EJECUCIÓN ===
 HORARIOS_EJECUCION = [
-    "08:00", "10:00","11:02", "12:42","12:43","12:44", "14:26","15:04", "16:00", "18:00"
+    "08:01", "10:00","11:02", "12:42","12:43","12:44", "14:26","15:04", "16:34", "18:00"
 ]
 
 # ============================================================

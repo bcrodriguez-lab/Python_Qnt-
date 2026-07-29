@@ -224,6 +224,27 @@ def fetch_select_query_rows(client, query: str, *, max_rows: int = 50000) -> dic
         return {"success": False, "message": str(e), "rows": []}
 
 
+def fetch_sms_query_rows(client, query: str, *, max_rows: int = 50000) -> dict:
+    """Obtiene filas sin el mapeo de Wolkvox, preservando variables para SMS."""
+    try:
+        if not query or not isinstance(query, str):
+            return {"success": False, "message": "La consulta es obligatoria.", "rows": []}
+        query_text = query.strip().rstrip(";")
+        if not re.match(r"^(SELECT|WITH)\b", query_text, re.IGNORECASE):
+            return {"success": False, "message": "Solo se permiten consultas SELECT o WITH.", "rows": []}
+        result = client.query(query_text).result(max_results=max_rows)
+        rows = []
+        for row in result:
+            rows.append(dict(row))
+            if len(rows) >= max_rows:
+                break
+        return {"success": True, "rows": rows, "total": len(rows),
+                "message": f"Se obtuvieron {len(rows)} fila(s) desde BigQuery."}
+    except Exception as exc:
+        logger.error(f"Error fetch_sms_query_rows: {exc}")
+        return {"success": False, "message": str(exc), "rows": []}
+
+
 def validate_query_columns(client, query: str, field_mapping: dict | None = None) -> dict:
     """Valida que la consulta SELECT devuelva columnas compatibles con el mapeo de campaña."""
     try:

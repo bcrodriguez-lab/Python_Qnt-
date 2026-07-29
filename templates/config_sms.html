@@ -1,0 +1,24 @@
+{% extends "layouts/adminlte.html" %}
+{% block title %}Campañas SMS{% endblock %}
+{% block page_title %}Campañas SMS{% endblock %}
+{% block page_subtitle %}<small class="text-muted">Envios de mensaje</small>{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">SMS</li>{% endblock %}
+{% block extra_css %}<style>.textarea-code{min-height:180px;font-family:monospace}.preview-message{white-space:pre-wrap}</style>{% endblock %}
+{% block content %}
+<div class="card card-primary"><div class="card-body">
+  <div class="form-group"><label>Consulta SQL</label><textarea id="query" class="form-control textarea-code" placeholder="SELECT celular, nombre FROM ..."></textarea><small class="form-text text-muted">La consulta debe incluir una columna de teléfono: celular, telefono, movil, phone o tel1.</small></div>
+  <div class="form-group"><label>Plantilla</label><textarea id="plantilla" class="form-control" rows="4" placeholder="Hola {{nombre}}, tenemos una novedad para ti."></textarea><small class="form-text text-muted">Usa {{nombre_columna}} para personalizar el mensaje.</small></div>
+  <button id="previewBtn" class="btn btn-outline-primary"><i class="fas fa-eye"></i> Probar consulta y vista previa</button>
+  <button id="sendBtn" class="btn btn-success" disabled><i class="fas fa-paper-plane"></i> Enviar SMS</button>
+</div></div>
+<div id="result"></div>
+{% endblock %}
+{% block extra_js %}<script>
+const result=document.getElementById('result'), previewBtn=document.getElementById('previewBtn'), sendBtn=document.getElementById('sendBtn');
+function payload(){return {query:document.getElementById('query').value.trim(),plantilla:document.getElementById('plantilla').value.trim()}}
+function show(message, type='info'){result.innerHTML=`<div class="alert alert-${type}">${message}</div>`}
+function escapeHtml(value){const element=document.createElement('span');element.textContent=String(value);return element.innerHTML}
+async function call(url){const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload())});const data=await response.json();if(!response.ok||!data.success)throw new Error(data.message||'No se pudo completar la operación.');return data}
+previewBtn.onclick=async()=>{try{previewBtn.disabled=true;show('Consultando BigQuery...','info');const data=await call('/api/sms/preview');let html=`<strong>${data.total_validos}</strong> números válidos. Columna: <code>${escapeHtml(data.phone_column)}</code>. `;if(data.invalid_numbers)html+=`${data.invalid_numbers} inválidos. `;html+='<hr>';data.preview.forEach(item=>html+=`<div class="mb-2"><strong>${escapeHtml(item.telefono)}</strong> · ${item.longitud} caracteres<div class="preview-message border rounded p-2">${escapeHtml(item.mensaje)}</div></div>`);show(html,'success');sendBtn.disabled=data.total_validos===0}catch(error){show(escapeHtml(error.message),'danger');sendBtn.disabled=true}finally{previewBtn.disabled=false}};
+sendBtn.onclick=async()=>{if(!confirm('¿Confirmas el envío real de SMS a los destinatarios de esta consulta?'))return;try{sendBtn.disabled=true;show('Enviando SMS...','info');const data=await call('/api/sms/enviar');show(`Envío finalizado: ${data.total_preparados} mensajes preparados, ${data.lotes_enviados} lotes enviados.${data.lotes_fallidos?` ${data.lotes_fallidos} lotes fallidos.`:''}`,'success')}catch(error){show(error.message,'danger')}finally{sendBtn.disabled=false}};
+</script>{% endblock %}
