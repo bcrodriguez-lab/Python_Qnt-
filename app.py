@@ -23,6 +23,7 @@ from backend import (
     load_config,
     CONFIG,
     logger,
+    log_task,
     log_gui_action,
     read_recent_log_lines,
     cleanup_old_log_files,
@@ -34,7 +35,11 @@ from backend import (
 from general_params import load_general_parameters, save_general_parameters
 from conexion_bigquery import get_bigquery_client
 from bigquery import escribir_resultados_campana, count_query_results, fetch_sms_query_rows, sync_campaigns_to_bigquery, validate_query_columns
-from services.sms_service import SmsServiceError, enviar_sms_desde_filas, preview_sms
+from services.sms_service import (
+    SCHEDULE_TABLE, SMS_LOG_TABLE, SmsServiceError, aplicar_validaciones,
+    enviar_sms_desde_filas, guardar_programacion, preview_sms, verificar_lista_negra,
+    limpiar_numero, obtener_lista_negra,
+)
 from campaigns import (
     list_campaigns,
     get_campaign,
@@ -92,7 +97,8 @@ from auto_campaign_executor import (
     request_stop_auto_campaign,
     start_auto_campaign_async,
 )
-
+# ========== CONFIGURACIÓN ==========
+PROJECT_ID = "capable-arbor-209819"
 # Crear conexión global a BigQuery al iniciar la aplicación
 bq_client = None
 
@@ -134,17 +140,14 @@ def index():
     stats = get_dashboard_data()
     return render_template("index.html", **stats)
 
+
 @app.route('/reports')
 def reports_index():
     """Página simple con formulario para descargar reportes de llamadas (XLSX)."""
-
     default_server = get_config_servidor_default() or ""
-
     today = date.today()
-
     default_start = today.strftime("%Y-%m-%d")
     default_end = today.strftime("%Y-%m-%d")
-
     return render_template(
         "report_download.html",
         default_server=default_server,
@@ -156,103 +159,42 @@ def reports_index():
 @app.route('/reports/download', methods=['POST'])
 def reports_download():
     """Genera un XLSX con los resultados del endpoint Wolkvox."""
-
     data = request.form or request.get_json() or {}
-
     server = (data.get('server') or '').strip()
     date_ini = (data.get('date_ini') or '').strip()
     date_end = (data.get('date_end') or '').strip()
 
-    # =========================================================
-    # Convertir fechas a formato Wolkvox
-    # =========================================================
-
     def _to_wolkvox_ts(s: str, is_end: bool = False) -> str:
-
         if not s:
             return ''
-
         try:
-
             if 'T' in s or len(s) > 10:
-
                 dt = datetime.fromisoformat(s)
-
             else:
-
                 d = date.fromisoformat(s)
-
                 if is_end:
-
-                    dt = datetime(
-                        d.year,
-                        d.month,
-                        d.day,
-                        23,
-                        59,
-                        59
-                    )
-
+                    dt = datetime(d.year, d.month, d.day, 23, 59, 59)
                 else:
-
-                    dt = datetime(
-                        d.year,
-                        d.month,
-                        d.day,
-                        0,
-                        0,
-                        0
-                    )
-
+                    dt = datetime(d.year, d.month, d.day, 0, 0, 0)
             return dt.strftime('%Y%m%d%H%M%S')
-
         except Exception:
-
             try:
-
                 dt = datetime.strptime(s, '%Y-%m-%d')
-
                 if is_end:
-
-                    dt = datetime(
-                        dt.year,
-                        dt.month,
-                        dt.day,
-                        23,
-                        59,
-                        59
-                    )
-
+                    dt = datetime(dt.year, dt.month, dt.day, 23, 59, 59)
                 return dt.strftime('%Y%m%d%H%M%S')
-
             except Exception:
-
                 return s
 
     date_ini_ts = _to_wolkvox_ts(date_ini, is_end=False)
     date_end_ts = _to_wolkvox_ts(date_end, is_end=True)
 
-    # =========================================================
-    # Validaciones
-    # =========================================================
-
     if not date_ini or not date_end:
-
-        return jsonify({
-            'success': False,
-            'message': 'Se requieren date_ini y date_end.'
-        }), 400
+        return jsonify({'success': False, 'message': 'Se requieren date_ini y date_end.'}), 400
 
     if not server:
+        return jsonify({'success': False, 'message': 'El parámetro server es obligatorio.'}), 400
 
-        return jsonify({
-            'success': False,
-            'message': 'El parámetro server es obligatorio.'
-        }), 400
-
-    # =========================================================
-    # Construcción URL Wolkvox
-    # Construcción URL Wolkvox
     url = None
     try:
         srv = get_server(server)
@@ -265,76 +207,26 @@ def reports_download():
             base_url = prefix
         else:
             base_url = f"https://wv{prefix}.wolkvox.com"
-        url = (
-            f"{base_url}/api/v2/reports_manager.php"
-            f"?api=cdr_1"
-            f"&date_ini={date_ini_ts}"
-            f"&date_end={date_end_ts}"
-        )
+        url = f"{base_url}/api/v2/reports_manager.php?api=cdr_1&date_ini={date_ini_ts}&date_end={date_end_ts}"
     else:
         if server.lower().startswith('http'):
             base_url = server.rstrip('/')
-            url = (
-                f"{base_url}/api/v2/reports_manager.php"
-                f"?api=cdr_1"
-                f"&date_ini={date_ini_ts}"
-                f"&date_end={date_end_ts}"
-            )
+            url = f"{base_url}/api/v2/reports_manager.php?api=cdr_1&date_ini={date_ini_ts}&date_end={date_end_ts}"
         else:
-            url = (
-                f"https://wv{server}.wolkvox.com"
-                f"/api/v2/reports_manager.php"
-                f"?api=cdr_1"
-                f"&date_ini={date_ini_ts}"
-                f"&date_end={date_end_ts}"
-            )
-
-    # =========================================================
-    # Headers
-    # =========================================================
+            url = f"https://wv{server}.wolkvox.com/api/v2/reports_manager.php?api=cdr_1&date_ini={date_ini_ts}&date_end={date_end_ts}"
 
     try:
         headers = get_authorization_headers(server) or {}
     except Exception:
         headers = {}
 
-    # =========================================================
-    # Request a Wolkvox
-    # =========================================================
-
     try:
-
-        resp = requests.get(
-            url,
-            headers=headers,
-            timeout=60
-        )
-
+        resp = requests.get(url, headers=headers, timeout=60)
     except Exception as e:
-
-        return jsonify({
-            'success': False,
-            'message': f'Error al conectar con Wolkvox: {e}'
-        }), 500
-
-    # =========================================================
-    # Validar respuesta
-    # =========================================================
+        return jsonify({'success': False, 'message': f'Error al conectar con Wolkvox: {e}'}), 500
 
     if resp.status_code != 200:
-
-        return jsonify({
-            'success': False,
-            'message': f'Wolkvox devolvió {resp.status_code}',
-            'text': resp.text[:500]
-        }), 502
-
-    # =========================================================
-    # Procesar respuesta
-    # =========================================================
-
-    # Usamos el builder nuevo (con formato) reutilizando lógica actual
-    # Nota: respetamos el formato/orden del Excel pero minimizamos duplicación.
+        return jsonify({'success': False, 'message': f'Wolkvox devolvió {resp.status_code}', 'text': resp.text[:500]}), 502
 
     try:
         data_json = resp.json()
@@ -352,7 +244,6 @@ def reports_download():
     except Exception:
         rows = [{'raw': resp.text}]
 
-    # Nombre de archivo solicitado: "1. Detalle de las llamadas.YYYYMMDD-<Servidor>.xlsx"
     today_str = datetime.utcnow().strftime('%Y%m%d')
     safe_server = _safe_filename(server or 'server')
     filename = f"1. Detalle de las llamadas.{today_str}-{safe_server}.xlsx"
@@ -367,31 +258,23 @@ def reports_download():
     )
 
 
-
 @app.route("/api/invoke", methods=["POST"])
 def invoke_api():
     """Endpoint para invocar una API y retornar resultado"""
     data = request.get_json()
     url = data.get("url")
-    
     if not url:
         return jsonify({"error": "Se requiere 'url'"}), 400
-    
     try:
         log_gui_action("API INVOKE", url=url)
         headers = get_authorization_headers()
-        response = requests.get(url, headers=headers, timeout=10)        
-        
+        response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             try:
                 response_data = response.json()
-                # Generar nombre del archivo CSV
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 csv_filename = f"response_contestadas_{timestamp}.csv"
-                
-                # Convertir a CSV
                 csv_path = convert_json_to_csv(response_data, csv_filename)
-                
                 result = {
                     "success": True,
                     "status": 200,
@@ -422,54 +305,34 @@ def invoke_api():
                 "message": f"Error {response.status_code}"
             }
             log_gui_action("API INVOKE fallo", status=response.status_code)
-        
         return jsonify(result), 200
-        
     except requests.Timeout:
         error_msg = "Timeout - La solicitud excedió el tiempo límite"
         log_gui_action("API INVOKE error", detalle=error_msg)
-        return jsonify({
-            "success": False,
-            "status": 0,
-            "url": url,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "message": error_msg
-        }), 500
+        return jsonify({"success": False, "status": 0, "url": url, "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "message": error_msg}), 500
     except Exception as e:
         error_msg = str(e)
         log_gui_action("API INVOKE error", detalle=error_msg)
-        return jsonify({
-            "success": False,
-            "status": 0,
-            "url": url,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "message": error_msg
-        }), 500
-    
+        return jsonify({"success": False, "status": 0, "url": url, "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "message": error_msg}), 500
+
+
 @app.route("/api/invokeWhatsapp", methods=["POST"])
 def invoke_api_whatsapp():
     """Endpoint para invocar una API Whatsapp y retornar resultado"""
     data = request.get_json()
     url = data.get("url")
-
     if not url:
         return jsonify({"error": "Se requiere 'url'"}), 400
-    
     try:
         log_gui_action("API WHATSAPP", url=url)
         headers = get_authorization_headers()
-        response = requests.get(url, headers=headers, timeout=10)                       
-
+        response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
-            try:                
+            try:
                 response_data = response.json()
-                # Generar nombre del archivo CSV
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 csv_filename = f"response_whatsapp_{timestamp}.csv"
-                
-                # Convertir a CSV
                 csv_path = convert_json_to_csv(response_data, csv_filename)
-                
                 result = {
                     "success": True,
                     "status": 200,
@@ -500,54 +363,34 @@ def invoke_api_whatsapp():
                 "message": f"Error {response.status_code}"
             }
             log_gui_action("API WHATSAPP fallo", status=response.status_code)
-        
         return jsonify(result), 200
-        
     except requests.Timeout:
         error_msg = "Timeout - La solicitud excedió el tiempo límite"
         log_gui_action("API WHATSAPP error", detalle=error_msg)
-        return jsonify({
-            "success": False,
-            "status": 0,
-            "url": url,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "message": error_msg
-        }), 500
+        return jsonify({"success": False, "status": 0, "url": url, "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "message": error_msg}), 500
     except Exception as e:
         error_msg = str(e)
         log_gui_action("API WHATSAPP error", detalle=error_msg)
-        return jsonify({
-            "success": False,
-            "status": 0,
-            "url": url,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "message": error_msg
-        }), 500
-    
+        return jsonify({"success": False, "status": 0, "url": url, "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "message": error_msg}), 500
+
+
 @app.route("/api/invokeNoContestadas", methods=["POST"])
 def invoke_api_no_contestadas():
     """Endpoint para invocar una API de llamadas no contestadas y retornar resultado"""
     data = request.get_json()
     url = data.get("url")
-
     if not url:
         return jsonify({"error": "Se requiere 'url'"}), 400
-    
     try:
         log_gui_action("API NO CONTESTADAS", url=url)
         headers = get_authorization_headers()
-        response = requests.get(url, headers=headers, timeout=10)                       
-
+        response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
-            try:                
+            try:
                 response_data = response.json()
-                # Generar nombre del archivo CSV
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 csv_filename = f"response_no_contestadas_{timestamp}.csv"
-                
-                # Convertir a CSV
                 csv_path = convert_json_to_csv(response_data, csv_filename)
-                
                 result = {
                     "success": True,
                     "status": 200,
@@ -578,37 +421,21 @@ def invoke_api_no_contestadas():
                 "message": f"Error {response.status_code}"
             }
             log_gui_action("API NO CONTESTADAS fallo", status=response.status_code)
-        
         return jsonify(result), 200
-        
     except requests.Timeout:
         error_msg = "Timeout - La solicitud excedió el tiempo límite"
         log_gui_action("API NO CONTESTADAS error", detalle=error_msg)
-        return jsonify({
-            "success": False,
-            "status": 0,
-            "url": url,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "message": error_msg
-        }), 500
+        return jsonify({"success": False, "status": 0, "url": url, "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "message": error_msg}), 500
     except Exception as e:
         error_msg = str(e)
         log_gui_action("API NO CONTESTADAS error", detalle=error_msg)
-        return jsonify({
-            "success": False,
-            "status": 0,
-            "url": url,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "message": error_msg
-        }), 500
-    
+        return jsonify({"success": False, "status": 0, "url": url, "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "message": error_msg}), 500
+
+
 @app.route("/bd/invokeBigquery", methods=["POST"])
 def guardar_bigquery():
     """Endpoint genérico para BigQuery que recuerda usar la página de configuración."""
-    return jsonify({
-        "success": False,
-        "message": "Use la página /config-bigquery para configurar campañas y probar queries."
-    }), 400
+    return jsonify({"success": False, "message": "Use la página /config-bigquery para configurar campañas y probar queries."}), 400
 
 
 def _parse_campaign_payload(data):
@@ -631,10 +458,7 @@ def _parse_campaign_payload(data):
         return None, ("El tipo es obligatorio.", 400)
     tipo_campana = validate_tipo_campana(tipo_campana_raw)
     if not tipo_campana:
-        return None, (
-            "El tipo de campaña es obligatorio. Opciones: Email, Llamada, SMS, WhatsApp.",
-            400,
-        )
+        return None, ("El tipo de campaña es obligatorio. Opciones: Email, Llamada, SMS, WhatsApp.", 400)
     if not fecha_inicio:
         return None, ("La fecha de inicio es obligatoria.", 400)
     if not consulta:
@@ -648,9 +472,7 @@ def _parse_campaign_payload(data):
         return None, ("Formato de fecha inválido. Use YYYY-MM-DDTHH:MM.", 400)
 
     flujo_proceso_id_raw = (data.get("flujo_proceso_id") or data.get("campaign_id") or "").strip()
-    flujo_proceso_id, flujo_error = validate_flujo_for_campaign(
-        flujo_proceso_id_raw, servidor, tipo_campana
-    )
+    flujo_proceso_id, flujo_error = validate_flujo_for_campaign(flujo_proceso_id_raw, servidor, tipo_campana)
     if flujo_error:
         return None, (flujo_error, 400)
 
@@ -692,10 +514,8 @@ def config_bigquery():
             page_size = 10
     except ValueError:
         page_size = 10
-
     page_size = min(max(page_size, 5), 50)
 
-    # Cargar servidores para el dropdown
     servers_result = load_servers()
     servers = servers_result.get('servers', []) if servers_result.get('success') else []
     options = servers_result.get('options', {}) if servers_result.get('success') else {}
@@ -764,37 +584,26 @@ def save_bigquery_campaign():
         return jsonify({"success": False, "message": save_result.get("message", "Error guardando campaña.")}), 500
 
     campaign = save_result.get("campaign") or {}
-    log_gui_action(
-        "Crear campaña",
-        id=campaign.get("id"),
-        nombre=payload.get("nombre"),
-    )
+    log_gui_action("Crear campaña", id=campaign.get("id"), nombre=payload.get("nombre"))
+    return jsonify({"success": True, "message": save_result.get("message"), "campaign": save_result.get("campaign")})
 
-    return jsonify({
-        "success": True,
-        "message": save_result.get("message"),
-        "campaign": save_result.get("campaign"),
-    })
 
 @app.route("/config-bigquery/get", methods=["POST"])
 def get_bigquery_campaign():
     data = request.get_json() or {}
     campaign_id = parse_campaign_id(data.get("id"))
-
     if campaign_id is None:
         return jsonify({"success": False, "message": "El id de campaña es obligatorio y debe ser numérico."}), 400
-
     campaign = get_campaign(campaign_id)
     if not campaign:
         return jsonify({"success": False, "message": "No se encontró la campaña."}), 404
-
     return jsonify({"success": True, "campaign": campaign})
+
 
 @app.route("/config-bigquery/update", methods=["POST"])
 def update_bigquery_campaign():
     data = request.get_json() or {}
     campaign_id = parse_campaign_id(data.get("id"))
-
     if campaign_id is None:
         return jsonify({"success": False, "message": "El id de campaña es obligatorio y debe ser numérico."}), 400
 
@@ -819,12 +628,8 @@ def update_bigquery_campaign():
         return jsonify({"success": False, "message": update_result.get("message", "Error actualizando campaña.")}), 500
 
     log_gui_action("Actualizar campaña", id=campaign_id, nombre=payload.get("nombre"))
+    return jsonify({"success": True, "message": update_result.get("message", "Campaña actualizada correctamente."), "campaign": update_result.get("campaign")})
 
-    return jsonify({
-        "success": True,
-        "message": update_result.get("message", "Campaña actualizada correctamente."),
-        "campaign": update_result.get("campaign"),
-    })
 
 @app.route("/config-bigquery/delete", methods=["POST"])
 def delete_bigquery_campaign():
@@ -839,11 +644,7 @@ def delete_bigquery_campaign():
         return jsonify({"success": False, "message": delete_result.get("message", "Error borrando la campaña.")}), 500
 
     log_gui_action("Eliminar campaña", id=campaign_id)
-
-    return jsonify({
-        "success": True,
-        "message": delete_result.get("message", "Campaña eliminada correctamente."),
-    })
+    return jsonify({"success": True, "message": delete_result.get("message", "Campaña eliminada correctamente.")})
 
 
 @app.route("/config-bigquery/sync", methods=["POST"])
@@ -861,16 +662,9 @@ def sync_bigquery_campaigns():
         log_gui_action("Sincronizar campañas fallo", mensaje=sync_result.get("message"))
         return jsonify({"success": False, "message": sync_result.get("message", "Error sincronizando.")}), 500
 
-    log_gui_action(
-        "Sincronizar campañas",
-        filas=sync_result.get("rows_written", 0),
-    )
+    log_gui_action("Sincronizar campañas", filas=sync_result.get("rows_written", 0))
+    return jsonify({"success": True, "message": sync_result.get("message"), "rows_written": sync_result.get("rows_written", 0)})
 
-    return jsonify({
-        "success": True,
-        "message": sync_result.get("message"),
-        "rows_written": sync_result.get("rows_written", 0),
-    })
 
 @app.route("/config-bigquery/test-count", methods=["POST"])
 def test_bigquery_query():
@@ -899,7 +693,15 @@ def test_bigquery_query():
         return jsonify(result)
     log_gui_action("Probar conteo BigQuery fallo", mensaje=result.get("message"))
     return jsonify(result), 400
-
+def registrar_resumen_sms(campaign, usuario, query, plantilla, total, enviados, fallidos, estado):
+    """Registra un resumen del envío en el log (no interrumpe el flujo)."""
+    try:
+        log_task(
+            f"[SMS] Campaña='{campaign}' Usuario='{usuario}' "
+            f"Total={total} Enviados={enviados} Fallidos={fallidos} Estado={estado}"
+        )
+    except Exception:
+        pass
 
 def _get_sms_rows(query):
     global bq_client
@@ -920,37 +722,426 @@ def config_sms():
 
 @app.route("/api/sms/preview", methods=["POST"])
 def sms_preview():
-    data = request.get_json() or {}
-    query, plantilla = (data.get("query") or "").strip(), (data.get("plantilla") or "").strip()
+    data = request.get_json(silent=True) or {}
+    query = (data.get("query") or "").strip()
+    plantilla = (data.get("plantilla") or "").strip()
+    allow_resend = bool(data.get("confirmar_reenvio", False))
+
     if not query or not plantilla:
         return jsonify({"success": False, "message": "La consulta SQL y la plantilla son obligatorias."}), 400
-    rows, error_response = _get_sms_rows(query)
-    if error_response:
-        return error_response
+
     try:
+        rows, error_response = _get_sms_rows(query)
+        if error_response:
+            return error_response
+
         result = preview_sms(rows, plantilla)
-        log_gui_action("Vista previa SMS", total=result["total_validos"])
+        if not result.get("success"):
+            return jsonify(result), 400
+
+        log_gui_action("Vista previa SMS", total=result.get("total_validos", 0))
         return jsonify({"success": True, **result})
-    except SmsServiceError as exc:
-        return jsonify({"success": False, "message": str(exc)}), 400
+
+    except Exception as exc:
+        logger.exception("Error en vista previa SMS")
+        log_task(f"[SMS] Error en vista previa: {exc}", level="ERROR")
+        return jsonify({"success": False, "message": "No fue posible preparar la vista previa. Revisa la consulta y las tablas SMS."}), 500
 
 
 @app.route("/api/sms/enviar", methods=["POST"])
 def sms_send():
-    data = request.get_json() or {}
-    query, plantilla = (data.get("query") or "").strip(), (data.get("plantilla") or "").strip()
+    data = request.get_json(silent=True) or {}
+    query = (data.get("query") or "").strip()
+    plantilla = (data.get("plantilla") or "").strip()
+    campaign = (data.get("campana") or "").strip()
+    usuario = (data.get("usuario") or "").strip()
+    allow_resend = bool(data.get("confirmar_reenvio", False))
+
     if not query or not plantilla:
         return jsonify({"success": False, "message": "La consulta SQL y la plantilla son obligatorias."}), 400
-    rows, error_response = _get_sms_rows(query)
-    if error_response:
-        return error_response
+
     try:
-        result = enviar_sms_desde_filas(rows, plantilla, (CONFIG or load_config()).get("infobip", {}))
-        log_gui_action("Envio SMS", preparados=result["total_preparados"], lotes=result["lotes_enviados"])
-        return jsonify({"success": result["lotes_fallidos"] == 0, **result})
+        rows, error_response = _get_sms_rows(query)
+        if error_response:
+            return error_response
+
+        infobip_config = (CONFIG or load_config()).get("infobip", {})
+        result = enviar_sms_desde_filas(
+            rows, plantilla, infobip_config,
+            client=bq_client,
+            campaign=campaign,
+            usuario=usuario,
+            query_sql=query,
+            allow_resend=allow_resend
+        )
+
+        log_gui_action("Envio SMS", preparados=result["total_preparados"], enviados=result["enviados"])
+        registrar_resumen_sms(campaign, usuario, query, plantilla, result["total_preparados"], result["enviados"], result["fallidos"], "exitoso" if result["fallidos"] == 0 else "parcial")
+        return jsonify({"success": result["fallidos"] == 0, **result})
+
     except SmsServiceError as exc:
+        registrar_resumen_sms(campaign, usuario, query, plantilla, 0, 0, 0, "fallido")
+        log_task(f"[SMS] Envío rechazado: {exc}", level="WARNING")
         return jsonify({"success": False, "message": str(exc)}), 400
 
+    except Exception as exc:
+        registrar_resumen_sms(campaign, usuario, query, plantilla, 0, 0, 0, "fallido")
+        logger.exception("Error enviando SMS")
+        log_task(f"[SMS] Error enviando: {exc}", level="ERROR")
+        return jsonify({"success": False, "message": "No se pudo completar el envío. Revisa logs."}), 500
+
+
+def _sms_client():
+    global bq_client
+    if bq_client is None:
+        init_bigquery()
+    if bq_client is None:
+        raise SmsServiceError("No se pudo inicializar BigQuery.")
+    return bq_client
+
+
+def execute_sms_schedule(schedule_id: str):
+    """Job de APScheduler que ejecuta una programación persistida en BigQuery."""
+    try:
+        from google.cloud import bigquery
+        client = bq_client or get_bigquery_client()
+        if client is None:
+            raise SmsServiceError("No se pudo conectar a BigQuery")
+
+        query = f"""
+            SELECT * FROM `{PROJECT_ID}.Temporal.ProgramacionSms`
+            WHERE id = '{schedule_id}' AND estado = 'pendiente'
+            LIMIT 1
+        """
+        df = client.query(query).to_dataframe()
+        if df.empty:
+            logger.warning(f"Programación {schedule_id} no encontrada o ya ejecutada")
+            return
+
+        scheduled = df.iloc[0].to_dict()
+        infobip_config = (CONFIG or load_config()).get("infobip", {})
+
+        fetched = fetch_sms_query_rows(client, scheduled['consulta_sql'])
+        if not fetched.get("success"):
+            raise SmsServiceError(fetched.get("message", "Error en consulta"))
+
+        enviar_sms_desde_filas(
+            fetched["rows"],
+            scheduled['plantilla'],
+            infobip_config,
+            client=client,
+            usuario=scheduled.get('usuario', 'sistema'),
+            query_sql=scheduled['consulta_sql'],
+            allow_resend=bool(scheduled.get('confirmar_duplicados', False))
+        )
+
+        client.query(f"""
+            UPDATE `{PROJECT_ID}.Temporal.ProgramacionSms`
+            SET estado = 'enviado', fecha_ejecucion = CURRENT_TIMESTAMP(), fecha_actualizacion = CURRENT_TIMESTAMP()
+            WHERE id = '{schedule_id}'
+        """).result()
+
+        log_gui_action("SMS programado ejecutado", programacion=schedule_id)
+
+    except Exception as exc:
+        logger.exception("Error en programación SMS %s", schedule_id)
+        try:
+            client = bq_client or get_bigquery_client()
+            if client:
+                client.query(f"""
+                    UPDATE `{PROJECT_ID}.Temporal.ProgramacionSms`
+                    SET estado = 'fallido', fecha_actualizacion = CURRENT_TIMESTAMP()
+                    WHERE id = '{schedule_id}'
+                """).result()
+        except:
+            pass
+        log_gui_action("SMS programado falló", programacion=schedule_id, mensaje=str(exc))
+
+
+@app.route("/api/sms/programar", methods=["POST"])
+def sms_schedule():
+    data = request.get_json(silent=True) or {}
+    query = (data.get("query") or "").strip()
+    plantilla = (data.get("plantilla") or "").strip()
+    when = (data.get("fecha_programada") or "").strip()
+    campaign = (data.get("campana") or "").strip()
+    usuario = (data.get("usuario") or "").strip()
+    allow_resend = bool(data.get("confirmar_reenvio", False))
+
+    if not query or not plantilla or not when:
+        return jsonify({"success": False, "message": "Consulta, plantilla y fecha programada son obligatorias."}), 400
+
+    try:
+        run_date = datetime.fromisoformat(when)
+        if run_date <= datetime.now():
+            raise SmsServiceError("La fecha programada debe ser futura.")
+
+        rows, error_response = _get_sms_rows(query)
+        if error_response:
+            return error_response
+
+        mensajes_validos, _ = aplicar_validaciones(rows, plantilla, bq_client, allow_resend=allow_resend)
+        if not mensajes_validos:
+            raise SmsServiceError("La programación no tiene destinatarios válidos.")
+
+        schedule_id = guardar_programacion(
+            bq_client, query, plantilla,
+            campaign=campaign,
+            usuario=usuario,
+            scheduled_at=run_date.isoformat(),
+            allow_resend=allow_resend
+        )
+
+        scheduler.add_job(
+            execute_sms_schedule,
+            trigger="date",
+            run_date=run_date,
+            args=[schedule_id],
+            id=f"sms_programado_{schedule_id}",
+            replace_existing=True
+        )
+
+        log_gui_action("SMS programado", programacion=schedule_id, fecha=run_date.isoformat())
+        return jsonify({
+            "success": True,
+            "id": schedule_id,
+            "fecha_programada": run_date.isoformat(),
+            "total_destinatarios": len(mensajes_validos),
+            "message": "Envío SMS programado correctamente."
+        })
+
+    except (ValueError, SmsServiceError) as exc:
+        log_task(f"[SMS] Programación rechazada: {exc}", level="WARNING")
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+    except Exception as exc:
+        logger.exception("Error programando SMS")
+        log_task(f"[SMS] Error programando: {exc}", level="ERROR")
+        return jsonify({"success": False, "message": "No se pudo guardar la programación."}), 500
+
+
+@app.route("/api/sms/historial")
+def sms_history():
+    try:
+        from google.cloud import bigquery
+        page = max(1, int(request.args.get("page", 1)))
+        per_page = min(100, max(1, int(request.args.get("per_page", 25))))
+        offset = (page - 1) * per_page
+
+        clauses = []
+        parameters = []
+
+        fecha = (request.args.get("fecha") or "").strip()
+        if fecha:
+            clauses.append("DATE(fecha_envio) = @fecha")
+            parameters.append(bigquery.ScalarQueryParameter("fecha", "DATE", fecha))
+
+        campana = (request.args.get("campana") or "").strip()
+        if campana:
+            clauses.append("LOWER(campana) LIKE LOWER(@campana)")
+            parameters.append(bigquery.ScalarQueryParameter("campana", "STRING", f"%{campana}%"))
+
+        telefono = (request.args.get("telefono") or "").strip()
+        if telefono:
+            clauses.append("telefono LIKE @telefono")
+            parameters.append(bigquery.ScalarQueryParameter("telefono", "STRING", f"%{telefono}%"))
+
+        where = " WHERE " + " AND ".join(clauses) if clauses else ""
+        parameters.extend([
+            bigquery.ScalarQueryParameter("limit", "INT64", per_page),
+            bigquery.ScalarQueryParameter("offset", "INT64", offset)
+        ])
+
+        query = f"""
+            SELECT * FROM `{SMS_LOG_TABLE}`
+            {where}
+            ORDER BY fecha_envio DESC
+            LIMIT @limit OFFSET @offset
+        """
+        job_config = bigquery.QueryJobConfig(query_parameters=parameters)
+        df = bq_client.query(query, job_config=job_config).to_dataframe()
+        items = df.to_dict('records') if not df.empty else []
+
+        return jsonify({"success": True, "page": page, "items": items})
+
+    except Exception as exc:
+        logger.exception("Error en historial SMS")
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@app.route("/api/sms/historial/<record_id>")
+def sms_history_detail(record_id):
+    try:
+        query = f"""
+            SELECT * FROM `{SMS_LOG_TABLE}`
+            WHERE id = '{record_id}'
+            LIMIT 1
+        """
+        df = bq_client.query(query).to_dataframe()
+        if df.empty:
+            return jsonify({"success": False, "message": "Registro no encontrado."}), 404
+        return jsonify({"success": True, "item": df.iloc[0].to_dict()})
+    except Exception as exc:
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@app.route("/api/sms/programaciones")
+def sms_schedules():
+    try:
+        query = f"""
+            SELECT * FROM `{SCHEDULE_TABLE}`
+            ORDER BY fecha_programada DESC
+            LIMIT 200
+        """
+        df = bq_client.query(query).to_dataframe()
+        items = df.to_dict('records') if not df.empty else []
+        return jsonify({"success": True, "items": items})
+    except Exception as exc:
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@app.route("/api/sms/programacion/<schedule_id>")
+def sms_schedule_detail(schedule_id):
+    try:
+        query = f"""
+            SELECT * FROM `{SCHEDULE_TABLE}`
+            WHERE id = '{schedule_id}'
+            LIMIT 1
+        """
+        df = bq_client.query(query).to_dataframe()
+        if df.empty:
+            return jsonify({"success": False, "message": "Programación no encontrada."}), 404
+        return jsonify({"success": True, "item": df.iloc[0].to_dict()})
+    except Exception as exc:
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@app.route("/api/sms/cancelar/<schedule_id>", methods=["POST"])
+def sms_cancel_schedule(schedule_id):
+    try:
+        job_id = f"sms_programado_{schedule_id}"
+        if scheduler.get_job(job_id):
+            scheduler.remove_job(job_id)
+
+        query = f"""
+            UPDATE `{SCHEDULE_TABLE}`
+            SET estado = 'cancelada', fecha_actualizacion = CURRENT_TIMESTAMP()
+            WHERE id = '{schedule_id}' AND estado = 'pendiente'
+        """
+        job = bq_client.query(query)
+        job.result()
+        if job.num_dml_affected_rows == 0:
+            return jsonify({"success": False, "message": "Programación no encontrada o ya no está pendiente."}), 404
+
+        log_gui_action("SMS programado cancelado", programacion=schedule_id)
+        return jsonify({"success": True, "message": "Programación cancelada."})
+    except Exception as exc:
+        return jsonify({"success": False, "message": str(exc)}), 500
+PROJECT_ID = "capable-arbor-209819"
+
+BLACKLIST_SOURCE_TABLE = f"{PROJECT_ID}.Tablas_Reporteria.Telefonos_Tutela"
+
+# ========== LISTA NEGRA ==========
+
+@app.route("/api/sms/lista-negra", methods=["GET"])
+def sms_blacklist():
+    """Obtiene la lista negra desde Tablas_Reporteria.Telefonos_Tutela ."""
+    try:
+        query = f"""
+            SELECT 
+                Telefono AS telefono,
+                Motivo AS motivo,
+                Fecha AS fecha_creacion
+            FROM `capable-arbor-209819.Tablas_Reporteria.Telefonos_Tutela`
+            ORDER BY Fecha DESC
+            LIMIT 500
+        """
+        df = bq_client.query(query).to_dataframe()
+        items = df.to_dict('records') if not df.empty else []
+        return jsonify({"success": True, "items": items, "read_only": True, "total": len(items)})
+    except Exception as exc:
+        logger.exception("Error obteniendo lista negra")
+        if "Not found" in str(exc):
+            return jsonify({"success": True, "items": [], "read_only": True, "total": 0})
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@app.route("/api/sms/lista-negra/agregar", methods=["POST"])
+def sms_blacklist_add():
+    """No se puede agregar a la lista negra (tabla de solo lectura)."""
+    return jsonify({
+        "success": False,
+        "message": "Tablas_Reporteria.Telefonos_Tutela es una tabla de solo lectura. No se pueden agregar números desde esta interfaz.",
+        "read_only": True
+    }), 403
+
+
+@app.route("/api/sms/lista-negra/eliminar/<record_id>", methods=["POST"])
+def sms_blacklist_delete(record_id):
+    """No se puede eliminar de la lista negra (tabla de solo lectura)."""
+    return jsonify({
+        "success": False,
+        "message": "Tablas_Reporteria.Telefonos_Tutela es una tabla de solo lectura. No se pueden eliminar números desde esta interfaz.",
+        "read_only": True
+    }), 403
+@app.route("/api/sms/validar", methods=["POST"])
+def sms_validar():
+    """Endpoint que ejecuta TODAS las validaciones: lista negra + duplicados + preview."""
+    data = request.get_json(silent=True) or {}
+    query = (data.get("query") or "").strip()
+    plantilla = (data.get("plantilla") or "").strip()
+    allow_resend = bool(data.get("confirmar_reenvio", False))
+
+    if not query or not plantilla:
+        return jsonify({"success": False, "message": "La consulta SQL y la plantilla son obligatorias."}), 400
+
+    try:
+        rows, error_response = _get_sms_rows(query)
+        if error_response:
+            return error_response
+
+        # Obtener vista previa
+        preview = preview_sms(rows, plantilla)
+        if not preview.get("success"):
+            return jsonify(preview), 400
+
+        # Aplicar validaciones completas
+        from services.sms_service import preparar_sms, verificar_lista_negra, verificar_duplicados
+        
+        prepared, details = preparar_sms(rows, plantilla)
+        phones = [item["phone"] for item in prepared]
+        
+        blocked = verificar_lista_negra(bq_client, phones)
+        duplicates = verificar_duplicados(bq_client, phones)
+        
+        # Calcular números válidos finales
+        allowed = [item for item in prepared if item["phone"] not in blocked]
+        if not allow_resend:
+            allowed = [item for item in allowed if item["phone"] not in duplicates]
+        
+        # Crear preview de los mensajes que se enviarían
+        preview_mensajes = []
+        for item in allowed[:3]:
+            preview_mensajes.append({
+                "telefono": item["phone"],
+                "mensaje": item["text"],
+                "longitud": len(item["text"])
+            })
+        
+        return jsonify({
+            "success": True,
+            "total_consulta": len(rows),
+            "total_validos": details.get("total_validos", 0),
+            "invalidos": details.get("invalid_numbers", 0),
+            "duplicados": len(duplicates),
+            "blacklist": len(blocked),
+            "a_enviar": len(allowed),
+            "preview": preview_mensajes
+        })
+
+    except Exception as exc:
+        logger.exception("Error en validación SMS")
+        return jsonify({"success": False, "message": str(exc)}), 500
 
 @app.route("/auto-campaigns", methods=["GET"])
 def auto_campaigns_index():
@@ -1024,16 +1215,13 @@ def auto_campaigns_test_count():
         log_gui_action("Preconteo campaña automática fallo", mensaje=result.get("message"))
         return jsonify(result), 400
 
-    # Si la validación devolvió advertencias, propágalas en la respuesta final
     if field_mapping and 'validation' in locals() and validation.get('warning'):
         result['warning'] = validation.get('warning')
-        # Asegurar que el mensaje principal incluya la advertencia
         result['message'] = validation.get('warning') + (" - " + result.get('message', '') if result.get('message') else "")
 
     campaign_id = parse_auto_campaign_id(data.get("campaign_id") or data.get("id"))
     if campaign_id is not None:
         from database import AutoCampaign
-
         campaign = AutoCampaign.query.get(campaign_id)
         if campaign:
             campaign.last_precount = int(result.get("total") or 0)
@@ -1046,14 +1234,6 @@ def auto_campaigns_test_count():
 
 @app.route("/auto-campaigns/validate-query-fields", methods=["POST"])
 def auto_campaigns_validate_query_fields():
-    """
-    Valida que una consulta BigQuery tenga los campos requeridos.
-    
-    Retorna:
-    - Los campos detectados en la consulta
-    - Los campos requeridos que faltan (si los hay)
-    - Las variaciones de nombres aceptadas
-    """
     from services.query_validator import (
         validate_and_normalize,
         describe_field_aliases,
@@ -1064,43 +1244,27 @@ def auto_campaigns_validate_query_fields():
     query = (data.get("query") or "").strip()
     
     if not query:
-        return jsonify({
-            "success": False,
-            "message": "La consulta SQL es obligatoria."
-        }), 400
+        return jsonify({"success": False, "message": "La consulta SQL es obligatoria."}), 400
 
     global bq_client
     if bq_client is None:
         init_bigquery()
     if bq_client is None:
-        return jsonify({
-            "success": False,
-            "message": "No se pudo inicializar el cliente de BigQuery."
-        }), 500
+        return jsonify({"success": False, "message": "No se pudo inicializar el cliente de BigQuery."}), 500
 
     try:
-        # Ejecutar consulta
         query_text = query.strip().rstrip(";")
         if not re.match(r"^(SELECT|WITH)\b", query_text, re.IGNORECASE):
-            return jsonify({
-                "success": False,
-                "message": "Solo se permiten consultas SELECT o WITH."
-            }), 400
+            return jsonify({"success": False, "message": "Solo se permiten consultas SELECT o WITH."}), 400
 
         job = bq_client.query(query_text)
         result = job.result(max_results=1)
         rows = list(result)
         
         if not rows:
-            return jsonify({
-                "success": False,
-                "message": "La consulta no retorna resultados."
-            }), 400
+            return jsonify({"success": False, "message": "La consulta no retorna resultados."}), 400
 
-        # Validar y mapear campos
         success, normalized_rows, error_msg = validate_and_normalize(rows)
-        
-        # Obtener información de campos detectados
         raw_columns = list(rows[0].keys()) if rows else []
         mapped_columns = {}
         
@@ -1126,10 +1290,7 @@ def auto_campaigns_validate_query_fields():
     except Exception as exc:
         error_msg = f"Error validando consulta: {str(exc)}"
         logger.error(error_msg)
-        return jsonify({
-            "success": False,
-            "message": error_msg
-        }), 500
+        return jsonify({"success": False, "message": error_msg}), 500
 
 
 @app.route("/auto-campaigns/<int:campaign_id>", methods=["GET"])
@@ -1155,7 +1316,6 @@ def auto_campaigns_update(campaign_id):
 
 @app.route("/auto-campaigns/<int:campaign_id>/download-report-before-edit", methods=["POST"])
 def auto_campaigns_download_report_before_edit(campaign_id):
-    """Descarga XLSX previo a edición (servidor + campaña + fin) sin borrar la campaña."""
     from database import AutoCampaign, AutoCampaignExecutionLog
 
     campaign = AutoCampaign.query.get(campaign_id)
@@ -1175,10 +1335,8 @@ def auto_campaigns_download_report_before_edit(campaign_id):
     if not end_dt:
         end_dt = datetime.utcnow()
 
-    # Rango para Wolkvox: mismo criterio que delete-report
     date_ini = end_dt.replace(hour=0, minute=0, second=0, microsecond=0)
     date_end = end_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
-
     date_ini_str = date_ini.strftime("%Y-%m-%d")
     date_end_str = date_end.strftime("%Y-%m-%d")
 
@@ -1196,18 +1354,11 @@ def auto_campaigns_download_report_before_edit(campaign_id):
     filename = f"reporte_{safe_server}_{safe_campaign}_finalizado_{end_file_ts}.xlsx"
 
     bio, _ = build_wolkvox_excel(rows=rows, filename=filename)
-
-    return send_file(
-        bio,
-        as_attachment=True,
-        download_name=filename,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
+    return send_file(bio, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 
 @app.route("/auto-campaigns/<int:campaign_id>/delete-report", methods=["POST"])
 def auto_campaigns_delete_report(campaign_id):
-    """Elimina la campaña automática descargando un XLSX (servidor + campaña + fin)."""
     from database import AutoCampaign, AutoCampaignExecutionLog
 
     campaign = AutoCampaign.query.get(campaign_id)
@@ -1220,7 +1371,6 @@ def auto_campaigns_delete_report(campaign_id):
     server_name = (campaign.server_name or "").strip()
     campaign_name = (campaign.name or "").strip() or f"campaign_{campaign_id}"
 
-    # Tomar fecha/hora de finalización desde el último log (si existe)
     log = (
         AutoCampaignExecutionLog.query.filter_by(auto_campaign_id=campaign_id)
         .order_by(AutoCampaignExecutionLog.end_time.desc())
@@ -1229,22 +1379,17 @@ def auto_campaigns_delete_report(campaign_id):
 
     end_dt = log.end_time if log and log.end_time else campaign.last_run
     if not end_dt:
-        # fallback: usar ahora UTC
         end_dt = datetime.utcnow()
 
     end_str = end_dt.strftime("%Y-%m-%dT%H:%M:%S")
-
-    # Ventana para reportes: 1 día hacia atrás (ajustable)
     date_ini = (end_dt.replace(hour=0, minute=0, second=0, microsecond=0))
     date_end = (end_dt.replace(hour=23, minute=59, second=59, microsecond=999999))
-
     date_ini_str = date_ini.strftime("%Y-%m-%d")
     date_end_str = date_end.strftime("%Y-%m-%d")
 
     if not server_name:
         return jsonify({"success": False, "message": "La campaña no tiene server_name configurado."}), 400
 
-    # Llamar a Wolkvox y generar Excel con formato
     try:
         rows = _wolkvox_report_rows(server_name, date_ini_str, date_end_str)
     except Exception as exc:
@@ -1257,34 +1402,24 @@ def auto_campaigns_delete_report(campaign_id):
 
     bio, _ = build_wolkvox_excel(rows=rows, filename=filename)
 
-    # Enviar el archivo ANTES de eliminar (para no perder metadatos)
-    # Luego eliminamos la campaña y logs.
     result = delete_auto_campaign(campaign_id)
     if not result.get("success"):
-        # Si falló el delete, igual preferimos no romper descarga; pero avisamos
         log_gui_action("Eliminar campaña automática fallo (post report)", id=campaign_id)
 
     log_gui_action("Eliminar campaña automática con descarga", id=campaign_id, server=server_name, nombre=campaign_name, end=end_str)
 
     from flask import make_response
-    resp = make_response(send_file(
-        bio,
-        as_attachment=True,
-        download_name=filename,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    ))
+    resp = make_response(send_file(bio, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'))
     return resp
 
 
 @app.route("/auto-campaigns/<int:campaign_id>", methods=["DELETE"])
 def auto_campaigns_delete(campaign_id):
-    # Mantener compatibilidad: eliminación normal sin reporte
     result = delete_auto_campaign(campaign_id)
     if not result.get("success"):
         return jsonify(result), 400
     log_gui_action("Eliminar campaña automática", id=campaign_id)
     return jsonify(result)
-
 
 
 @app.route("/auto-campaigns/<int:campaign_id>/run", methods=["POST"])
@@ -1332,12 +1467,7 @@ def auto_campaigns_report(campaign_id):
         "report_file_path": log.report_file_path or "",
     }
     bio = io.BytesIO(json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8"))
-    return send_file(
-        bio,
-        as_attachment=True,
-        download_name=f"auto_campaign_{campaign_id}_execution_{log.id}.json",
-        mimetype="application/json",
-    )
+    return send_file(bio, as_attachment=True, download_name=f"auto_campaign_{campaign_id}_execution_{log.id}.json", mimetype="application/json")
 
 
 @app.route("/auto-campaigns/<int:campaign_id>/records", methods=["DELETE"])
@@ -1365,23 +1495,14 @@ def auto_campaigns_delete_records(campaign_id):
             response = requests.delete(url, headers={"wolkvox-token": token} if token else {}, timeout=60)
             remote_result = {"status": response.status_code, "ok": response.ok, "text": response.text[:1000]}
             if not response.ok:
-                return jsonify({
-                    "success": False,
-                    "message": "Wolkvox respondió error al borrar registros.",
-                    "remote": remote_result,
-                }), 502
+                return jsonify({"success": False, "message": "Wolkvox respondió error al borrar registros.", "remote": remote_result}), 502
         except Exception as exc:
             return jsonify({"success": False, "message": str(exc)}), 502
 
     deleted_logs = AutoCampaignExecutionLog.query.filter_by(auto_campaign_id=campaign_id).delete()
     db.session.commit()
     log_gui_action("Borrar registros campaña automática", id=campaign_id, logs=deleted_logs)
-    return jsonify({
-        "success": True,
-        "message": "Registros remotos borrados si había endpoint configurado; logs locales eliminados.",
-        "deleted_logs": deleted_logs,
-        "remote": remote_result,
-    })
+    return jsonify({"success": True, "message": "Registros remotos borrados si había endpoint configurado; logs locales eliminados.", "deleted_logs": deleted_logs, "remote": remote_result})
 
 
 @app.route("/auto-campaigns/<int:campaign_id>/reset", methods=["POST"])
@@ -1398,26 +1519,16 @@ def auto_campaigns_reset(campaign_id):
     campaign.last_run = None
     db.session.commit()
     log_gui_action("Reiniciar ciclo campaña automática", id=campaign_id)
-    return jsonify({
-        "success": True,
-        "message": "Ciclo reiniciado.",
-        "next_run": campaign.next_run.strftime("%Y-%m-%d %H:%M:%S") if campaign.next_run else "",
-    })
+    return jsonify({"success": True, "message": "Ciclo reiniciado.", "next_run": campaign.next_run.strftime("%Y-%m-%d %H:%M:%S") if campaign.next_run else ""})
 
 
 @app.route('/config-general')
 def config_general():
-    """Parámetros generales (intervalo de revisión de campañas, etc.)."""
     result = load_general_parameters()
     parameters = result.get("parameters", {})
     limits = result.get("limits", {})
     error = None if result.get("success") else result.get("message")
-    return render_template(
-        "config_general.html",
-        parameters=parameters,
-        limits=limits,
-        error=error,
-    )
+    return render_template("config_general.html", parameters=parameters, limits=limits, error=error)
 
 
 @app.route('/config-general/save', methods=['POST'])
@@ -1428,46 +1539,28 @@ def config_general_save():
         return jsonify(result), 400
 
     load_config()
-    interval = reschedule_campaign_check_job(
-        result["parameters"]["campaign_check_interval_seconds"]
-    )
-    console_interval = reschedule_console_message_job(
-        result["parameters"]["console_message_interval_seconds"]
-    )
+    interval = reschedule_campaign_check_job(result["parameters"]["campaign_check_interval_seconds"])
+    console_interval = reschedule_console_message_job(result["parameters"]["console_message_interval_seconds"])
     result["scheduler_interval_seconds"] = interval
     result["console_message_interval_seconds"] = console_interval
     result["logs_deleted"] = cleanup_old_log_files()
-    log_gui_action(
-        "Guardar parámetros generales",
-        intervalo_campanas=interval,
-        intervalo_consola=console_interval,
-    )
+    log_gui_action("Guardar parámetros generales", intervalo_campanas=interval, intervalo_consola=console_interval)
     return jsonify(result)
 
 
 @app.route("/config-flujos-proceso")
 def config_flujos_proceso():
-    """Página de flujos de proceso Wolkvox."""
     result = load_flujos_proceso()
     flujos = []
     servers = []
     error = None
     servers_result = load_servers()
-    servers = (
-        servers_result.get("servers", [])
-        if servers_result.get("success")
-        else []
-    )
+    servers = servers_result.get("servers", []) if servers_result.get("success") else []
     if result.get("success"):
         flujos = result.get("flujos", [])
     else:
         error = result.get("message")
-    return render_template(
-        "config_flujos_proceso.html",
-        flujos=flujos,
-        servers=servers,
-        error=error,
-    )
+    return render_template("config_flujos_proceso.html", flujos=flujos, servers=servers, error=error)
 
 
 @app.route("/config-flujos-proceso/get", methods=["POST"])
@@ -1490,10 +1583,7 @@ def config_flujos_proceso_save():
     servidor = (data.get("servidor") or "").strip()
     original_id = (data.get("original_id") or "").strip()
     if not flujo_id or not nombre or not servidor:
-        return jsonify({
-            "success": False,
-            "message": "Id, nombre y servidor son obligatorios.",
-        }), 400
+        return jsonify({"success": False, "message": "Id, nombre y servidor son obligatorios."}), 400
     result = save_flujo(flujo_id, nombre, servidor, original_id=original_id or None)
     if result.get("success"):
         log_gui_action("Guardar flujo de proceso", id=flujo_id, nombre=nombre)
@@ -1516,7 +1606,6 @@ def config_flujos_proceso_delete():
 
 @app.route("/config-bigquery/flujos-proceso", methods=["GET"])
 def config_bigquery_flujos_proceso():
-    """Lista flujos para dropdown de campaña (filtrado por servidor)."""
     server = (request.args.get("server") or request.args.get("servidor") or "").strip()
     flujos = list_flujos_by_server(server)
     return jsonify({"success": True, "flujos": flujos})
@@ -1524,7 +1613,6 @@ def config_bigquery_flujos_proceso():
 
 @app.route('/config-servers')
 def config_servers():
-    """Página para listar y configurar servidores."""
     result = load_servers()
     servers = []
     error = None
@@ -1541,11 +1629,9 @@ def config_servers_get():
     name = (data.get('name') or '').strip()
     if not name:
         return jsonify({'success': False, 'message': 'El nombre del servidor es obligatorio.'}), 400
-
     server = get_server(name)
     if not server:
         return jsonify({'success': False, 'message': 'No se encontró el servidor.'}), 404
-
     server['deletable'] = not has_pending_campaigns_for_server(name)
     return jsonify({'success': True, 'server': server})
 
@@ -1581,7 +1667,6 @@ def config_servers_delete():
 
 @app.route('/config-apis')
 def config_apis():
-    """Página para listar y configurar APIs."""
     ensure_demo_api()
     result = load_apis()
     apis = []
@@ -1590,13 +1675,7 @@ def config_apis():
         apis = result.get('apis', [])
     else:
         error = result.get('message')
-    return render_template(
-        'config_apis.html',
-        apis=apis,
-        error=error,
-        handler_files=list_handler_files(),
-        http_methods=HTTP_METHODS,
-    )
+    return render_template('config_apis.html', apis=apis, error=error, handler_files=list_handler_files(), http_methods=HTTP_METHODS)
 
 
 @app.route('/config-apis/get', methods=['POST'])
@@ -1605,17 +1684,11 @@ def config_apis_get():
     name = (data.get('name') or '').strip()
     if not name:
         return jsonify({'success': False, 'message': 'El nombre de la API es obligatorio.'}), 400
-
     if is_system_api(name):
-        return jsonify({
-            'success': False,
-            'message': 'La API DEMO es de referencia del sistema y no se puede modificar.',
-        }), 403
-
+        return jsonify({'success': False, 'message': 'La API DEMO es de referencia del sistema y no se puede modificar.'}), 403
     api = get_api(name)
     if not api:
         return jsonify({'success': False, 'message': 'No se encontró la API.'}), 404
-
     return jsonify({'success': True, 'api': api})
 
 
@@ -1649,11 +1722,7 @@ def config_apis_save():
         return jsonify(metodo_check), 400
     metodo = normalize_http_metodo(metodo_raw)
 
-    result = save_api(
-        name, url, descripcion, frecuencia,
-        archivo, metodo,
-        original_name=original_name or None,
-    )
+    result = save_api(name, url, descripcion, frecuencia, archivo, metodo, original_name=original_name or None)
     if result.get('success'):
         log_gui_action("Guardar API", nombre=name)
         return jsonify(result)
@@ -1680,7 +1749,6 @@ def _parse_api_test_payload(raw) -> tuple[dict | None, str | None]:
 
 
 def _resolve_api_for_test(data: dict) -> tuple[dict | None, str | None]:
-    """API a probar: borrador del formulario o registro guardado por nombre."""
     draft = data.get("draft")
     if isinstance(draft, dict):
         url = (draft.get("url") or "").strip()
@@ -1690,12 +1758,7 @@ def _resolve_api_for_test(data: dict) -> tuple[dict | None, str | None]:
             metodo = normalize_http_metodo(metodo_raw)
             if not metodo:
                 return None, "Método HTTP inválido en el formulario."
-            return {
-                "name": (draft.get("name") or data.get("name") or "").strip(),
-                "url": url,
-                "archivo": archivo,
-                "metodo": metodo,
-            }, None
+            return {"name": (draft.get("name") or data.get("name") or "").strip(), "url": url, "archivo": archivo, "metodo": metodo}, None
 
     name = (data.get("name") or "").strip()
     if not name:
@@ -1722,7 +1785,6 @@ def _default_api_test_payload(api: dict) -> dict:
         template["wolkvox-token"] = token
     if (api.get("archivo") or "").strip() == "Wolkvox_Carga_Clientes":
         from api_handlers.Wolkvox_Carga_Clientes import load_ejemplo_datos_clientes_csv
-
         template["datos_clientes"] = load_ejemplo_datos_clientes_csv()
     archivo_api = (api.get("archivo") or "").strip()
     if archivo_api in ("Wolkvox_Carga_Clientes", "PararCampana", "BorrarClientesCampana"):
@@ -1732,24 +1794,17 @@ def _default_api_test_payload(api: dict) -> dict:
 
 @app.route('/config-apis/test-template', methods=['POST'])
 def config_apis_test_template():
-    """Plantilla JSON de parámetros para prueba manual según la API."""
     data = request.get_json() or {}
     api, error = _resolve_api_for_test(data)
     if error:
         return jsonify({"success": False, "message": error}), 400
 
     template = _default_api_test_payload(api)
-    return jsonify({
-        "success": True,
-        "api": api,
-        "url_placeholders": extract_url_placeholders(api.get("url") or ""),
-        "template": template,
-    })
+    return jsonify({"success": True, "api": api, "url_placeholders": extract_url_placeholders(api.get("url") or ""), "template": template})
 
 
 @app.route('/config-apis/preview-body', methods=['POST'])
 def config_apis_preview_body():
-    """Previsualiza el body HTTP sin llamar al servicio externo."""
     data = request.get_json() or {}
     payload, error = _parse_api_test_payload(data.get("payload"))
     if error:
@@ -1760,43 +1815,24 @@ def config_apis_preview_body():
         return jsonify({"success": False, "message": error}), 400
 
     try:
-        body = build_request_body_preview(
-            api.get("archivo") or "",
-            payload or {},
-            api.get("url") or "",
-            api,
-        )
+        body = build_request_body_preview(api.get("archivo") or "", payload or {}, api.get("url") or "", api)
     except ValueError as exc:
         return jsonify({"success": False, "message": str(exc)}), 400
 
     if isinstance(body, dict) and body.get("_error"):
         return jsonify({"success": False, "message": body["_error"]}), 400
 
-    request_headers = build_request_headers_preview(
-        api.get("archivo") or "",
-        payload or {},
-        api,
-    )
+    request_headers = build_request_headers_preview(api.get("archivo") or "", payload or {}, api)
     try:
-        request_url = build_request_url_preview(
-            api.get("url") or "",
-            payload or {},
-            api,
-        )
+        request_url = build_request_url_preview(api.get("url") or "", payload or {}, api)
     except ValueError as exc:
         return jsonify({"success": False, "message": str(exc)}), 400
 
-    return jsonify({
-        "success": True,
-        "request_body": body,
-        "request_headers": request_headers,
-        "request_url": request_url,
-    })
+    return jsonify({"success": True, "request_body": body, "request_headers": request_headers, "request_url": request_url})
 
 
 @app.route('/config-apis/test', methods=['POST'])
 def config_apis_test():
-    """Ejecuta una prueba manual del handler registrado."""
     data = request.get_json() or {}
     payload, error = _parse_api_test_payload(data.get("payload"))
     if error:
@@ -1812,9 +1848,7 @@ def config_apis_test():
         return jsonify({"success": False, "message": "La API no tiene archivo o método configurado."}), 400
 
     try:
-        request_body = build_request_body_preview(
-            archivo, payload or {}, api.get("url") or "", api
-        )
+        request_body = build_request_body_preview(archivo, payload or {}, api.get("url") or "", api)
     except ValueError as exc:
         return jsonify({"success": False, "message": str(exc)}), 400
 
@@ -1830,21 +1864,8 @@ def config_apis_test():
     result = invoke_handler(archivo, metodo, api, payload_dict)
     if not request_headers and isinstance(result.get("request_headers"), dict):
         request_headers = result.get("request_headers")
-    log_gui_action(
-        "Probar API",
-        nombre=api.get("name") or "borrador",
-        exito=bool(result.get("success")),
-        http=result.get("status"),
-    )
-
-    return jsonify({
-        "success": bool(result.get("success")),
-        "message": result.get("message", ""),
-        "request_body": request_body,
-        "request_headers": request_headers,
-        "request_url": result.get("url") or preview_url,
-        "result": result,
-    })
+    log_gui_action("Probar API", nombre=api.get("name") or "borrador", exito=bool(result.get("success")), http=result.get("status"))
+    return jsonify({"success": bool(result.get("success")), "message": result.get("message", ""), "request_body": request_body, "request_headers": request_headers, "request_url": result.get("url") or preview_url, "result": result})
 
 
 @app.route('/config-apis/delete', methods=['POST'])
@@ -1862,7 +1883,6 @@ def config_apis_delete():
 
 @app.route('/config-server-apis')
 def config_server_apis():
-    """Matriz servidor × API (activar/desactivar por checkbox)."""
     ensure_demo_api()
     result = load_assignment_matrix()
     servers = []
@@ -1875,13 +1895,7 @@ def config_server_apis():
         assignments = result.get('assignments', {})
     else:
         error = result.get('message')
-    return render_template(
-        'config_server_apis.html',
-        servers=servers,
-        apis=apis,
-        assignments=assignments,
-        error=error,
-    )
+    return render_template('config_server_apis.html', servers=servers, apis=apis, assignments=assignments, error=error)
 
 
 @app.route('/config-server-apis/toggle', methods=['POST'])
@@ -1900,31 +1914,21 @@ def config_server_apis_toggle():
         return jsonify({'success': False, 'message': 'Servidor y API son obligatorios.'}), 400
     result = set_server_api_active(server, api, active)
     if result.get('success'):
-        log_gui_action(
-            "Asignar API a servidor",
-            servidor=server,
-            api=api,
-            activo=active,
-        )
+        log_gui_action("Asignar API a servidor", servidor=server, api=api, activo=active)
         return jsonify(result)
     return jsonify(result), 400
 
 
 @app.route("/api/dashboard", methods=["GET"])
 def api_dashboard():
-    """Datos del tablero (campañas de hoy y métricas agregadas)."""
     return jsonify({"success": True, **get_dashboard_data()})
 
 
 @app.route("/api/dashboard/refresh", methods=["POST"])
 def api_dashboard_refresh():
-    """Consulta Wolkvox y devuelve el tablero con métricas actualizadas."""
     try:
         payload = refresh_dashboard_from_wolkvox()
-        log_gui_action(
-            "Actualizar tablero campañas",
-            actualizadas=payload.get("wolkvox_refreshed", 0),
-        )
+        log_gui_action("Actualizar tablero campañas", actualizadas=payload.get("wolkvox_refreshed", 0))
         return jsonify({"success": True, **payload})
     except Exception as exc:
         return jsonify({"success": False, "message": str(exc)}), 500
@@ -1932,13 +1936,11 @@ def api_dashboard_refresh():
 
 @app.route("/api/recent_logs", methods=["GET"])
 def api_recent_logs():
-    """Obtener últimos logs"""
     return jsonify(read_recent_log_lines(50))
 
 
 @app.route("/downloads/<filename>", methods=["GET"])
 def download_file(filename):
-    """Descargar archivo CSV desde la carpeta downloads"""
     try:
         return send_from_directory(str(DOWNLOAD_FOLDER), filename, as_attachment=True)
     except Exception as e:
@@ -1951,23 +1953,15 @@ def reportes():
     load_config()
     servidor = CONFIG.get("servidor", "")
     wolkvox_token = CONFIG.get("wolkvox-token", "")
-    # Obtener lista de servidores para el selector
     from servers import load_servers
     servers_result = load_servers()
     servers = servers_result.get('servers', []) if servers_result.get('success') else []
-
     today = datetime.utcnow().date()
     default_start = today.isoformat()
     default_end = today.isoformat()
+    return render_template("reportes.html", servidor=servidor, wolkvox_token=wolkvox_token, servers=servers, default_start=default_start, default_end=default_end)
 
-    return render_template(
-        "reportes.html",
-        servidor=servidor,
-        wolkvox_token=wolkvox_token,
-        servers=servers,
-        default_start=default_start,
-        default_end=default_end,
-    )
+
 # ========== INTEGRACIÓN CON DESCARGA AUTOMÁTICA ==========
 try:
     from download_auto import iniciar_scheduler, detener_scheduler, estado_scheduler, descargar_todos_los_reportes
@@ -1976,32 +1970,21 @@ except ImportError:
     AUTO_DOWNLOAD_AVAILABLE = False
     logger.warning("Módulo download_auto no disponible")
 
-# Variable global para controlar si el scheduler está activo
 auto_download_active = False
 
 @app.route('/api/auto-download/status', methods=['GET'])
 def auto_download_status():
-    """Retorna el estado del sistema de descargas automáticas."""
     if not AUTO_DOWNLOAD_AVAILABLE:
         return jsonify({'success': False, 'message': 'Módulo de descargas automáticas no disponible'}), 404
-    
-    return jsonify({
-        'success': True,
-        'status': estado_scheduler(),
-        'active': auto_download_active
-    })
+    return jsonify({'success': True, 'status': estado_scheduler(), 'active': auto_download_active})
 
 @app.route('/api/auto-download/start', methods=['POST'])
 def auto_download_start():
-    """Inicia el sistema de descargas automáticas."""
     global auto_download_active
-    
     if not AUTO_DOWNLOAD_AVAILABLE:
         return jsonify({'success': False, 'message': 'Módulo de descargas automáticas no disponible'}), 404
-    
     if auto_download_active:
         return jsonify({'success': False, 'message': 'El sistema ya está activo'}), 400
-    
     try:
         resultado = iniciar_scheduler()
         if resultado:
@@ -2015,15 +1998,11 @@ def auto_download_start():
 
 @app.route('/api/auto-download/stop', methods=['POST'])
 def auto_download_stop():
-    """Detiene el sistema de descargas automáticas."""
     global auto_download_active
-    
     if not AUTO_DOWNLOAD_AVAILABLE:
         return jsonify({'success': False, 'message': 'Módulo de descargas automáticas no disponible'}), 404
-    
     if not auto_download_active:
         return jsonify({'success': False, 'message': 'El sistema no está activo'}), 400
-    
     try:
         detener_scheduler()
         auto_download_active = False
@@ -2034,10 +2013,8 @@ def auto_download_stop():
 
 @app.route('/api/auto-download/run-now', methods=['POST'])
 def auto_download_run_now():
-    """Ejecuta una descarga inmediata."""
     if not AUTO_DOWNLOAD_AVAILABLE:
         return jsonify({'success': False, 'message': 'Módulo de descargas automáticas no disponible'}), 404
-    
     try:
         data = request.get_json() or {}
         fecha = data.get('fecha')
@@ -2054,7 +2031,5 @@ def auto_download_run_now():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    # Inicializar conexión a BigQuery
     init_bigquery()
-    # El job de campañas (cada 5 min) se registra en backend.py al importar el modulo.
     app.run(debug=True, host="0.0.0.0", port=5000)
