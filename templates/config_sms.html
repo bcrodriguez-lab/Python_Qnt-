@@ -483,7 +483,6 @@
         <button class="tab active" data-tab="send"><i class="fas fa-paper-plane"></i> Enviar</button>
         <button class="tab" data-tab="history"><i class="fas fa-history"></i> Historial</button>
         <button class="tab" data-tab="scheduled"><i class="fas fa-clock"></i> Programados</button>
-        <button class="tab" data-tab="blacklist"><i class="fas fa-ban"></i> Lista Negra</button>
       </div>
 
       <div class="sms-tab-panel active" id="panel-send">
@@ -565,16 +564,7 @@
         </div>
       </div>
 
-      <div class="sms-tab-panel" id="panel-blacklist">
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
-          <input id="blTelefono" class="form-control" style="flex:2;min-width:180px;" placeholder="Número a bloquear (ej: 3001234567)">
-          <input id="blMotivo" class="form-control" style="flex:2;min-width:180px;" placeholder="Motivo">
-          <button id="blAgregarBtn" class="btn btn-danger"><i class="fas fa-plus-circle"></i> Bloquear</button>
-        </div>
-        <div id="blResult" style="max-height:300px;overflow-y:auto;">
-          <div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Cargando lista negra...</div>
-        </div>
-      </div>
+      
 
     </div>
   </div>
@@ -665,7 +655,6 @@
     send: document.getElementById('panel-send'),
     history: document.getElementById('panel-history'),
     scheduled: document.getElementById('panel-scheduled'),
-    blacklist: document.getElementById('panel-blacklist')
   };
 
   let previewData = null;
@@ -1041,7 +1030,6 @@
       });
       if (tab.dataset.tab === 'history') loadHistory();
       if (tab.dataset.tab === 'scheduled') loadScheduled();
-      if (tab.dataset.tab === 'blacklist') loadBlacklist();
     });
   });
 
@@ -1133,63 +1121,6 @@
     }
   }
 
-  async function loadBlacklist() {
-    const container = document.getElementById('blResult');
-    container.innerHTML = `<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Cargando lista negra...</div>`;
-    try {
-      const resp = await fetch('/api/sms/lista-negra');
-      const data = await resp.json();
-      if (!data.success) throw new Error(data.message || 'Error');
-
-      if (!data.items || data.items.length === 0) {
-        container.innerHTML = `<div class="text-center text-muted py-4"><i class="fas fa-check-circle" style="color:var(--sms-success);"></i> No hay números bloqueados</div>`;
-        return;
-      }
-
-      let html = `<table class="table table-hover table-sm"><thead><tr>
-        <th>Teléfono</th><th>Motivo</th><th>Fecha</th>
-      </tr></thead><tbody>`;
-      data.items.forEach(row => {
-        html += `<tr>
-          <td>${escapeHtml(row.telefono || '')}</td>
-          <td>${escapeHtml(row.motivo || '')}</td>
-          <td>${row.fecha_creacion ? new Date(row.fecha_creacion).toLocaleDateString() : '—'}</td>
-        </tr>`;
-      });
-      html += `</tbody></table>`;
-      container.innerHTML = html;
-    } catch (error) {
-      container.innerHTML = `<div class="alert alert-danger">Error: ${escapeHtml(error.message)}</div>`;
-    }
-  }
-
-  document.getElementById('blAgregarBtn').addEventListener('click', async () => {
-    const telefono = document.getElementById('blTelefono').value.trim();
-    const motivo = document.getElementById('blMotivo').value.trim() || 'Bloqueado desde UI';
-
-    if (!telefono) {
-      showToast('⚠️ Ingresa un número de teléfono', 'warning');
-      return;
-    }
-
-    try {
-      const resp = await fetch('/api/sms/lista-negra/agregar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ telefono, motivo })
-      });
-      const data = await resp.json();
-      if (!data.success) throw new Error(data.message);
-
-      showToast(`✅ ${telefono} bloqueado`, 'success');
-      document.getElementById('blTelefono').value = '';
-      document.getElementById('blMotivo').value = '';
-      loadBlacklist();
-    } catch (error) {
-      console.error('❌ Error al bloquear:', error);
-      showToast(`❌ Error: ${error.message}`, 'danger');
-    }
-  });
 
   document.getElementById('histFiltrarBtn').addEventListener('click', () => {
     loadHistory();
@@ -1200,10 +1131,9 @@
 
   loadHistory();
   loadScheduled();
-  loadBlacklist();
 
   setTimeout(() => {
-    showToast('💬 Sistema SMS listo · Usa "Probar consulta" para validar', 'info', 4000);
+    showToast(' Sistema SMS listo · Usa "Probar consulta" para validar', 'info', 4000);
   }, 500);
 
 })();

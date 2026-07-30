@@ -61,23 +61,14 @@ class InfobipSenderV2:
         """
         url = f"{self.base_url}/sms/2/text/advanced"
         
-        # ✅ PAYLOAD CON ACORTAMIENTO DE URLs
         payload = {
-            "messages": []
-        }
-        
-        for item in lista_mensajes:
-            msg_payload = {
-                "from": item["from"],
-                "destinations": item["destinations"],
-                "text": item["text"],
-                "callbackData": item.get("callbackData", ""),
-                "urlOptions": {             # ← Agregar a nivel de mensaje
-                    "shortenUrl": True,
-                    "trackClicks": True
-                }
+            "messages": lista_mensajes,
+            "urlOptions": {
+                "shortenUrl": True,
+                "trackClicks": True,
+                "removeProtocol": False
             }
-            payload["messages"].append(msg_payload)
+        }
         
         logger.info(f"📤 Enviando lote de {len(payload['messages'])} SMS a Infobip (URLs se acortarán automáticamente)")
         logger.debug(f"📦 Payload: {json.dumps(payload, ensure_ascii=False)[:500]}...")
@@ -97,7 +88,6 @@ class InfobipSenderV2:
                 if intento < reintentos:
                     time.sleep(2 * intento)
         return None
-
 
 # ==================================================
 # 📱 LIMPIEZA DE NÚMEROS

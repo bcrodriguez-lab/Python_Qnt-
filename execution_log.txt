@@ -1654,3 +1654,12 @@ requests.exceptions.HTTPError: 404 Client Error: Not Found for url: https://wv00
 2026-07-29 10:05:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-07-29...
 2026-07-29 10:07:23 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-07-29
 2026-07-29 10:07:26 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-07-29
+2026-07-30 14:32:53 - INFO - [SMS] Campaña='Promoción Julio 2026' Usuario='admin' Total=2 Enviados=500 Fallidos=0 Estado=exitoso
+2026-07-30 14:37:12 - INFO - [SMS] Campaña='Promoción Julio 2026' Usuario='admin' Total=2 Enviados=500 Fallidos=0 Estado=exitoso
+2026-07-30 15:06:52 - INFO - [SMS] Campaña='Promoción Julio 2026' Usuario='admin' Total=2 Enviados=500 Fallidos=0 Estado=exitoso
+2026-07-30 15:09:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-07-30...
+2026-07-30 15:09:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-07-30...
+2026-07-30 15:09:22 - ERROR - ❌ bigquery_processor.py falló con código 1
+2026-07-30 15:09:24 - ERROR - ❌ bigquery_processor.py falló con código 1
+2026-07-30 15:21:59 - INFO - [SMS] Campaña='Promoción Julio 2026' Usuario='admin' Total=2 Enviados=500 Fallidos=0 Estado=exitoso
+2026-07-30 15:27:08 - ERROR - [SMS] Error programando: guardar_programacion() takes 1 positional argument but 3 positional arguments (and 4 keyword-only arguments) were given
