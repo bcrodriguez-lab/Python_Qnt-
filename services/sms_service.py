@@ -478,45 +478,115 @@ def guardar_sms_log(
         except Exception as e:
             logger.error(f"Error guardando logs: {e}")
 
-
-def guardar_programacion(
+def guardar_sms_log(
     client, 
+    mensajes: List[Dict], 
     *, 
-    query: str, 
-    plantilla: str, 
     campaign: str, 
     usuario: str,
-    scheduled_at: str, 
-    allow_resend: bool
+    bulk_ids: List[str], 
+    reenvios: set, 
+    status: str, 
+    plantilla: str = ""
+) -> None:
+    """Guarda registros en SmsLog vía INSERT (query job, no streaming insert)."""
+    from google.cloud import bigquery
+
+    now = datetime.now(timezone.utc).isoformat()
+    bulk_id = bulk_ids[0] if bulk_ids else None
+
+    if not mensajes or not client:
+        return
+
+    insert_sql = f"""
+        INSERT INTO `{SMS_LOG_TABLE}` (
+            telefono, mensaje, plantilla, consulta_sql, fecha_envio,
+            resultado, bulk_id, error, campana, usuario, es_reenvio,
+            fecha_creacion, fecha_actualizacion
+        )
+        VALUES
+    """
+    # Construir múltiples filas con parámetros indexados
+    value_rows = []
+    parameters = []
+    for i, item in enumerate(mensajes):
+        value_rows.append(
+            f"(@telefono_{i}, @mensaje_{i}, @plantilla_{i}, @consulta_sql_{i}, @fecha_envio_{i}, "
+            f"@resultado_{i}, @bulk_id_{i}, @error_{i}, @campana_{i}, @usuario_{i}, @es_reenvio_{i}, "
+            f"@fecha_creacion_{i}, @fecha_actualizacion_{i})"
+        )
+        parameters.extend([
+            bigquery.ScalarQueryParameter(f"telefono_{i}", "STRING", item["phone"]),
+            bigquery.ScalarQueryParameter(f"mensaje_{i}", "STRING", item["text"]),
+            bigquery.ScalarQueryParameter(f"plantilla_{i}", "STRING", plantilla),
+            bigquery.ScalarQueryParameter(f"consulta_sql_{i}", "STRING", ""),
+            bigquery.ScalarQueryParameter(f"fecha_envio_{i}", "TIMESTAMP", now),
+            bigquery.ScalarQueryParameter(f"resultado_{i}", "STRING", status),
+            bigquery.ScalarQueryParameter(f"bulk_id_{i}", "STRING", bulk_id),
+            bigquery.ScalarQueryParameter(f"error_{i}", "STRING", ""),
+            bigquery.ScalarQueryParameter(f"campana_{i}", "STRING", campaign or ""),
+            bigquery.ScalarQueryParameter(f"usuario_{i}", "STRING", usuario or ""),
+            bigquery.ScalarQueryParameter(f"es_reenvio_{i}", "BOOL", item["phone"] in reenvios),
+            bigquery.ScalarQueryParameter(f"fecha_creacion_{i}", "TIMESTAMP", now),
+            bigquery.ScalarQueryParameter(f"fecha_actualizacion_{i}", "TIMESTAMP", now),
+        ])
+
+    insert_sql += ", ".join(value_rows)
+    job_config = bigquery.QueryJobConfig(query_parameters=parameters)
+
+    try:
+        client.query(insert_sql, job_config=job_config).result()
+        logger.info(f"✅ {len(mensajes)} registros guardados en SmsLog (vía query job)")
+    except Exception as e:
+        logger.error(f"Error guardando logs: {e}")
+def guardar_programacion(
+    client,
+    query: str,
+    plantilla: str,
+    *,
+    campaign: str = "",
+    usuario: str = "",
+    scheduled_at: str = "",
+    allow_resend: bool = False,
 ) -> str:
-    """Guarda una programación en BigQuery y retorna el ID."""
+    """Guarda una programación en BigQuery vía INSERT (query job, no streaming insert)."""
+    from google.cloud import bigquery
+
     schedule_id = str(uuid4())
     now = datetime.now(timezone.utc).isoformat()
-    
-    row = {
-        "id": schedule_id,
-        "fecha_programada": scheduled_at,
-        "consulta_sql": query,
-        "plantilla": plantilla,
-        "campana": campaign or "",
-        "estado": "pendiente",
-        "total_destinatarios": 0,
-        "usuario": usuario or "",
-        "periodo_duplicados_horas": 24,
-        "confirmar_duplicados": allow_resend,
-        "fecha_creacion": now,
-        "fecha_actualizacion": now,
-    }
-    
-    if client:
-        try:
-            errors = client.insert_rows_json(SCHEDULE_TABLE, [row])
-            if errors:
-                raise SmsServiceError(f"No se pudo guardar la programación: {errors}")
-            logger.info(f"✅ Programación guardada: {schedule_id}")
-        except Exception as e:
-            raise SmsServiceError(f"No se pudo guardar la programación: {e}")
-    
+
+    insert_sql = f"""
+        INSERT INTO `{SCHEDULE_TABLE}` (
+            id, fecha_programada, consulta_sql, plantilla, estado,
+            total_destinatarios, usuario, periodo_duplicados_horas,
+            confirmar_duplicados, fecha_creacion, fecha_actualizacion
+        )
+        VALUES (
+            @id, @fecha_programada, @consulta_sql, @plantilla, @estado,
+            @total_destinatarios, @usuario, @periodo_duplicados_horas,
+            @confirmar_duplicados, @fecha_creacion, @fecha_actualizacion
+        )
+    """
+    job_config = bigquery.QueryJobConfig(query_parameters=[
+        bigquery.ScalarQueryParameter("id", "STRING", schedule_id),
+        bigquery.ScalarQueryParameter("fecha_programada", "TIMESTAMP", scheduled_at),
+        bigquery.ScalarQueryParameter("consulta_sql", "STRING", query),
+        bigquery.ScalarQueryParameter("plantilla", "STRING", plantilla),
+        bigquery.ScalarQueryParameter("estado", "STRING", "pendiente"),
+        bigquery.ScalarQueryParameter("total_destinatarios", "INT64", 0),
+        bigquery.ScalarQueryParameter("usuario", "STRING", usuario or ""),
+        bigquery.ScalarQueryParameter("periodo_duplicados_horas", "INT64", 24),
+        bigquery.ScalarQueryParameter("confirmar_duplicados", "BOOL", allow_resend),
+        bigquery.ScalarQueryParameter("fecha_creacion", "TIMESTAMP", now),
+        bigquery.ScalarQueryParameter("fecha_actualizacion", "TIMESTAMP", now),
+    ])
+
+    try:
+        client.query(insert_sql, job_config=job_config).result()
+        logger.info(f"✅ Programación guardada (vía query job): {schedule_id}")
+    except Exception as e:
+        raise SmsServiceError(f"No se pudo guardar la programación: {e}")
+
     return schedule_id
 
 def verificar_lista_negra(client, phones: List[str]) -> Set[str]:

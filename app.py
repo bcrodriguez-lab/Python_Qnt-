@@ -885,13 +885,14 @@ def sms_schedule():
             raise SmsServiceError("La programación no tiene destinatarios válidos.")
 
         schedule_id = guardar_programacion(
-            bq_client, query, plantilla,
+            bq_client,
+            query=query,
+            plantilla=plantilla,
             campaign=campaign,
             usuario=usuario,
             scheduled_at=run_date.isoformat(),
             allow_resend=allow_resend
         )
-
         scheduler.add_job(
             execute_sms_schedule,
             trigger="date",
