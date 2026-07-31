@@ -1813,3 +1813,25 @@ requests.exceptions.HTTPError: 404 Client Error: Not Found for url: https://wv00
 2026-07-30 16:27:20 - WARNING - [SMS] Programación rechazada: Variables no encontradas en la consulta: nombre. Verifique los nombres de las variables en la plantilla.
 2026-07-30 16:27:38 - WARNING - [SMS] Programación rechazada: La programación no tiene destinatarios válidos.
 2026-07-30 16:28:23 - WARNING - [SMS] Programación rechazada: La plantilla no contiene variables ({{nombre}}, {{monto}}, etc.). Agregue al menos una variable para personalizar los mensajes.
+2026-07-30 16:39:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-07-30...
+2026-07-30 16:39:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-07-30...
+2026-07-30 16:39:03 - ERROR - ❌ bigquery_processor.py falló con código 1
+2026-07-30 16:39:03 - ERROR - ❌ bigquery_processor.py falló con código 1
+2026-07-30 18:05:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-07-30...
+2026-07-30 18:05:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-07-30...
+2026-07-30 18:07:49 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-07-30
+2026-07-30 18:07:51 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-07-30
+2026-07-31 08:06:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-07-31...
+2026-07-31 08:06:04 - ERROR - ❌ bigquery_processor.py falló con código 1
+2026-07-31 08:37:56 - INFO - [SMS] Campaña='Promoción Julio 2026' Usuario='admin' Total=2 Enviados=500 Fallidos=0 Estado=exitoso
+2026-07-31 09:10:51 - WARNING - [SMS] Programación rechazada: La programación no tiene destinatarios válidos.
+2026-07-31 09:16:43 - WARNING - [SMS] Programación rechazada: La programación no tiene destinatarios válidos.
+2026-07-31 10:05:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-07-31...
+2026-07-31 10:07:26 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-07-31
+2026-07-31 10:49:22 - INFO - [SMS] Campaña='Promoción Julio 2026' Usuario='admin' Total=2 Enviados=500 Fallidos=0 Estado=exitoso
+2026-07-31 11:00:38 - INFO - [SMS] Campaña='Promoción Julio 2026' Usuario='admin' Total=2 Enviados=500 Fallidos=0 Estado=exitoso
+2026-07-31 11:01:30 - INFO - [SMS] Campaña='Promoción Julio 2026' Usuario='admin' Total=2 Enviados=500 Fallidos=0 Estado=exitoso
+2026-07-31 11:04:33 - INFO - [SMS] Campaña='Promoción Julio 2026' Usuario='admin' Total=2 Enviados=500 Fallidos=0 Estado=exitoso
+2026-07-31 11:07:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-07-31...
+2026-07-31 11:09:38 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-07-31
+2026-07-31 11:24:14 - INFO - [SMS] Campaña='Prueba fuerte tdr' Usuario='Bryan' Total=2 Enviados=500 Fallidos=0 Estado=exitoso

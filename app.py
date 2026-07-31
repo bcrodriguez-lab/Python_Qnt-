@@ -921,6 +921,45 @@ def sms_schedule():
         return jsonify({"success": False, "message": "No se pudo guardar la programación."}), 500
 
 
+
+@app.route("/api/sms/mensajes-operacion", methods=["GET"])
+def sms_mensajes_operacion():
+    """Lista los mensajes de operación con filtros opcionales."""
+    try:
+        operador = (request.args.get("operador") or "").strip()
+        campana = (request.args.get("campana") or "").strip()
+        intensidad = (request.args.get("intensidad") or "").strip()
+
+        clauses = []
+        if operador:
+            clauses.append(f"LOWER(operador) = LOWER('{operador}')")
+        if campana:
+            clauses.append(f"id_campana = '{campana}'")
+        if intensidad:
+            clauses.append(f"LOWER(intensidad) = LOWER('{intensidad}')")
+
+        where = " WHERE " + " AND ".join(clauses) if clauses else ""
+
+        query = f"""
+            SELECT id_mensaje, id_campana, operador, mensaje, intensidad
+            FROM `capable-arbor-209819.Temporal.Mensaje_Operacion`
+            {where}
+            ORDER BY operador, id_campana, 
+              CASE intensidad 
+                WHEN 'baja' THEN 1 
+                WHEN 'media' THEN 2 
+                WHEN 'media-alta' THEN 3 
+                WHEN 'alta' THEN 4 
+                ELSE 5 
+              END
+        """
+        df = bq_client.query(query).to_dataframe()
+        items = df.to_dict('records') if not df.empty else []
+        return jsonify({"success": True, "items": items})
+    except Exception as exc:
+        logger.exception("Error obteniendo mensajes de operación")
+        return jsonify({"success": False, "message": str(exc)}), 500
+
 @app.route("/api/sms/historial")
 def sms_history():
     try:
@@ -1231,7 +1270,33 @@ def auto_campaigns_test_count():
 
     log_gui_action("Preconteo campaña automática", total=result.get("total"), campaign_id=campaign_id)
     return jsonify(result)
-
+@app.route("/api/sms/mensaje-por-operacion", methods=["GET"])
+def sms_mensaje_por_operacion():
+    """Busca un mensaje por operador, campaña e intensidad."""
+    operador = (request.args.get("operador") or "").strip()
+    campana = (request.args.get("campana") or "").strip()
+    intensidad = (request.args.get("intensidad") or "").strip()
+    
+    if not operador or not campana or not intensidad:
+        return jsonify({"success": False, "message": "Faltan filtros"}), 400
+    
+    try:
+        query = f"""
+            SELECT id_mensaje, mensaje, intensidad
+            FROM `capable-arbor-209819.Temporal.Mensaje_Operacion`
+            WHERE LOWER(operador) = LOWER('{operador}')
+              AND id_campana = '{campana}'
+              AND LOWER(intensidad) = LOWER('{intensidad}')
+            LIMIT 1
+        """
+        df = bq_client.query(query).to_dataframe()
+        if df.empty:
+            return jsonify({"success": False, "message": "No encontrado"})
+        
+        row = df.iloc[0].to_dict()
+        return jsonify({"success": True, "mensaje": row["mensaje"], "id_mensaje": row["id_mensaje"]})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
 
 @app.route("/auto-campaigns/validate-query-fields", methods=["POST"])
 def auto_campaigns_validate_query_fields():
