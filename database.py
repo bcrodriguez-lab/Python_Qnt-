@@ -207,7 +207,8 @@ class MensajeOperacion(db.Model):
     Tipo = db.Column(db.String(50))
     Estado = db.Column(db.Integer, default=1)
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
-    
+    Categoria = db.Column(db.String(100)) 
+    Operadores = db.Column(db.Text)
     def to_dict(self):
         return {
             'id': self.id,
@@ -215,5 +216,8 @@ class MensajeOperacion(db.Model):
             'mensaje': self.Mensaje,
             'tipo': self.Tipo,
             'estado': self.Estado,
-            'fecha_creacion': self.fecha_creacion.isoformat() if self.fecha_creacion else None
+            'fecha_creacion': self.fecha_creacion.isoformat() if self.fecha_creacion else None,
+            'operadores': self.Operadores,
+            'categoria': self.Categoria,
+
         }

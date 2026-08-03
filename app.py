@@ -2074,7 +2074,11 @@ def sms_mensajes_operacion_sqlite():
             query = query.filter(MensajeOperacion.Operador == operador)
         if tipo:
             query = query.filter(MensajeOperacion.Tipo == tipo)
-        
+        if operador:
+            query = query.filter(
+                (MensajeOperacion.Operador == operador) | 
+                (MensajeOperacion.Operadores.contains(operador))
+            )
         mensajes = query.order_by(MensajeOperacion.Operador, MensajeOperacion.Tipo).all()
         items = [m.to_dict() for m in mensajes]
         
@@ -2199,6 +2203,8 @@ def api_mensajes_create():
         operador = (data.get("operador") or "").strip()
         mensaje_texto = (data.get("mensaje") or "").strip()
         tipo = (data.get("tipo") or "").strip()
+        operadores = (data.get("operadores") or "").strip()
+        categoria = (data.get("categoria") or "").strip()
         estado = int(data.get("estado", 1))
         
         if not operador or not mensaje_texto:
@@ -2208,6 +2214,9 @@ def api_mensajes_create():
             Operador=operador,
             Mensaje=mensaje_texto,
             Tipo=tipo,
+            Categoria=categoria,
+            Operadores = operadores,
+ 
             Estado=estado
         )
         db.session.add(nuevo)
@@ -2237,8 +2246,12 @@ def api_mensajes_update(mensaje_id):
             mensaje.Mensaje = (data["mensaje"] or "").strip()
         if "tipo" in data:
             mensaje.Tipo = (data["tipo"] or "").strip()
+        if "categoria" in data:
+            mensaje.Categoria = (data["categoria"] or "").strip()    
         if "estado" in data:
             mensaje.Estado = int(data["estado"])
+        if "operadores" in data:
+             mensaje.Operadores = (data["operadores"] or "").strip()
         
         db.session.commit()
         
@@ -2266,6 +2279,29 @@ def api_mensajes_delete(mensaje_id):
     except Exception as exc:
         return jsonify({"success": False, "message": str(exc)}), 500
 
+@app.route("/api/sms/operadores-por-categoria", methods=["GET"])
+def sms_operadores_por_categoria():
+    """Lista operadores filtrados por categoría."""
+    try:
+        from database import MensajeOperacion
+        
+        categoria = (request.args.get("categoria") or "").strip()
+        
+        query = MensajeOperacion.query.filter(MensajeOperacion.Estado == 1)
+        
+        if categoria:
+            query = query.filter(MensajeOperacion.Categoria == categoria)
+        
+        operadores = query \
+            .with_entities(MensajeOperacion.Operador) \
+            .distinct() \
+            .order_by(MensajeOperacion.Operador) \
+            .all()
+        
+        items = [op[0] for op in operadores if op[0]]
+        return jsonify({"success": True, "items": items})
+    except Exception as exc:
+        return jsonify({"success": False, "message": str(exc)}), 500
 
 @app.route("/api/sms/mensajes/<int:mensaje_id>/toggle", methods=["POST"])
 def api_mensajes_toggle(mensaje_id):
@@ -2289,7 +2325,123 @@ def api_mensajes_toggle(mensaje_id):
         })
     except Exception as exc:
         return jsonify({"success": False, "message": str(exc)}), 500
+# ========== NUEVOS ENDPOINTS PARA CATEGORÍAS Y TIPOS ==========
 
+
+@app.route("/api/sms/categorias", methods=["GET"])
+def sms_categorias():
+    """Lista todas las categorías disponibles."""
+    try:
+        from database import MensajeOperacion
+        
+        categorias = MensajeOperacion.query \
+            .filter(MensajeOperacion.Estado == 1) \
+            .filter(MensajeOperacion.Categoria.isnot(None), MensajeOperacion.Categoria != '') \
+            .with_entities(MensajeOperacion.Categoria) \
+            .distinct() \
+            .order_by(MensajeOperacion.Categoria) \
+            .all()
+        
+        items = [c[0] for c in categorias if c[0]]
+        return jsonify({"success": True, "items": items})
+    except Exception as exc:
+        logger.exception("Error obteniendo categorías")
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+@app.route("/api/sms/categorias-por-operador", methods=["GET"])
+def sms_categorias_por_operador():
+    """Lista categorías que tienen mensajes para un operador dado."""
+    try:
+        from database import MensajeOperacion
+        
+        operador = (request.args.get("operador") or "").strip()
+        if not operador:
+            return jsonify({"success": False, "message": "Se requiere operador"}), 400
+        
+        categorias = MensajeOperacion.query \
+            .filter(MensajeOperacion.Estado == 1) \
+            .filter(
+                (MensajeOperacion.Operador == operador) | 
+                (MensajeOperacion.Operadores.contains(operador))
+            ) \
+            .filter(MensajeOperacion.Categoria.isnot(None), MensajeOperacion.Categoria != '') \
+            .with_entities(MensajeOperacion.Categoria) \
+            .distinct() \
+            .order_by(MensajeOperacion.Categoria) \
+            .all()
+        
+        items = [c[0] for c in categorias if c[0]]
+        return jsonify({"success": True, "items": items})
+    except Exception as exc:
+        logger.exception("Error obteniendo categorías por operador")
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+@app.route("/api/sms/tipos", methods=["GET"])
+def sms_tipos_flexibles():
+    """
+    Lista tipos disponibles según operador y/o categoría (ambos opcionales).
+    Parámetros: operador (opcional), categoria (opcional)
+    """
+    try:
+        from database import MensajeOperacion
+        
+        operador = (request.args.get("operador") or "").strip()
+        categoria = (request.args.get("categoria") or "").strip()
+        
+        query = MensajeOperacion.query.filter(MensajeOperacion.Estado == 1)
+        
+        if operador:
+            query = query.filter(
+                (MensajeOperacion.Operador == operador) | 
+                (MensajeOperacion.Operadores.contains(operador))
+            )
+        if categoria:
+            query = query.filter(MensajeOperacion.Categoria == categoria)
+        
+        tipos = query \
+            .with_entities(MensajeOperacion.Tipo) \
+            .filter(MensajeOperacion.Tipo.isnot(None), MensajeOperacion.Tipo != '') \
+            .distinct() \
+            .order_by(MensajeOperacion.Tipo) \
+            .all()
+        
+        items = [t[0] for t in tipos if t[0]]
+        return jsonify({"success": True, "items": items})
+    except Exception as exc:
+        logger.exception("Error obteniendo tipos")
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+@app.route("/api/sms/mensajes-operacion", methods=["GET"])
+def sms_mensajes_operacion_flexible():
+    """
+    Lista mensajes según operador, categoría, tipo (todos opcionales).
+    """
+    try:
+        from database import MensajeOperacion
+        
+        operador = (request.args.get("operador") or "").strip()
+        tipo = (request.args.get("tipo") or "").strip()
+        categoria = (request.args.get("categoria") or "").strip()
+        
+        query = MensajeOperacion.query.filter(MensajeOperacion.Estado == 1)
+        
+        if operador:
+            query = query.filter(
+                (MensajeOperacion.Operador == operador) | 
+                (MensajeOperacion.Operadores.contains(operador))
+            )
+        if tipo:
+            query = query.filter(MensajeOperacion.Tipo == tipo)
+        if categoria:
+            query = query.filter(MensajeOperacion.Categoria == categoria)
+        
+        mensajes = query.order_by(MensajeOperacion.Operador, MensajeOperacion.Tipo, MensajeOperacion.id.desc()).all()
+        items = [m.to_dict() for m in mensajes]
+        
+        return jsonify({"success": True, "items": items})
+    except Exception as exc:
+        logger.exception("Error obteniendo mensajes de operación")
+        return jsonify({"success": False, "message": str(exc)}), 500
 
 if __name__ == "__main__":
     with app.app_context():

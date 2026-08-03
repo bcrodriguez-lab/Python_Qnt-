@@ -6,7 +6,7 @@
   <div class="d-flex align-items-center gap-2 mb-1">
     <h1 class="h3 font-weight-bold mb-0 text-dark">Configuración de Mensajes</h1>
   </div>
-  <small class="text-muted">Gestión de plantillas SMS por operador</small>
+  <small class="text-muted">Gestión de plantillas SMS por operador y categoría</small>
 {% endblock %}
 
 {% block breadcrumb %}
@@ -16,7 +16,6 @@
 
 {% block extra_css %}
 <style>
-  /* ---- Variables de Color Modernas ---- */
   :root {
     --primary-color: #4f46e5;
     --primary-hover: #4338ca;
@@ -25,164 +24,114 @@
     --text-muted: #64748b;
   }
 
-  /* ---- Badges "Soft" ---- */
   .badge-activo { 
-    background-color: #ecfdf5; 
-    color: #047857; 
-    border: 1px solid #a7f3d0;
-    font-weight: 600;
-    padding: 0.35em 0.75em;
-    border-radius: 50px;
-    font-size: 0.75rem;
+    background-color: #ecfdf5; color: #047857; 
+    border: 1px solid #a7f3d0; font-weight: 600;
+    padding: 0.35em 0.75em; border-radius: 50px; font-size: 0.75rem;
   }
   .badge-inactivo { 
-    background-color: #fef2f2; 
-    color: #b91c1c; 
-    border: 1px solid #fecaca;
-    font-weight: 600;
-    padding: 0.35em 0.75em;
-    border-radius: 50px;
-    font-size: 0.75rem;
+    background-color: #fef2f2; color: #b91c1c; 
+    border: 1px solid #fecaca; font-weight: 600;
+    padding: 0.35em 0.75em; border-radius: 50px; font-size: 0.75rem;
+  }
+  .badge-categoria {
+    background-color: #eef2ff; color: #4338ca;
+    border: 1px solid #c7d2fe; font-weight: 600;
+    padding: 0.3em 0.7em; border-radius: 50px; font-size: 0.72rem;
+  }
+  .badge-operadores {
+    background-color: #fef3c7; color: #92400e;
+    border: 1px solid #fcd34d; font-weight: 600;
+    padding: 0.2em 0.6em; border-radius: 50px; font-size: 0.68rem;
+    margin-right: 2px;
+    display: inline-block;
+    margin-bottom: 2px;
   }
 
   .mensaje-preview {
-    max-width: 320px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: #334155;
+    max-width: 280px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; color: #334155;
   }
 
-  /* ---- Cards ---- */
   .card-modern {
-    background: #ffffff;
-    border-radius: 12px;
+    background: #ffffff; border-radius: 12px;
     border: 1px solid var(--border-color);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03), 0 2px 4px -2px rgba(0,0,0,0.03);
     margin-bottom: 1.25rem;
   }
 
-  /* ---- Inputs & Selects ---- */
   .form-control, .form-control-sm {
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-    background-color: #ffffff;
-    color: #1e293b;
-    transition: all 0.2s ease;
+    border-radius: 8px; border: 1px solid var(--border-color);
+    background-color: #ffffff; color: #1e293b; transition: all 0.2s ease;
   }
   .form-control:focus, .form-control-sm:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
-    outline: none;
+    box-shadow: 0 0 0 3px rgba(79,70,229,0.15); outline: none;
   }
 
-  /* ---- Filter bar ---- */
   .filtros-bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 1rem;
-  }
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1rem;
+    
+}
   .filtros-bar .filtro-grupo {
-    flex: 1 1 160px;
-    min-width: 140px;
+    flex: 1 1 140px; min-width: 120px;
   }
   .filtros-bar .filtro-grupo label {
-    font-size: .72rem;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-    color: var(--text-muted);
-    margin-bottom: .4rem;
-    font-weight: 700;
+    font-size: .72rem; text-transform: uppercase;
+    letter-spacing: .05em; color: var(--text-muted);
+    margin-bottom: .4rem; font-weight: 700;
   }
 
-  /* ---- Buttons ---- */
   .btn {
-    border-radius: 8px;
-    font-weight: 500;
-    transition: all 0.2s ease;
+    border-radius: 8px; font-weight: 500; transition: all 0.2s ease;
   }
   .btn-primary {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    background-color: var(--primary-color); border-color: var(--primary-color);
+    box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
   }
   .btn-primary:hover {
-    background-color: var(--primary-hover);
-    border-color: var(--primary-hover);
+    background-color: var(--primary-hover); border-color: var(--primary-hover);
     transform: translateY(-1px);
   }
   .btn-outline-secondary {
-    border-color: var(--border-color);
-    color: #475569;
+    border-color: var(--border-color); color: #475569;
   }
   .btn-outline-secondary:hover {
-    background-color: #f1f5f9;
-    color: #0f172a;
-    border-color: #cbd5e1;
+    background-color: #f1f5f9; color: #0f172a; border-color: #cbd5e1;
   }
 
-  /* ---- Sortable table headers ---- */
-  .table {
-    margin-bottom: 0;
-  }
+  .table { margin-bottom: 0; }
   .table th {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
+    font-size: 0.75rem; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text-muted);
     border-bottom: 1px solid var(--border-color);
-    padding: 0.85rem 1rem;
-    vertical-align: middle;
+    padding: 0.85rem 1rem; vertical-align: middle;
+    position: relative;
   }
   .table td {
-    padding: 0.85rem 1rem;
-    vertical-align: middle;
+    padding: 0.85rem 1rem; vertical-align: middle;
     border-bottom: 1px solid #f1f5f9;
   }
   th.sortable {
-    cursor: pointer;
-    user-select: none;
-    white-space: nowrap;
+    cursor: pointer; user-select: none; white-space: nowrap;
     transition: background-color 0.2s;
   }
-  th.sortable:hover {
-    background-color: #f1f5f9;
-  }
-  th.sortable .sort-icon {
-    margin-left: 4px;
-    opacity: .3;
-    font-size: .75em;
-    transition: opacity 0.2s;
-  }
-  th.sortable.sort-active .sort-icon {
-    opacity: 1;
-    color: var(--primary-color);
-  }
+  th.sortable:hover { background-color: #f1f5f9; }
+  th.sortable .sort-icon { margin-left: 4px; opacity: .3; font-size: .75em; }
+  th.sortable.sort-active .sort-icon { opacity: 1; color: var(--primary-color); }
 
-  /* ---- Modal Moderno ---- */
   .modal-backdrop-custom {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.45);
-    z-index: 1050;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem;
-    backdrop-filter: blur(8px);
+    position: fixed; inset: 0;
+    background: rgba(15,23,42,0.45); z-index: 1050;
+    display: none; align-items: center; justify-content: center;
+    padding: 1.5rem; backdrop-filter: blur(8px);
   }
-  .modal-backdrop-custom.open {
-    display: flex;
-  }
+  .modal-backdrop-custom.open { display: flex; }
   .modal-custom-panel {
-    background: #ffffff;
-    border-radius: 16px;
-    width: 100%;
-    max-width: 520px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-    animation: modalPop .2s cubic-bezier(0.16, 1, 0.3, 1);
-    border: 1px solid rgba(255,255,255,0.8);
+    background: #ffffff; border-radius: 16px;
+    width: 100%; max-width: 560px;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+    animation: modalPop .2s cubic-bezier(0.16,1,0.3,1);
     overflow: hidden;
   }
   @keyframes modalPop {
@@ -190,42 +139,184 @@
     to { opacity: 1; transform: scale(1) translateY(0); }
   }
   .modal-custom-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color);
+  }
+  .modal-custom-header h3 { margin: 0; font-size: 1.1rem; font-weight: 600; color: #0f172a; }
+  .modal-custom-close {
+    background: none; border: none; font-size: 1.25rem;
+    color: var(--text-muted); cursor: pointer; border-radius: 6px;
+    padding: 2px 8px; transition: all 0.2s;
+  }
+  .modal-custom-close:hover { background-color: #f1f5f9; color: #0f172a; }
+  .modal-custom-body { padding: 1.5rem; }
+  .modal-custom-footer {
+    padding: 1rem 1.5rem; background-color: #f8fafc;
+    border-top: 1px solid var(--border-color);
+    display: flex; justify-content: flex-end; gap: .5rem;
+  }
+
+  .categoria-sugerencias {
+    display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;
+  }
+  .categoria-chip {
+    background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe;
+    padding: 2px 10px; border-radius: 50px; font-size: 0.7rem;
+    cursor: pointer; font-weight: 600; transition: all 0.2s;
+  }
+  .categoria-chip:hover { background: #c7d2fe; }
+
+  /* Multi-select con chips y buscador */
+  .multi-select-container {
+    position: relative;
+  }
+  .multi-select-trigger {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    background: #fff;
+    min-height: 36px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid var(--border-color);
-  }
-  .modal-custom-header h3 {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #0f172a;
-  }
-  .modal-custom-close {
-    background: none;
-    border: none;
-    font-size: 1.25rem;
-    color: var(--text-muted);
-    cursor: pointer;
-    border-radius: 6px;
-    padding: 2px 8px;
+    flex-wrap: wrap;
+    gap: 4px;
     transition: all 0.2s;
   }
-  .modal-custom-close:hover {
-    background-color: #f1f5f9;
-    color: #0f172a;
+  .multi-select-trigger:hover { border-color: var(--primary-color); }
+  .multi-select-chip {
+    background: #eef2ff;
+    color: #4338ca;
+    border: 1px solid #c7d2fe;
+    padding: 2px 8px;
+    border-radius: 50px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
   }
-  .modal-custom-body {
-    padding: 1.5rem;
+  .multi-select-chip .remove-chip {
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: #6366f1;
   }
-  .modal-custom-footer {
-    padding: 1rem 1.5rem;
-    background-color: #f8fafc;
-    border-top: 1px solid var(--border-color);
+  .multi-select-chip .remove-chip:hover { color: #e24c4b; }
+  .multi-select-placeholder { color: #94a3b8; font-size: 0.82rem; }
+
+  .multi-select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    z-index: 100;
+    max-height: 260px;
+    display: none;
+    margin-top: 4px;
+    overflow: hidden;
+    flex-direction: column;
+  }
+  .multi-select-dropdown.open { display: flex; }
+
+  .multi-select-search {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+  }
+  .multi-select-search input {
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.82rem;
+    outline: none;
+    transition: border 0.2s;
+  }
+  .multi-select-search input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(79,70,229,0.15);
+  }
+
+  .multi-select-options {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+  }
+  .multi-select-options label {
     display: flex;
-    justify-content: flex-end;
-    gap: .5rem;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition: background 0.15s;
+  }
+  .multi-select-options label:hover { background: #f1f5f9; }
+  .multi-select-options input[type="checkbox"] { accent-color: var(--primary-color); }
+
+  .multi-select-actions {
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border-color);
+    flex-shrink: 0;
+  }
+  .multi-select-actions button {
+    flex: 1;
+    font-size: 0.72rem;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: #fff;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .multi-select-actions .btn-aplicar {
+    background: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+  }
+    /* ====== FIX: Multi-select dropdown por encima de todo ====== */
+  .multi-select-container {
+    position: relative;
+    z-index: 1050 !important;
+  }
+  
+  .multi-select-dropdown {
+    position: absolute;
+    z-index: 1060 !important;
+    background: #fff;
+    border: 1px solid var(--sms-border);
+    border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    max-height: 260px;
+    overflow: hidden;
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    min-width: 200px;
+  }
+  
+  .multi-select-dropdown.open {
+    display: flex !important;
+  }
+  
+  /* Asegurar que el contenedor de la tabla no interfiera */
+  .table-responsive {
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Forzar que el dropdown esté por encima de todo */
+  .multi-select-dropdown .multi-select-options {
+    max-height: 180px;
+    overflow-y: auto;
   }
 </style>
 {% endblock %}
@@ -240,15 +331,31 @@
   <div class="card-modern p-3">
     <div class="filtros-bar">
       <div class="filtro-grupo">
-        <label for="fOperador">Operador</label>
-        <select id="fOperador" class="form-control form-control-sm">
-          <option value="">Todos</option>
-        </select>
+        <label>Categoría</label>
+        <div class="multi-select-container" id="msCategoria">
+          <div class="multi-select-trigger" id="msCategoriaTrigger">
+            <span class="multi-select-placeholder">Todas</span>
+          </div>
+          <div class="multi-select-dropdown" id="msCategoriaDropdown"></div>
+        </div>
       </div>
       <div class="filtro-grupo">
-        <label for="fTipo">Intensidad / Tipo</label>
+        <label>Operador</label>
+        <div class="multi-select-container" id="msOperador">
+          <div class="multi-select-trigger" id="msOperadorTrigger">
+            <span class="multi-select-placeholder">Todos</span>
+          </div>
+          <div class="multi-select-dropdown" id="msOperadorDropdown"></div>
+        </div>
+      </div>
+      <div class="filtro-grupo">
+        <label for="fTipo">Tipo</label>
         <select id="fTipo" class="form-control form-control-sm">
-          <option value="">Todas</option>
+          <option value="">Todos</option>
+          <option value="baja">Baja</option>
+          <option value="media">Media</option>
+          <option value="media-alta">Media-Alta</option>
+          <option value="alta">Alta</option>
         </select>
       </div>
       <div class="filtro-grupo">
@@ -259,7 +366,7 @@
           <option value="0">Inactivo</option>
         </select>
       </div>
-      <div class="filtro-grupo" style="flex:2 1 220px;">
+      <div class="filtro-grupo" style="flex:2 1 200px;">
         <label for="fBusqueda">Buscar en el mensaje</label>
         <input type="text" id="fBusqueda" class="form-control form-control-sm" placeholder="Texto dentro de la plantilla...">
       </div>
@@ -287,7 +394,8 @@
         <thead class="bg-light sticky-top">
           <tr>
             <th class="sortable" data-sort="id">ID <i class="fas fa-sort sort-icon"></i></th>
-            <th class="sortable" data-sort="operador">Operador <i class="fas fa-sort sort-icon"></i></th>
+            <th class="sortable" data-sort="categoria">Categoría <i class="fas fa-sort sort-icon"></i></th>
+            <th>Operadores</th>
             <th class="sortable" data-sort="tipo">Tipo <i class="fas fa-sort sort-icon"></i></th>
             <th>Mensaje</th>
             <th class="sortable" data-sort="estado">Estado <i class="fas fa-sort sort-icon"></i></th>
@@ -295,7 +403,7 @@
           </tr>
         </thead>
         <tbody id="tablaMensajes">
-          <tr><td colspan="6" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin mr-2"></i> Cargando datos...</td></tr>
+          <tr><td colspan="7" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin mr-2"></i> Cargando datos...</td></tr>
         </tbody>
       </table>
     </div>
@@ -303,7 +411,7 @@
 </div>
 
 <!-- Modal de mensaje -->
-<div class="modal-backdrop-custom" id="modalMensaje" role="dialog" aria-modal="true" aria-labelledby="formTitulo">
+<div class="modal-backdrop-custom" id="modalMensaje" role="dialog" aria-modal="true">
   <div class="modal-custom-panel">
     <div class="modal-custom-header">
       <h3 id="formTitulo">Nuevo Mensaje</h3>
@@ -313,21 +421,32 @@
       <input type="hidden" id="mensajeId" value="">
 
       <div class="form-group mb-3">
-        <label for="msgOperador" class="form-label font-weight-bold small">Operador <span class="text-danger">*</span></label>
-        <select id="msgOperador" class="form-control">
-          <option value="">-- Selecciona --</option>
-        </select>
-        <small class="text-muted">También puedes escribir uno nuevo</small>
+        <label for="msgCategoria" class="form-label font-weight-bold small">Categoría</label>
+        <input type="text" id="msgCategoria" class="form-control" placeholder="Ej: Promoción, Cobro, Extracto..." list="listaCategorias" autocomplete="off">
+        <datalist id="listaCategorias"></datalist>
+        <div class="categoria-sugerencias" id="categoriaSugerencias"></div>
+        <small class="text-muted">Agrupa mensajes por categoría</small>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label font-weight-bold small">Operadores <span class="text-danger">*</span></label>
+        <div class="multi-select-container" id="msModalOperador">
+          <div class="multi-select-trigger" id="msModalOperadorTrigger">
+            <span class="multi-select-placeholder">-- Selecciona operadores --</span>
+          </div>
+          <div class="multi-select-dropdown" id="msModalOperadorDropdown"></div>
+        </div>
+        <small class="text-muted">Selecciona uno o varios operadores</small>
       </div>
 
       <div class="form-group mb-3">
         <label for="msgTipo" class="form-label font-weight-bold small">Tipo</label>
         <select id="msgTipo" class="form-control">
-            <option value="">-- Selecciona --</option>
-            <option value="baja">Baja</option>
-            <option value="media">Media</option>
-            <option value="media-alta">Media-Alta</option>
-            <option value="alta">Alta</option>
+          <option value="">-- Selecciona --</option>
+          <option value="baja">Baja</option>
+          <option value="media">Media</option>
+          <option value="media-alta">Media-Alta</option>
+          <option value="alta">Alta</option>
         </select>
       </div>
 
@@ -357,141 +476,94 @@
 (function() {
   'use strict';
 
-  // ---- Elementos: formulario / modal ----
   const modalEl = document.getElementById('modalMensaje');
   const btnNuevoMensaje = document.getElementById('btnNuevoMensaje');
   const btnCerrarModal = document.getElementById('btnCerrarModal');
   const mensajeIdEl = document.getElementById('mensajeId');
-  const msgOperadorEl = document.getElementById('msgOperador');
+  const msgCategoriaEl = document.getElementById('msgCategoria');
   const msgTipoEl = document.getElementById('msgTipo');
   const msgMensajeEl = document.getElementById('msgMensaje');
   const msgEstadoEl = document.getElementById('msgEstado');
   const btnGuardar = document.getElementById('btnGuardar');
   const btnCancelar = document.getElementById('btnCancelar');
   const formTitulo = document.getElementById('formTitulo');
+  const categoriaSugerencias = document.getElementById('categoriaSugerencias');
+  const listaCategorias = document.getElementById('listaCategorias');
 
-  // ---- Elementos: filtros ----
-  const fOperador = document.getElementById('fOperador');
   const fTipo = document.getElementById('fTipo');
   const fEstado = document.getElementById('fEstado');
   const fBusqueda = document.getElementById('fBusqueda');
   const btnLimpiarFiltros = document.getElementById('btnLimpiarFiltros');
   const resultadosCount = document.getElementById('resultadosCount');
 
-  // ---- Elementos: tabla ----
   const tablaMensajes = document.getElementById('tablaMensajes');
   const toastArea = document.getElementById('toastArea');
 
   let TODOS_LOS_MENSAJES = [];
-  let ordenActual = { campo: 'operador', dir: 'asc' };
+  let ordenActual = { campo: 'id', dir: 'asc' };
+  let msCategoria, msOperador, msModalOperador;
 
-  // ---- Utilidad de Escape HTML (Seguridad XSS) ----
   const escapeHTML = str => {
     if (!str) return '';
-    return str.toString().replace(/[&<>'"]/g, 
-      tag => ({
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          "'": '&#39;',
-          '"': '&quot;'
-      }[tag])
-    );
+    return str.toString().replace(/[&<>'"]/g, tag => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[tag]));
   };
 
-  // ---- Notificaciones (Toast) ----
   function toast(msg, type = 'success') {
     const colors = { success: '#047857', danger: '#b91c1c', warning: '#b45309', info: '#0284c7' };
     const borders = { success: '#a7f3d0', danger: '#fecaca', warning: '#fde68a', info: '#bae6fd' };
     const bg = { success: '#ecfdf5', danger: '#fef2f2', warning: '#fffbeb', info: '#f0f9ff' };
-    
     const t = document.createElement('div');
     t.style.cssText = `background:${bg[type]||bg.info}; border:1px solid ${borders[type]||borders.info}; color:${colors[type]||colors.info}; padding:12px 16px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,.05); font-size:.85rem; font-weight:600; animation: modalPop .2s ease-out;`;
     t.textContent = msg;
     toastArea.appendChild(t);
-    setTimeout(() => {
-        t.style.opacity = '0';
-        t.style.transition = 'opacity 0.3s';
-        setTimeout(() => t.remove(), 300);
-    }, 4000);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 4000);
   }
 
-  // ---- Modal open/close ----
-  function abrirModal() {
-    modalEl.classList.add('open');
-    msgOperadorEl.focus();
-  }
-  function cerrarModal() {
-    modalEl.classList.remove('open');
-    resetForm();
-  }
-  
+  function abrirModal() { modalEl.classList.add('open'); }
+  function cerrarModal() { modalEl.classList.remove('open'); resetForm(); }
+
   btnNuevoMensaje.addEventListener('click', abrirModal);
   btnCerrarModal.addEventListener('click', cerrarModal);
   btnCancelar.addEventListener('click', cerrarModal);
   modalEl.addEventListener('click', (e) => { if (e.target === modalEl) cerrarModal(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modalEl.classList.contains('open')) cerrarModal(); });
 
-  // ---- Cargar select de operador + filtros ----
-  function poblarSelect(select, valores, placeholder) {
-    const actual = select.value;
-    select.innerHTML = `<option value="">${placeholder}</option>` +
-      valores.map(v => `<option value="${escapeHTML(v)}">${escapeHTML(v)}</option>`).join('');
-    if (valores.includes(actual)) select.value = actual;
+  function actualizarSugerenciasCategoria() {
+    const categorias = [...new Set(TODOS_LOS_MENSAJES.map(i => i.categoria).filter(Boolean))].sort();
+    listaCategorias.innerHTML = categorias.map(c => `<option value="${escapeHTML(c)}">`).join('');
+    categoriaSugerencias.innerHTML = categorias.slice(0, 8).map(c => 
+      `<span class="categoria-chip" onclick="document.getElementById('msgCategoria').value='${escapeHTML(c)}'">${escapeHTML(c)}</span>`
+    ).join('');
   }
 
-  async function cargarOperadores() {
-    try {
-      const resp = await fetch('/api/sms/operadores');
-      if (!resp.ok) throw new Error('Error en la red');
-      const data = await resp.json();
-      
-      if (data.success) {
-        const operadoresBase = data.items;
-        const todos = [...new Set([...operadoresBase, ...TODOS_LOS_MENSAJES.map(i => i.operador)])]
-          .filter(Boolean).sort((a,b) => a.localeCompare(b));
-        
-        msgOperadorEl.innerHTML = '<option value="">-- Selecciona --</option>' +
-          todos.map(op => `<option value="${escapeHTML(op)}">${escapeHTML(op)}</option>`).join('') +
-          '<option value="__otro__">+ Nuevo operador...</option>';
+  // Función para obtener operadores únicos de todos los mensajes
+  function obtenerTodosOperadores() {
+    const ops = new Set();
+    TODOS_LOS_MENSAJES.forEach(m => {
+      if (m.operador) ops.add(m.operador);
+      if (m.operadores) {
+        m.operadores.split(',').forEach(o => { const t = o.trim(); if (t) ops.add(t); });
       }
-    } catch(e) {
-        console.error('Error al cargar operadores:', e);
-    }
-  }
-
-  msgOperadorEl.addEventListener('change', function() {
-    if (this.value === '__otro__') {
-      const nuevo = prompt('Nombre del nuevo operador:');
-      if (nuevo && nuevo.trim()) {
-        const opt = document.createElement('option');
-        const nuevoSaneado = escapeHTML(nuevo.trim());
-        opt.value = nuevoSaneado;
-        opt.textContent = nuevoSaneado;
-        opt.selected = true;
-        this.insertBefore(opt, this.lastChild);
-      } else {
-        this.value = '';
-      }
-    }
-  });
-
-  // ---- Filtros ----
-  function actualizarOpcionesFiltro() {
-    const operadores = [...new Set(TODOS_LOS_MENSAJES.map(i => i.operador).filter(Boolean))].sort((a,b) => a.localeCompare(b));
-    const tipos = [...new Set(TODOS_LOS_MENSAJES.map(i => i.tipo).filter(Boolean))].sort((a,b) => a.localeCompare(b));
-    poblarSelect(fOperador, operadores, 'Todos');
-    poblarSelect(fTipo, tipos, 'Todas');
+    });
+    return [...ops].sort();
   }
 
   function obtenerMensajesFiltrados() {
-    const opFiltro = fOperador.value;
+    const catSeleccionadas = msCategoria ? msCategoria.getSelected() : [];
+    const opSeleccionados = msOperador ? msOperador.getSelected() : [];
     const tipoFiltro = fTipo.value;
     const estadoFiltro = fEstado.value;
     const busqueda = fBusqueda.value.trim().toLowerCase();
 
     let items = TODOS_LOS_MENSAJES.filter(m => {
-      if (opFiltro && m.operador !== opFiltro) return false;
+      if (catSeleccionadas.length > 0 && !catSeleccionadas.includes(m.categoria)) return false;
+      if (opSeleccionados.length > 0) {
+        const todosOperadores = [m.operador, ...(m.operadores || '').split(',').map(o => o.trim()).filter(Boolean)];
+        const match = opSeleccionados.some(op => todosOperadores.includes(op));
+        if (!match) return false;
+      }
       if (tipoFiltro && m.tipo !== tipoFiltro) return false;
       if (estadoFiltro !== '' && String(m.estado) !== estadoFiltro) return false;
       if (busqueda && !(m.mensaje||'').toLowerCase().includes(busqueda)) return false;
@@ -501,17 +573,14 @@
     const { campo, dir } = ordenActual;
     items.sort((a, b) => {
       let va = a[campo], vb = b[campo];
-      if (campo === 'id' || campo === 'estado') { 
-          va = Number(va) || 0; 
-          vb = Number(vb) || 0; 
-          return dir === 'asc' ? va - vb : vb - va;
-      } else { 
-          va = (va||'').toString(); 
-          vb = (vb||'').toString(); 
-          return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+      if (campo === 'id' || campo === 'estado') {
+        va = Number(va) || 0; vb = Number(vb) || 0;
+        return dir === 'asc' ? va - vb : vb - va;
+      } else {
+        va = (va||'').toString(); vb = (vb||'').toString();
+        return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
       }
     });
-
     return items;
   }
 
@@ -541,41 +610,53 @@
     });
   });
 
-  [fOperador, fTipo, fEstado].forEach(el => el.addEventListener('change', renderTabla));
+  [fTipo, fEstado].forEach(el => el.addEventListener('change', renderTabla));
   fBusqueda.addEventListener('input', renderTabla);
+
   btnLimpiarFiltros.addEventListener('click', () => {
-    fOperador.value = '';
-    fTipo.value = '';
-    fEstado.value = '';
-    fBusqueda.value = '';
+    if (msCategoria) msCategoria.limpiar();
+    if (msOperador) msOperador.limpiar();
+    fTipo.value = ''; fEstado.value = ''; fBusqueda.value = '';
     renderTabla();
   });
 
+  // Renderiza la tabla con los operadores agrupados (máx 3 badges)
   function renderTabla() {
     const items = obtenerMensajesFiltrados();
     resultadosCount.textContent = `${items.length} de ${TODOS_LOS_MENSAJES.length} mensajes`;
 
     if (!items.length) {
-      tablaMensajes.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5"><i class="fas fa-inbox fa-2x mb-2 d-block text-black-50"></i> No se encontraron resultados</td></tr>';
+      tablaMensajes.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-5">No se encontraron resultados</td></tr>';
       return;
     }
 
     let html = '';
     items.forEach(m => {
-      const estadoBadge = m.estado == 1
-        ? '<span class="badge badge-activo">Activo</span>'
-        : '<span class="badge badge-inactivo">Inactivo</span>';
-        
-      const mensajeSeguro = escapeHTML(m.mensaje);
-      const operadorSeguro = escapeHTML(m.operador);
-      const tipoSeguro = escapeHTML(m.tipo);
+      const estadoBadge = m.estado == 1 ? '<span class="badge badge-activo">Activo</span>' : '<span class="badge badge-inactivo">Inactivo</span>';
+      const categoriaBadge = m.categoria ? `<span class="badge badge-categoria">${escapeHTML(m.categoria)}</span>` : '<span class="text-muted small">—</span>';
       
+      // Obtener lista única de operadores
+      const todosOps = [m.operador, ...(m.operadores || '').split(',').map(o => o.trim()).filter(Boolean)];
+      const unicos = [...new Set(todosOps)];
+      let opsHtml = '';
+      if (unicos.length === 0) {
+        opsHtml = '<span class="text-muted small">—</span>';
+      } else if (unicos.length <= 3) {
+        opsHtml = unicos.map(op => `<span class="badge badge-operadores">${escapeHTML(op)}</span>`).join(' ');
+      } else {
+        // Mostrar los primeros 2 y un badge con +N
+        const primeros = unicos.slice(0, 2);
+        opsHtml = primeros.map(op => `<span class="badge badge-operadores">${escapeHTML(op)}</span>`).join(' ');
+        opsHtml += ` <span class="badge badge-operadores" style="background:#e5e7eb;color:#374151;border-color:#d1d5db;">+${unicos.length - 2}</span>`;
+      }
+
       html += `
         <tr>
           <td class="text-muted small">${m.id}</td>
-          <td><strong class="text-dark">${operadorSeguro||'—'}</strong></td>
-          <td><span class="text-capitalize small font-weight-bold text-secondary">${tipoSeguro||'—'}</span></td>
-          <td class="mensaje-preview" title="${mensajeSeguro}">${mensajeSeguro.substring(0,60)}${mensajeSeguro.length>60?'...':''}</td>
+          <td>${categoriaBadge}</td>
+          <td>${opsHtml}</td>
+          <td><span class="text-capitalize small font-weight-bold text-secondary">${escapeHTML(m.tipo||'—')}</span></td>
+          <td class="mensaje-preview" title="${escapeHTML(m.mensaje||'')}">${escapeHTML((m.mensaje||'').substring(0,60))}${(m.mensaje||'').length>60?'...':''}</td>
           <td>${estadoBadge}</td>
           <td class="text-right">
             <button class="btn btn-sm btn-outline-secondary editar-btn border-0 mr-1" data-id="${m.id}" title="Editar"><i class="fas fa-pen"></i></button>
@@ -586,36 +667,24 @@
     });
     tablaMensajes.innerHTML = html;
 
-    document.querySelectorAll('.editar-btn').forEach(btn => {
-      btn.addEventListener('click', () => editarMensaje(btn.dataset.id));
-    });
-    document.querySelectorAll('.toggle-btn').forEach(btn => {
-      btn.addEventListener('click', () => toggleMensaje(btn.dataset.id));
-    });
-    document.querySelectorAll('.eliminar-btn').forEach(btn => {
-      btn.addEventListener('click', () => eliminarMensaje(btn.dataset.id));
-    });
+    document.querySelectorAll('.editar-btn').forEach(btn => btn.addEventListener('click', () => editarMensaje(btn.dataset.id)));
+    document.querySelectorAll('.toggle-btn').forEach(btn => btn.addEventListener('click', () => toggleMensaje(btn.dataset.id)));
+    document.querySelectorAll('.eliminar-btn').forEach(btn => btn.addEventListener('click', () => eliminarMensaje(btn.dataset.id)));
   }
 
   async function cargarMensajes() {
     try {
       const resp = await fetch('/api/sms/mensajes');
-      if (!resp.ok) throw new Error('Falló la conexión');
       const data = await resp.json();
-      
-      if (!data.success) {
-          toast(data.message || 'Error al cargar datos', 'danger');
-          return;
-      }
-      
+      if (!data.success) { toast(data.message || 'Error al cargar datos', 'danger'); return; }
       TODOS_LOS_MENSAJES = data.items;
-      actualizarOpcionesFiltro();
+      configurarMultiSelects();
+      actualizarSugerenciasCategoria();
       actualizarIndicadoresOrden();
       renderTabla();
     } catch(e) { 
-        console.error(e);
-        tablaMensajes.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Error al conectar con el servidor.</td></tr>';
-        toast('Error al cargar datos', 'danger'); 
+      tablaMensajes.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-4">Error al conectar con el servidor.</td></tr>';
+      toast('Error al cargar datos', 'danger'); 
     }
   }
 
@@ -623,10 +692,19 @@
     const m = TODOS_LOS_MENSAJES.find(i => i.id == id);
     if (!m) return;
     mensajeIdEl.value = m.id;
-    msgOperadorEl.value = m.operador || '';
+    msgCategoriaEl.value = m.categoria || '';
     msgTipoEl.value = m.tipo || '';
     msgMensajeEl.value = m.mensaje || '';
     msgEstadoEl.value = m.estado;
+
+    // Seleccionar operadores en el multi-select del modal
+    const todosOps = [m.operador, ...(m.operadores || '').split(',').map(o => o.trim()).filter(Boolean)];
+    const unicos = [...new Set(todosOps)];
+    // Actualizar el estado interno del multi-select
+    if (msModalOperador) {
+      msModalOperador.setSelected(unicos);
+    }
+
     formTitulo.textContent = 'Editar Mensaje';
     btnGuardar.innerHTML = '<i class="fas fa-save mr-1"></i> Actualizar';
     abrirModal();
@@ -634,93 +712,241 @@
 
   function resetForm() {
     mensajeIdEl.value = '';
-    msgOperadorEl.value = '';
+    msgCategoriaEl.value = '';
     msgTipoEl.value = '';
     msgMensajeEl.value = '';
     msgEstadoEl.value = '1';
     formTitulo.textContent = 'Nuevo Mensaje';
     btnGuardar.innerHTML = '<i class="fas fa-save mr-1"></i> Guardar';
+    if (msModalOperador) msModalOperador.limpiar();
   }
 
   btnGuardar.addEventListener('click', async () => {
-    const operador = msgOperadorEl.value.trim();
+    const operadores = msModalOperador ? msModalOperador.getSelected().join(', ') : '';
     const mensaje = msgMensajeEl.value.trim();
     const tipo = msgTipoEl.value.trim();
+    const categoria = msgCategoriaEl.value.trim();
     const estado = parseInt(msgEstadoEl.value);
     const id = mensajeIdEl.value;
 
-    if (!operador || !mensaje) {
-      toast('Operador y mensaje son obligatorios', 'warning');
+    if (!operadores || !mensaje) {
+      toast('Operadores y mensaje son obligatorios', 'warning');
       return;
     }
 
     btnGuardar.disabled = true;
-    const btnTextoOriginal = btnGuardar.innerHTML;
-    btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Guardando...';
-
-    const payload = { operador, mensaje, tipo, estado };
+    const payload = { 
+      operador: operadores.split(',')[0].trim(), 
+      operadores, 
+      mensaje, 
+      tipo, 
+      categoria, 
+      estado 
+    };
     const url = id ? `/api/sms/mensajes/${id}` : '/api/sms/mensajes';
     const method = id ? 'PUT' : 'POST';
 
     try {
-      const resp = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!resp.ok) throw new Error('Error de petición');
-      
+      const resp = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const data = await resp.json();
       if (data.success) {
         toast(id ? 'Mensaje actualizado' : 'Mensaje creado');
         cerrarModal();
         cargarMensajes();
-        cargarOperadores();
       } else {
         toast(data.message || 'Error al guardar', 'danger');
       }
-    } catch(e) {
-      toast('Error de red o del servidor', 'danger');
-    } finally {
-      btnGuardar.disabled = false;
-      btnGuardar.innerHTML = btnTextoOriginal;
-    }
+    } catch(e) { toast('Error de red o del servidor', 'danger'); }
+    finally { btnGuardar.disabled = false; }
   });
 
   async function toggleMensaje(id) {
     try {
       const resp = await fetch(`/api/sms/mensajes/${id}/toggle`, { method: 'POST' });
-      if (!resp.ok) throw new Error('Fallo');
       const data = await resp.json();
-      
-      if (data.success) {
-        toast(data.message);
-        cargarMensajes();
-      }
-    } catch(e) { 
-        toast('Error al cambiar de estado', 'danger'); 
-    }
+      if (data.success) { toast(data.message); cargarMensajes(); }
+    } catch(e) { toast('Error al cambiar de estado', 'danger'); }
   }
 
   async function eliminarMensaje(id) {
     if (!confirm('¿Estás seguro de eliminar este mensaje?')) return;
     try {
       const resp = await fetch(`/api/sms/mensajes/${id}`, { method: 'DELETE' });
-      if (!resp.ok) throw new Error('Fallo');
       const data = await resp.json();
-      
-      if (data.success) {
-        toast('Mensaje eliminado');
-        cargarMensajes();
-        cargarOperadores();
-      }
-    } catch(e) { 
-        toast('Error al eliminar', 'danger'); 
-    }
+      if (data.success) { toast('Mensaje eliminado'); cargarMensajes(); }
+    } catch(e) { toast('Error al eliminar', 'danger'); }
   }
 
-  // Inicializar
-  cargarMensajes().then(cargarOperadores);
+  // ========== MULTI-SELECT MEJORADO CON BUSCADOR ==========
+  function initMultiSelect(containerId, triggerId, dropdownId, onChange, opciones = []) {
+    const trigger = document.getElementById(triggerId);
+    const dropdown = document.getElementById(dropdownId);
+    let selected = [];
+
+    function actualizarTrigger() {
+      if (selected.length === 0) {
+        trigger.innerHTML = '<span class="multi-select-placeholder">Todos</span>';
+      } else if (selected.length <= 3) {
+        trigger.innerHTML = selected.map(v => 
+          `<span class="multi-select-chip">${escapeHTML(v)}<span class="remove-chip" data-val="${escapeHTML(v)}">&times;</span></span>`
+        ).join('');
+      } else {
+        trigger.innerHTML = `<span class="multi-select-chip">${selected.length} seleccionados</span>`;
+      }
+      trigger.querySelectorAll('.remove-chip').forEach(chip => {
+        chip.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selected = selected.filter(v => v !== chip.dataset.val);
+          actualizarTrigger();
+          sincronizarCheckboxes();
+          if (onChange) onChange(selected);
+        });
+      });
+    }
+
+    function sincronizarCheckboxes() {
+      const container = dropdown.querySelector('.multi-select-options');
+      if (!container) return;
+      container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.checked = selected.includes(cb.value);
+      });
+    }
+
+    // Filtrar opciones según búsqueda
+    function filtrarOpciones(texto) {
+      const container = dropdown.querySelector('.multi-select-options');
+      if (!container) return;
+      const labels = container.querySelectorAll('label');
+      const filtro = texto.toLowerCase().trim();
+      labels.forEach(label => {
+        const txt = label.textContent.trim().toLowerCase();
+        label.style.display = txt.includes(filtro) ? '' : 'none';
+      });
+    }
+
+    // Construir dropdown con buscador
+    function construirDropdown(opciones) {
+      let html = `
+        <div class="multi-select-search">
+          <input type="text" placeholder="Buscar operador..." class="multi-select-filter">
+        </div>
+        <div class="multi-select-options">
+      `;
+      opciones.forEach(op => {
+        html += `<label><input type="checkbox" value="${escapeHTML(op)}"> ${escapeHTML(op)}</label>`;
+      });
+      html += `</div>
+        <div class="multi-select-actions">
+          <button class="btn-todos">Todos</button>
+          <button class="btn-ninguno">Ninguno</button>
+          <button class="btn-aplicar">Aplicar</button>
+        </div>
+      `;
+      dropdown.innerHTML = html;
+
+      // Evento para filtrar
+      const filterInput = dropdown.querySelector('.multi-select-filter');
+      if (filterInput) {
+        filterInput.addEventListener('input', (e) => filtrarOpciones(e.target.value));
+      }
+
+      // Botones
+      dropdown.querySelector('.btn-todos').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const opcionesActuales = [...dropdown.querySelectorAll('.multi-select-options label')]
+          .filter(label => label.style.display !== 'none')
+          .map(label => label.querySelector('input[type="checkbox"]').value);
+        selected = opcionesActuales;
+        actualizarTrigger();
+        sincronizarCheckboxes();
+        if (onChange) onChange(selected);
+        dropdown.classList.remove('open');
+      });
+
+      dropdown.querySelector('.btn-ninguno').addEventListener('click', (e) => {
+        e.stopPropagation();
+        selected = [];
+        actualizarTrigger();
+        sincronizarCheckboxes();
+        if (onChange) onChange(selected);
+        dropdown.classList.remove('open');
+      });
+
+      dropdown.querySelector('.btn-aplicar').addEventListener('click', (e) => {
+        e.stopPropagation();
+        selected = [...dropdown.querySelectorAll('.multi-select-options input[type="checkbox"]:checked')].map(cb => cb.value);
+        actualizarTrigger();
+        if (onChange) onChange(selected);
+        dropdown.classList.remove('open');
+      });
+
+      // Click en labels para toggle
+      dropdown.querySelectorAll('.multi-select-options label').forEach(label => {
+        label.addEventListener('click', (e) => {
+          // No cerrar el dropdown
+          e.stopPropagation();
+        });
+        const cb = label.querySelector('input[type="checkbox"]');
+        if (cb) {
+          cb.addEventListener('change', () => {
+            // Actualizar selected según los checkboxes marcados
+            selected = [...dropdown.querySelectorAll('.multi-select-options input[type="checkbox"]:checked')].map(c => c.value);
+            actualizarTrigger();
+            if (onChange) onChange(selected);
+          });
+        }
+      });
+
+      sincronizarCheckboxes();
+    }
+
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('open');
+      // Si se abre, enfocar el filtro
+      if (dropdown.classList.contains('open')) {
+        const filter = dropdown.querySelector('.multi-select-filter');
+        if (filter) setTimeout(() => filter.focus(), 50);
+      }
+    });
+    document.addEventListener('click', () => dropdown.classList.remove('open'));
+
+    const inst = {
+      setOpciones: (opciones) => {
+        construirDropdown(opciones);
+      },
+      getSelected: () => selected,
+      setSelected: (valores) => {
+        selected = [...valores];
+        actualizarTrigger();
+        sincronizarCheckboxes();
+      },
+      limpiar: () => { selected = []; actualizarTrigger(); sincronizarCheckboxes(); },
+      _actualizarTrigger: actualizarTrigger,
+    };
+    return inst;
+  }
+
+  function configurarMultiSelects() {
+    const categorias = [...new Set(TODOS_LOS_MENSAJES.map(i => i.categoria).filter(Boolean))].sort();
+    const operadores = obtenerTodosOperadores();
+
+    if (!msCategoria) {
+      msCategoria = initMultiSelect('msCategoria', 'msCategoriaTrigger', 'msCategoriaDropdown', () => renderTabla());
+    }
+    if (!msOperador) {
+      msOperador = initMultiSelect('msOperador', 'msOperadorTrigger', 'msOperadorDropdown', () => renderTabla());
+    }
+    if (!msModalOperador) {
+      msModalOperador = initMultiSelect('msModalOperador', 'msModalOperadorTrigger', 'msModalOperadorDropdown', null);
+    }
+
+    msCategoria.setOpciones(categorias);
+    msOperador.setOpciones(operadores);
+    msModalOperador.setOpciones(operadores);
+  }
+
+  cargarMensajes();
 })();
 </script>
 {% endblock %}
