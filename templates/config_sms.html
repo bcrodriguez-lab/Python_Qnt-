@@ -65,37 +65,6 @@
   }
   .sms-card:hover { box-shadow: 0 12px 40px rgba(31, 41, 102, 0.12); }
 
-  .sms-card-header {
-    padding: 18px 24px;
-    background: linear-gradient(135deg, var(--sms-primary), var(--sms-accent));
-    color: #fff;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  .sms-card-header .icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background: rgba(255,255,255,0.18);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    flex-shrink: 0;
-  }
-  .sms-card-header h3 {
-    margin: 0;
-    font-size: 1.05rem;
-    font-weight: 700;
-  }
-  .sms-card-header small {
-    display: block;
-    font-size: 0.75rem;
-    opacity: 0.85;
-    font-weight: 400;
-  }
-
   .sms-card-body { padding: 24px 26px 26px; }
 
   .sms-tabs {
@@ -166,10 +135,6 @@
     border-color: var(--sms-primary);
     box-shadow: 0 0 0 4px rgba(52, 82, 225, 0.12);
   }
-  .form-control.is-invalid {
-    border-color: var(--sms-danger);
-    box-shadow: 0 0 0 4px rgba(226, 76, 75, 0.12);
-  }
   textarea.textarea-code {
     min-height: 120px;
     font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
@@ -177,6 +142,23 @@
     line-height: 1.6;
     background: #FBFBFE;
     tab-size: 2;
+  }
+
+  .sms-auto-section {
+    background: #FAFAFD;
+    border: 1.5px dashed var(--sms-border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+  }
+  .sms-auto-section .section-title {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--sms-primary);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .sms-schedule-row {
@@ -221,11 +203,6 @@
     border-color: var(--sms-primary);
     color: var(--sms-primary);
     background: var(--sms-primary-light);
-  }
-  .sms-schedule-row .btn-schedule.has-date {
-    border-color: var(--sms-success);
-    color: var(--sms-success);
-    background: var(--sms-success-bg);
   }
 
   .sms-flag {
@@ -277,7 +254,7 @@
     color: #fff;
     box-shadow: 0 6px 16px rgba(23, 166, 115, 0.28);
   }
-  .btn-success:hover { background: #13895D; box-shadow: 0 8px 24px rgba(23, 166, 115, 0.35); }
+  .btn-success:hover { background: #13895D; }
   .btn-success:disabled {
     background: #B9C0CC;
     box-shadow: none;
@@ -298,6 +275,8 @@
     box-shadow: 0 6px 16px rgba(226, 76, 75, 0.25);
   }
   .btn-danger:hover { background: #C0392B; }
+
+  .btn-sm { padding: 0.35rem 0.8rem; font-size: 0.78rem; }
 
   .sms-side { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 16px; }
 
@@ -366,22 +345,8 @@
   .sms-stats .row + .row { border-top: 1px dashed var(--sms-border); }
   .sms-stats .label { color: var(--sms-muted); }
   .sms-stats .value { font-weight: 700; color: var(--sms-text); }
-  .sms-stats .value .chip {
-    display: inline-block;
-    padding: 2px 12px;
-    border-radius: 20px;
-    font-size: 0.72rem;
-    font-weight: 700;
-  }
-  .chip-success { background: var(--sms-success-bg); color: var(--sms-success); }
-  .chip-danger { background: var(--sms-danger-bg); color: var(--sms-danger); }
-  .chip-warning { background: var(--sms-warning-bg); color: var(--sms-warning); }
-  .chip-info { background: var(--sms-info-bg); color: var(--sms-info); }
 
-  .sms-result {
-    margin-top: 20px;
-    display: none;
-  }
+  .sms-result { margin-top: 20px; display: none; }
   .sms-result.visible { display: block; animation: fadeIn 0.3s ease; }
 
   .sms-preview-item {
@@ -390,9 +355,7 @@
     padding: 10px 14px;
     margin-bottom: 8px;
     background: #FAFAFD;
-    transition: var(--sms-transition);
   }
-  .sms-preview-item:hover { background: #F0F2F8; }
   .sms-preview-item .phone { font-weight: 700; font-size: 0.84rem; color: var(--sms-text); }
   .sms-preview-item .meta { font-size: 0.72rem; color: var(--sms-muted); }
   .sms-preview-item .msg {
@@ -435,7 +398,6 @@
 
   .sms-toast .icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 2px; }
   .sms-toast .content { flex: 1; font-size: 0.88rem; color: var(--sms-text); }
-  .sms-toast .content strong { display: block; font-size: 0.82rem; }
   .sms-toast .close-btn {
     background: none;
     border: none;
@@ -465,7 +427,6 @@
   @media (max-width: 768px) {
     .sms-card-body { padding: 16px; }
     .sms-schedule-row { flex-direction: column; align-items: stretch; }
-    .sms-schedule-row .btn-schedule { align-self: flex-start; }
   }
 </style>
 {% endblock %}
@@ -488,43 +449,36 @@
       <!-- PANEL ENVIAR -->
       <div class="sms-tab-panel active" id="panel-send">
 
-        <!-- SECCIÓN MENSAJES AUTOMÁTICOS -->
+        <!-- SECCIÓN CONSTRUCTOR DE MENSAJE (SQLite) -->
         <div class="sms-auto-section">
           <div class="section-title">
-            <i class="fas fa-robot"></i> Mensajes Automáticos (Mensaje_Operacion)
+            <i class="fas fa-puzzle-piece"></i> Constructor de Mensaje
             <span class="badge" style="background:#E2E4EE;color:var(--sms-muted);font-size:0.7rem;">Opcional</span>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
-            <div style="flex:1;min-width:110px;">
+            <div style="flex:1;min-width:130px;">
               <label style="font-size:0.72rem;font-weight:600;color:var(--sms-muted);">Operador</label>
               <select id="maFiltroOperador" class="form-control form-control-sm">
-                <option value="">--</option>
+                <option value="">-- Operador --</option>
               </select>
             </div>
-            <div style="flex:1;min-width:110px;">
-              <label style="font-size:0.72rem;font-weight:600;color:var(--sms-muted);">Campaña</label>
-              <select id="maFiltroCampana" class="form-control form-control-sm">
-                <option value="">--</option>
-              </select>
-            </div>
-            <div style="flex:1;min-width:110px;">
-              <label style="font-size:0.72rem;font-weight:600;color:var(--sms-muted);">Intensidad</label>
+            <div style="flex:1;min-width:130px;">
+              <label style="font-size:0.72rem;font-weight:600;color:var(--sms-muted);">Tipo</label>
               <select id="maFiltroIntensidad" class="form-control form-control-sm">
-                <option value="">--</option>
-                <option value="baja">🟢 Baja</option>
-                <option value="media">🟡 Media</option>
-                <option value="media-alta">🟠 Media-Alta</option>
-                <option value="alta">🔴 Alta</option>
+                <option value="">Tipo</option>
               </select>
             </div>
-            <button id="maAplicarBtn" class="btn btn-sm btn-outline-primary" style="height:31px;">
-              <i class="fas fa-magic"></i> Aplicar
-            </button>
+            <div style="flex:2;min-width:200px;">
+              <label style="font-size:0.72rem;font-weight:600;color:var(--sms-muted);">Mensaje</label>
+              <select id="maMensajeSelect" class="form-control form-control-sm">
+                <option value="">-- Selecciona mensaje --</option>
+              </select>
+            </div>
           </div>
           <div style="margin-top:6px;font-size:0.7rem;color:var(--sms-muted);">
             <i class="fas fa-info-circle"></i> 
-            Si tu consulta ya trae columna <code>mensaje</code>, se usará automáticamente.
-            Si no, usa estos filtros para cargar la plantilla desde Mensaje_Operacion.
+            Selecciona Operador e Intensidad para cargar una plantilla predefinida. 
+            También puedes escribir la plantilla manualmente.
           </div>
         </div>
 
@@ -804,56 +758,82 @@
     return data;
   }
 
-  // ========== CARGAR FILTROS DE MENSAJES AUTOMÁTICOS ==========
-  async function cargarFiltrosMensajesAuto() {
+  // ========== NUEVOS FILTROS ENCADENADOS (SQLite) ==========
+
+  // Cargar operadores al iniciar
+  async function cargarOperadores() {
     try {
-      const data = await callAPI('/api/sms/mensajes-operacion', {}, 'GET');
-      if (!data.items || !data.items.length) return;
-
-      const operadores = [...new Set(data.items.map(i => i.operador))].sort();
-      const campanas = [...new Set(data.items.map(i => i.id_campana))].sort();
-
-      const selOperador = document.getElementById('maFiltroOperador');
-      selOperador.innerHTML = '<option value="">--</option>' + 
-        operadores.map(o => `<option value="${o}">${o}</option>`).join('');
-
-      const selCampana = document.getElementById('maFiltroCampana');
-      selCampana.innerHTML = '<option value="">--</option>' + 
-        campanas.map(c => `<option value="${c}">${c}</option>`).join('');
+      const resp = await fetch('/api/sms/operadores');
+      const data = await resp.json();
+      if (!data.success) return;
+      
+      const sel = document.getElementById('maFiltroOperador');
+      sel.innerHTML = '<option value="">-- Operador --</option>' +
+        data.items.map(op => `<option value="${op}">${op}</option>`).join('');
     } catch (e) {
-      console.log('Error cargando filtros:', e);
+      console.log('Error cargando operadores:', e);
     }
   }
 
-  // ========== BOTÓN APLICAR MENSAJE AUTOMÁTICO ==========
-  document.getElementById('maAplicarBtn').addEventListener('click', async () => {
-    const operador = document.getElementById('maFiltroOperador').value;
-    const campana = document.getElementById('maFiltroCampana').value;
-    const intensidad = document.getElementById('maFiltroIntensidad').value;
-
-    if (!operador || !campana || !intensidad) {
-      showToast('⚠️ Selecciona operador, campaña e intensidad', 'warning');
-      return;
-    }
-
+  // Cuando cambia operador → cargar tipos
+  document.getElementById('maFiltroOperador').addEventListener('change', async function() {
+    const operador = this.value;
+    const selTipo = document.getElementById('maFiltroIntensidad');
+    
+    selTipo.innerHTML = '<option value="">Tipo</option>';
+    if (!operador) return;
+    
     try {
-      const url = `/api/sms/mensaje-por-operacion?operador=${encodeURIComponent(operador)}&campana=${encodeURIComponent(campana)}&intensidad=${encodeURIComponent(intensidad)}`;
-      const resp = await fetch(url);
+      const resp = await fetch(`/api/sms/tipos-por-operador?operador=${encodeURIComponent(operador)}`);
       const data = await resp.json();
-
-      if (data.success && data.mensaje) {
-        plantillaEl.value = data.mensaje;
-        document.getElementById('idMensajeHidden').value = data.id_mensaje || '';
-        actualizarMockup();
-        showToast(`✅ Plantilla cargada · Intensidad: ${intensidad}`, 'success');
-      } else {
-        showToast('⚠️ No se encontró mensaje para esos filtros', 'warning');
+      if (!data.success) return;
+      
+      selTipo.innerHTML = '<option value="">Tipo</option>' +
+        data.items.map(t => `<option value="${t}">${t}</option>`).join('');
+    } catch (e) {
+      console.log('Error cargando tipos:', e);
+    }
+  });
+    // Cuando cambia tipo → cargar mensajes en el select
+  document.getElementById('maFiltroIntensidad').addEventListener('change', async function() {
+    const operador = document.getElementById('maFiltroOperador').value;
+    const tipo = this.value;
+    const selMensaje = document.getElementById('maMensajeSelect');
+    
+    selMensaje.innerHTML = '<option value="">-- Selecciona mensaje --</option>';
+    
+    if (!operador || !tipo) return;
+    
+    try {
+      const resp = await fetch(`/api/sms/mensajes-operacion?operador=${encodeURIComponent(operador)}&tipo=${encodeURIComponent(tipo)}`);
+      const data = await resp.json();
+      if (!data.success || !data.items.length) {
+        selMensaje.innerHTML = '<option value="">-- Sin mensajes --</option>';
+        return;
       }
-    } catch (error) {
-      showToast(`❌ Error: ${error.message}`, 'danger');
+      
+      selMensaje.innerHTML = '<option value="">-- Selecciona mensaje --</option>' +
+        data.items.map((m, i) => `<option value="${m.id}" data-mensaje="${escapeHtml(m.mensaje)}">Mensaje ${i+1}: ${(m.mensaje||'').substring(0,50)}...</option>`).join('');
+    } catch (e) {
+      console.log('Error cargando mensajes:', e);
     }
   });
 
+  // Cuando selecciona un mensaje → cargar plantilla
+  document.getElementById('maMensajeSelect').addEventListener('change', function() {
+    const mensaje = this.options[this.selectedIndex].getAttribute('data-mensaje');
+    if (mensaje) {
+      plantillaEl.value = mensaje;
+      document.getElementById('idMensajeHidden').value = this.value;
+      actualizarMockup();
+      showToast('✅ Plantilla cargada', 'success', 2000);
+    }
+  });
+
+  // Iniciar carga de operadores
+  cargarOperadores();
+
+ 
   // ========== PROBAR CONSULTA ==========
   previewBtn.addEventListener('click', async () => {
     const payload = getPayload();
@@ -1003,9 +983,8 @@
     confirmarReenvioEl.checked = false; fechaProgramadaEl.value = '';
     document.getElementById('idMensajeHidden').value = '';
     document.getElementById('maFiltroOperador').value = '';
-    document.getElementById('maFiltroCampana').value = '';
-    document.getElementById('maFiltroIntensidad').value = '';
-    clearResult();
+    document.getElementById('maFiltroIntensidad').innerHTML = '<option value="">Tipo</option>';
+    document.getElementById('maMensajeSelect').innerHTML = '<option value="">-- Selecciona mensaje --</option>';
     phoneBubble.textContent = 'Escribe tu plantilla...';
     phoneBubble.classList.add('is-placeholder');
     phoneMetaCount.textContent = '0 caracteres';
@@ -1037,12 +1016,13 @@
         container.innerHTML = '<div class="text-center text-muted py-4">Sin registros</div>';
         return;
       }
-      let html = '<table class="table table-hover table-sm"><thead><tr><th>Fecha</th><th>Teléfono</th><th>Mensaje</th><th>Estado</th></tr></thead><tbody>';
+      let html = '<table class="table table-hover table-sm"><thead><tr><th>Fecha</th><th>Teléfono</th><th>Mensaje</th><th>Campaña</th><th>Estado</th></tr></thead><tbody>';
       data.items.slice(0, 50).forEach(row => {
         html += `<tr>
           <td>${row.fecha_envio ? new Date(row.fecha_envio).toLocaleString() : '—'}</td>
           <td>${escapeHtml(row.telefono||'')}</td>
           <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml((row.mensaje||'').substring(0,50))}</td>
+          <td>${escapeHtml(row.campana||'—')}</td>
           <td><span class="badge badge-${row.resultado==='enviado'?'success':'danger'}">${row.resultado||'?'}</span></td>
         </tr>`;
       });
@@ -1090,7 +1070,6 @@
   document.getElementById('histFiltrarBtn').addEventListener('click', loadHistory);
   plantillaEl.addEventListener('input', actualizarMockup);
   actualizarMockup();
-  cargarFiltrosMensajesAuto();
   loadHistory();
   loadScheduled();
 

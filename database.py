@@ -197,3 +197,23 @@ class SmsLog(db.Model):
     estado = db.Column(db.String(20), nullable=False, default="enviado")
     fecha_creacion = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     fecha_envio = db.Column(db.DateTime, nullable=True)
+
+class MensajeOperacion(db.Model):
+    __tablename__ = 'Mensajes_'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    Operador = db.Column(db.String(100), nullable=False)
+    Mensaje = db.Column(db.Text, nullable=False)
+    Tipo = db.Column(db.String(50))
+    Estado = db.Column(db.Integer, default=1)
+    fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'operador': self.Operador,
+            'mensaje': self.Mensaje,
+            'tipo': self.Tipo,
+            'estado': self.Estado,
+            'fecha_creacion': self.fecha_creacion.isoformat() if self.fecha_creacion else None
+        }
