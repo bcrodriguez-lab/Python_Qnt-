@@ -2165,6 +2165,131 @@ def sms_mensaje_por_operador_tipo():
     except Exception as exc:
         logger.exception("Error obteniendo mensaje")
         return jsonify({"success": False, "message": str(exc)}), 500
+# ========== GESTIÓN DE MENSAJES (CRUD) ==========
+
+@app.route("/config-mensajes")
+def config_mensajes():
+    """Página de gestión de mensajes de operación."""
+    return render_template("config_mensajes.html")
+
+
+@app.route("/api/sms/mensajes", methods=["GET"])
+def api_mensajes_list():
+    """Lista todos los mensajes (activos e inactivos)."""
+    try:
+        from database import MensajeOperacion
+        mensajes = MensajeOperacion.query.order_by(
+            MensajeOperacion.Operador, 
+            MensajeOperacion.Tipo,
+            MensajeOperacion.id.desc()
+        ).all()
+        items = [m.to_dict() for m in mensajes]
+        return jsonify({"success": True, "items": items})
+    except Exception as exc:
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@app.route("/api/sms/mensajes", methods=["POST"])
+def api_mensajes_create():
+    """Crea un nuevo mensaje."""
+    try:
+        from database import MensajeOperacion, db
+        
+        data = request.get_json() or {}
+        operador = (data.get("operador") or "").strip()
+        mensaje_texto = (data.get("mensaje") or "").strip()
+        tipo = (data.get("tipo") or "").strip()
+        estado = int(data.get("estado", 1))
+        
+        if not operador or not mensaje_texto:
+            return jsonify({"success": False, "message": "Operador y mensaje son obligatorios"}), 400
+        
+        nuevo = MensajeOperacion(
+            Operador=operador,
+            Mensaje=mensaje_texto,
+            Tipo=tipo,
+            Estado=estado
+        )
+        db.session.add(nuevo)
+        db.session.commit()
+        
+        log_gui_action("Crear mensaje", id=nuevo.id, operador=operador)
+        return jsonify({"success": True, "message": "Mensaje creado", "item": nuevo.to_dict()})
+    except Exception as exc:
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@app.route("/api/sms/mensajes/<int:mensaje_id>", methods=["PUT"])
+def api_mensajes_update(mensaje_id):
+    """Actualiza un mensaje existente."""
+    try:
+        from database import MensajeOperacion, db
+        
+        mensaje = MensajeOperacion.query.get(mensaje_id)
+        if not mensaje:
+            return jsonify({"success": False, "message": "Mensaje no encontrado"}), 404
+        
+        data = request.get_json() or {}
+        
+        if "operador" in data:
+            mensaje.Operador = (data["operador"] or "").strip()
+        if "mensaje" in data:
+            mensaje.Mensaje = (data["mensaje"] or "").strip()
+        if "tipo" in data:
+            mensaje.Tipo = (data["tipo"] or "").strip()
+        if "estado" in data:
+            mensaje.Estado = int(data["estado"])
+        
+        db.session.commit()
+        
+        log_gui_action("Actualizar mensaje", id=mensaje_id)
+        return jsonify({"success": True, "message": "Mensaje actualizado", "item": mensaje.to_dict()})
+    except Exception as exc:
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@app.route("/api/sms/mensajes/<int:mensaje_id>", methods=["DELETE"])
+def api_mensajes_delete(mensaje_id):
+    """Elimina un mensaje."""
+    try:
+        from database import MensajeOperacion, db
+        
+        mensaje = MensajeOperacion.query.get(mensaje_id)
+        if not mensaje:
+            return jsonify({"success": False, "message": "Mensaje no encontrado"}), 404
+        
+        db.session.delete(mensaje)
+        db.session.commit()
+        
+        log_gui_action("Eliminar mensaje", id=mensaje_id)
+        return jsonify({"success": True, "message": "Mensaje eliminado"})
+    except Exception as exc:
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@app.route("/api/sms/mensajes/<int:mensaje_id>/toggle", methods=["POST"])
+def api_mensajes_toggle(mensaje_id):
+    """Activa/Desactiva un mensaje."""
+    try:
+        from database import MensajeOperacion, db
+        
+        mensaje = MensajeOperacion.query.get(mensaje_id)
+        if not mensaje:
+            return jsonify({"success": False, "message": "Mensaje no encontrado"}), 404
+        
+        mensaje.Estado = 0 if mensaje.Estado == 1 else 1
+        db.session.commit()
+        
+        estado_texto = "activado" if mensaje.Estado == 1 else "desactivado"
+        log_gui_action(f"Mensaje {estado_texto}", id=mensaje_id)
+        return jsonify({
+            "success": True, 
+            "message": f"Mensaje {estado_texto}", 
+            "estado": mensaje.Estado
+        })
+    except Exception as exc:
+        return jsonify({"success": False, "message": str(exc)}), 500
+
 
 if __name__ == "__main__":
     with app.app_context():

@@ -1,0 +1,551 @@
+{% extends "layouts/adminlte.html" %}
+
+{% block title %}Configuración de Mensajes{% endblock %}
+
+{% block page_title %}
+  <h1><i class="fas fa-envelope"></i> Configuración de Mensajes</h1>
+  <small class="text-muted">Gestión de plantillas SMS por operador</small>
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/">Inicio</a></li>
+<li class="breadcrumb-item active">Mensajes</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .badge-activo { background: #17A673; color: #fff; }
+  .badge-inactivo { background: #E24C4B; color: #fff; }
+
+  .mensaje-preview {
+    max-width: 340px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ---- Filter bar ---- */
+  .filtros-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1rem;
+  }
+  .filtros-bar .filtro-grupo {
+    flex: 1 1 160px;
+    min-width: 140px;
+  }
+  .filtros-bar .filtro-grupo label {
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #8a94a6;
+    margin-bottom: .25rem;
+    font-weight: 600;
+  }
+  .filtros-bar .filtro-limpiar {
+    flex: 0 0 auto;
+  }
+
+  /* ---- Sortable table headers ---- */
+  th.sortable {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  th.sortable .sort-icon {
+    margin-left: 4px;
+    opacity: .35;
+    font-size: .75em;
+  }
+  th.sortable.sort-active .sort-icon {
+    opacity: 1;
+  }
+
+  .resultados-count {
+    font-size: .8rem;
+    color: #8a94a6;
+  }
+
+  /* ---- Modal ---- */
+  .modal-backdrop-custom {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 24, 34, .55);
+    z-index: 1050;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 4vh 1rem;
+    overflow-y: auto;
+  }
+  .modal-backdrop-custom.open {
+    display: flex;
+  }
+  .modal-custom-panel {
+    background: #fff;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 520px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.25);
+    animation: modalIn .15s ease-out;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .modal-custom-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #eef0f4;
+  }
+  .modal-custom-header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+  .modal-custom-close {
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    color: #8a94a6;
+    cursor: pointer;
+  }
+  .modal-custom-body {
+    padding: 1.25rem;
+  }
+  .modal-custom-footer {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid #eef0f4;
+    display: flex;
+    justify-content: flex-end;
+    gap: .5rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+  <!-- Toast -->
+  <div id="toastArea" style="position:fixed;top:1rem;right:1rem;z-index:9999;"></div>
+
+  <!-- Filtros -->
+  <div class="card">
+    <div class="card-body">
+      <div class="filtros-bar">
+        <div class="filtro-grupo">
+          <label for="fOperador">Operador</label>
+          <select id="fOperador" class="form-control form-control-sm">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="filtro-grupo">
+          <label for="fTipo">Intensidad / Tipo</label>
+          <select id="fTipo" class="form-control form-control-sm">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="filtro-grupo">
+          <label for="fEstado">Estado</label>
+          <select id="fEstado" class="form-control form-control-sm">
+            <option value="">Todos</option>
+            <option value="1">Activo</option>
+            <option value="0">Inactivo</option>
+          </select>
+        </div>
+        <div class="filtro-grupo" style="flex:2 1 220px;">
+          <label for="fBusqueda">Buscar en el mensaje</label>
+          <input type="text" id="fBusqueda" class="form-control form-control-sm" placeholder="Texto dentro de la plantilla...">
+        </div>
+        <div class="filtro-limpiar">
+          <button id="btnLimpiarFiltros" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-eraser"></i> Limpiar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h3 class="card-title mb-0">Mensajes Configurados</h3>
+      <div class="d-flex align-items-center" style="gap:1rem;">
+        <span class="resultados-count" id="resultadosCount"></span>
+        <button id="btnNuevoMensaje" class="btn btn-primary btn-sm">
+          <i class="fas fa-plus"></i> Nuevo Mensaje
+        </button>
+      </div>
+    </div>
+    <div class="card-body table-responsive p-0" style="max-height:560px;overflow-y:auto;">
+      <table class="table table-hover table-striped mb-0">
+        <thead>
+          <tr>
+            <th class="sortable" data-sort="id">ID <i class="fas fa-sort sort-icon"></i></th>
+            <th class="sortable" data-sort="operador">Operador <i class="fas fa-sort sort-icon"></i></th>
+            <th class="sortable" data-sort="tipo">Tipo <i class="fas fa-sort sort-icon"></i></th>
+            <th>Mensaje</th>
+            <th class="sortable" data-sort="estado">Estado <i class="fas fa-sort sort-icon"></i></th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tablaMensajes">
+          <tr><td colspan="6" class="text-center">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de mensaje -->
+<div class="modal-backdrop-custom" id="modalMensaje">
+  <div class="modal-custom-panel">
+    <div class="modal-custom-header">
+      <h3 id="formTitulo">Nuevo Mensaje</h3>
+      <button class="modal-custom-close" id="btnCerrarModal"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-custom-body">
+      <input type="hidden" id="mensajeId" value="">
+
+      <div class="form-group">
+        <label for="msgOperador">Operador <span class="text-danger">*</span></label>
+        <select id="msgOperador" class="form-control">
+          <option value="">-- Selecciona --</option>
+        </select>
+        <small class="text-muted">También puedes escribir uno nuevo</small>
+      </div>
+
+      <div class="form-group">
+        <label for="msgTipo">Tipo / Intensidad</label>
+        <input type="text" id="msgTipo" class="form-control" placeholder="Ej: baja, media, alta">
+      </div>
+
+      <div class="form-group">
+        <label for="msgMensaje">Mensaje <span class="text-danger">*</span></label>
+        <textarea id="msgMensaje" class="form-control" rows="5" placeholder="Plantilla del SMS con {{variables}}"></textarea>
+      </div>
+
+      <div class="form-group mb-0">
+        <label for="msgEstado">Estado</label>
+        <select id="msgEstado" class="form-control">
+          <option value="1">Activo</option>
+          <option value="0">Inactivo</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-custom-footer">
+      <button id="btnCancelar" class="btn btn-outline-secondary">Cancelar</button>
+      <button id="btnGuardar" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  'use strict';
+
+  // ---- Elementos: formulario / modal ----
+  const modalEl = document.getElementById('modalMensaje');
+  const btnNuevoMensaje = document.getElementById('btnNuevoMensaje');
+  const btnCerrarModal = document.getElementById('btnCerrarModal');
+  const mensajeIdEl = document.getElementById('mensajeId');
+  const msgOperadorEl = document.getElementById('msgOperador');
+  const msgTipoEl = document.getElementById('msgTipo');
+  const msgMensajeEl = document.getElementById('msgMensaje');
+  const msgEstadoEl = document.getElementById('msgEstado');
+  const btnGuardar = document.getElementById('btnGuardar');
+  const btnCancelar = document.getElementById('btnCancelar');
+  const formTitulo = document.getElementById('formTitulo');
+
+  // ---- Elementos: filtros ----
+  const fOperador = document.getElementById('fOperador');
+  const fTipo = document.getElementById('fTipo');
+  const fEstado = document.getElementById('fEstado');
+  const fBusqueda = document.getElementById('fBusqueda');
+  const btnLimpiarFiltros = document.getElementById('btnLimpiarFiltros');
+  const resultadosCount = document.getElementById('resultadosCount');
+
+  // ---- Elementos: tabla ----
+  const tablaMensajes = document.getElementById('tablaMensajes');
+  const toastArea = document.getElementById('toastArea');
+
+  let TODOS_LOS_MENSAJES = [];
+  let ordenActual = { campo: 'operador', dir: 'asc' };
+
+  function toast(msg, type = 'success') {
+    const colors = { success: '#17A673', danger: '#E24C4B', warning: '#B8790A', info: '#00B4D8' };
+    const t = document.createElement('div');
+    t.style.cssText = `background:#fff;border-left:4px solid ${colors[type]||colors.info};padding:12px 16px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.1);margin-bottom:8px;font-size:.85rem;`;
+    t.textContent = msg;
+    toastArea.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
+  }
+
+  // ---- Modal open/close ----
+  function abrirModal() {
+    modalEl.classList.add('open');
+  }
+  function cerrarModal() {
+    modalEl.classList.remove('open');
+    resetForm();
+  }
+  btnNuevoMensaje.addEventListener('click', abrirModal);
+  btnCerrarModal.addEventListener('click', cerrarModal);
+  btnCancelar.addEventListener('click', cerrarModal);
+  modalEl.addEventListener('click', (e) => { if (e.target === modalEl) cerrarModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modalEl.classList.contains('open')) cerrarModal(); });
+
+  // ---- Cargar select de operador (form) + poblar filtros ----
+  function poblarSelect(select, valores, placeholder) {
+    const actual = select.value;
+    select.innerHTML = `<option value="">${placeholder}</option>` +
+      valores.map(v => `<option value="${v}">${v}</option>`).join('');
+    if (valores.includes(actual)) select.value = actual;
+  }
+
+  async function cargarOperadores() {
+    try {
+      const resp = await fetch('/api/sms/operadores');
+      const data = await resp.json();
+      if (data.success) {
+        const operadoresBase = data.items;
+        const todos = [...new Set([...operadoresBase, ...TODOS_LOS_MENSAJES.map(i => i.operador)])]
+          .filter(Boolean).sort();
+        msgOperadorEl.innerHTML = '<option value="">-- Selecciona --</option>' +
+          todos.map(op => `<option value="${op}">${op}</option>`).join('') +
+          '<option value="__otro__">+ Nuevo operador...</option>';
+      }
+    } catch(e) { console.log(e); }
+  }
+
+  msgOperadorEl.addEventListener('change', function() {
+    if (this.value === '__otro__') {
+      const nuevo = prompt('Nombre del nuevo operador:');
+      if (nuevo && nuevo.trim()) {
+        const opt = document.createElement('option');
+        opt.value = nuevo.trim();
+        opt.textContent = nuevo.trim();
+        opt.selected = true;
+        this.insertBefore(opt, this.lastChild);
+      } else {
+        this.value = '';
+      }
+    }
+  });
+
+  // ---- Filtros: poblar dinámicamente según datos cargados ----
+  function actualizarOpcionesFiltro() {
+    const operadores = [...new Set(TODOS_LOS_MENSAJES.map(i => i.operador).filter(Boolean))].sort();
+    const tipos = [...new Set(TODOS_LOS_MENSAJES.map(i => i.tipo).filter(Boolean))].sort();
+    poblarSelect(fOperador, operadores, 'Todos');
+    poblarSelect(fTipo, tipos, 'Todas');
+  }
+
+  function obtenerMensajesFiltrados() {
+    const opFiltro = fOperador.value;
+    const tipoFiltro = fTipo.value;
+    const estadoFiltro = fEstado.value;
+    const busqueda = fBusqueda.value.trim().toLowerCase();
+
+    let items = TODOS_LOS_MENSAJES.filter(m => {
+      if (opFiltro && m.operador !== opFiltro) return false;
+      if (tipoFiltro && m.tipo !== tipoFiltro) return false;
+      if (estadoFiltro !== '' && String(m.estado) !== estadoFiltro) return false;
+      if (busqueda && !(m.mensaje||'').toLowerCase().includes(busqueda)) return false;
+      return true;
+    });
+
+    const { campo, dir } = ordenActual;
+    items.sort((a, b) => {
+      let va = a[campo], vb = b[campo];
+      if (campo === 'id' || campo === 'estado') { va = Number(va); vb = Number(vb); }
+      else { va = (va||'').toString().toLowerCase(); vb = (vb||'').toString().toLowerCase(); }
+      if (va < vb) return dir === 'asc' ? -1 : 1;
+      if (va > vb) return dir === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return items;
+  }
+
+  function actualizarIndicadoresOrden() {
+    document.querySelectorAll('th.sortable').forEach(th => {
+      const icon = th.querySelector('.sort-icon');
+      if (th.dataset.sort === ordenActual.campo) {
+        th.classList.add('sort-active');
+        icon.className = ordenActual.dir === 'asc' ? 'fas fa-sort-up sort-icon' : 'fas fa-sort-down sort-icon';
+      } else {
+        th.classList.remove('sort-active');
+        icon.className = 'fas fa-sort sort-icon';
+      }
+    });
+  }
+
+  document.querySelectorAll('th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const campo = th.dataset.sort;
+      if (ordenActual.campo === campo) {
+        ordenActual.dir = ordenActual.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        ordenActual = { campo, dir: 'asc' };
+      }
+      actualizarIndicadoresOrden();
+      renderTabla();
+    });
+  });
+
+  [fOperador, fTipo, fEstado].forEach(el => el.addEventListener('change', renderTabla));
+  fBusqueda.addEventListener('input', renderTabla);
+  btnLimpiarFiltros.addEventListener('click', () => {
+    fOperador.value = '';
+    fTipo.value = '';
+    fEstado.value = '';
+    fBusqueda.value = '';
+    renderTabla();
+  });
+
+  function renderTabla() {
+    const items = obtenerMensajesFiltrados();
+    resultadosCount.textContent = `${items.length} de ${TODOS_LOS_MENSAJES.length} mensajes`;
+
+    if (!items.length) {
+      tablaMensajes.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay mensajes que coincidan con los filtros</td></tr>';
+      return;
+    }
+
+    let html = '';
+    items.forEach(m => {
+      const estadoBadge = m.estado == 1
+        ? '<span class="badge badge-activo">Activo</span>'
+        : '<span class="badge badge-inactivo">Inactivo</span>';
+      html += `
+        <tr>
+          <td>${m.id}</td>
+          <td><strong>${m.operador||'—'}</strong></td>
+          <td>${m.tipo||'—'}</td>
+          <td class="mensaje-preview" title="${(m.mensaje||'').replace(/"/g,'&quot;')}">${(m.mensaje||'').substring(0,60)}${(m.mensaje||'').length>60?'...':''}</td>
+          <td>${estadoBadge}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary editar-btn" data-id="${m.id}"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-sm btn-outline-warning toggle-btn" data-id="${m.id}" data-estado="${m.estado}"><i class="fas fa-power-off"></i></button>
+            <button class="btn btn-sm btn-outline-danger eliminar-btn" data-id="${m.id}"><i class="fas fa-trash"></i></button>
+          </td>
+        </tr>`;
+    });
+    tablaMensajes.innerHTML = html;
+
+    document.querySelectorAll('.editar-btn').forEach(btn => {
+      btn.addEventListener('click', () => editarMensaje(btn.dataset.id));
+    });
+    document.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => toggleMensaje(btn.dataset.id));
+    });
+    document.querySelectorAll('.eliminar-btn').forEach(btn => {
+      btn.addEventListener('click', () => eliminarMensaje(btn.dataset.id));
+    });
+  }
+
+  async function cargarMensajes() {
+    try {
+      const resp = await fetch('/api/sms/mensajes');
+      const data = await resp.json();
+      if (!data.success) return;
+      TODOS_LOS_MENSAJES = data.items;
+      actualizarOpcionesFiltro();
+      actualizarIndicadoresOrden();
+      renderTabla();
+    } catch(e) { console.log(e); }
+  }
+
+  function editarMensaje(id) {
+    const m = TODOS_LOS_MENSAJES.find(i => i.id == id);
+    if (!m) return;
+    mensajeIdEl.value = m.id;
+    msgOperadorEl.value = m.operador || '';
+    msgTipoEl.value = m.tipo || '';
+    msgMensajeEl.value = m.mensaje || '';
+    msgEstadoEl.value = m.estado;
+    formTitulo.textContent = 'Editar Mensaje';
+    btnGuardar.innerHTML = '<i class="fas fa-save"></i> Actualizar';
+    abrirModal();
+  }
+
+  function resetForm() {
+    mensajeIdEl.value = '';
+    msgOperadorEl.value = '';
+    msgTipoEl.value = '';
+    msgMensajeEl.value = '';
+    msgEstadoEl.value = '1';
+    formTitulo.textContent = 'Nuevo Mensaje';
+    btnGuardar.innerHTML = '<i class="fas fa-save"></i> Guardar';
+  }
+
+  btnGuardar.addEventListener('click', async () => {
+    const operador = msgOperadorEl.value.trim();
+    const mensaje = msgMensajeEl.value.trim();
+    const tipo = msgTipoEl.value.trim();
+    const estado = parseInt(msgEstadoEl.value);
+    const id = mensajeIdEl.value;
+
+    if (!operador || !mensaje) {
+      toast('Operador y mensaje son obligatorios', 'warning');
+      return;
+    }
+
+    const payload = { operador, mensaje, tipo, estado };
+    const url = id ? `/api/sms/mensajes/${id}` : '/api/sms/mensajes';
+    const method = id ? 'PUT' : 'POST';
+
+    try {
+      const resp = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await resp.json();
+      if (data.success) {
+        toast(id ? 'Mensaje actualizado' : 'Mensaje creado');
+        cerrarModal();
+        cargarMensajes();
+        cargarOperadores();
+      } else {
+        toast(data.message || 'Error', 'danger');
+      }
+    } catch(e) {
+      toast('Error de conexión', 'danger');
+    }
+  });
+
+  async function toggleMensaje(id) {
+    try {
+      const resp = await fetch(`/api/sms/mensajes/${id}/toggle`, { method: 'POST' });
+      const data = await resp.json();
+      if (data.success) {
+        toast(data.message);
+        cargarMensajes();
+      }
+    } catch(e) { toast('Error', 'danger'); }
+  }
+
+  async function eliminarMensaje(id) {
+    if (!confirm('¿Eliminar este mensaje permanentemente?')) return;
+    try {
+      const resp = await fetch(`/api/sms/mensajes/${id}`, { method: 'DELETE' });
+      const data = await resp.json();
+      if (data.success) {
+        toast('Mensaje eliminado');
+        cargarMensajes();
+        cargarOperadores();
+      }
+    } catch(e) { toast('Error', 'danger'); }
+  }
+
+  // Iniciar
+  cargarMensajes().then(cargarOperadores);
+})();
+</script>
+{% endblock %}
