@@ -3,25 +3,77 @@
 {% block title %}Configuración de Mensajes{% endblock %}
 
 {% block page_title %}
-  <h1><i class="fas fa-envelope"></i> Configuración de Mensajes</h1>
+  <div class="d-flex align-items-center gap-2 mb-1">
+    <h1 class="h3 font-weight-bold mb-0 text-dark">Configuración de Mensajes</h1>
+  </div>
   <small class="text-muted">Gestión de plantillas SMS por operador</small>
 {% endblock %}
 
 {% block breadcrumb %}
-<li class="breadcrumb-item"><a href="/">Inicio</a></li>
+<li class="breadcrumb-item"><a href="/" class="text-decoration-none">Inicio</a></li>
 <li class="breadcrumb-item active">Mensajes</li>
 {% endblock %}
 
 {% block extra_css %}
 <style>
-  .badge-activo { background: #17A673; color: #fff; }
-  .badge-inactivo { background: #E24C4B; color: #fff; }
+  /* ---- Variables de Color Modernas ---- */
+  :root {
+    --primary-color: #4f46e5;
+    --primary-hover: #4338ca;
+    --bg-light: #f8fafc;
+    --border-color: #e2e8f0;
+    --text-muted: #64748b;
+  }
+
+  /* ---- Badges "Soft" ---- */
+  .badge-activo { 
+    background-color: #ecfdf5; 
+    color: #047857; 
+    border: 1px solid #a7f3d0;
+    font-weight: 600;
+    padding: 0.35em 0.75em;
+    border-radius: 50px;
+    font-size: 0.75rem;
+  }
+  .badge-inactivo { 
+    background-color: #fef2f2; 
+    color: #b91c1c; 
+    border: 1px solid #fecaca;
+    font-weight: 600;
+    padding: 0.35em 0.75em;
+    border-radius: 50px;
+    font-size: 0.75rem;
+  }
 
   .mensaje-preview {
-    max-width: 340px;
+    max-width: 320px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: #334155;
+  }
+
+  /* ---- Cards ---- */
+  .card-modern {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+    margin-bottom: 1.25rem;
+  }
+
+  /* ---- Inputs & Selects ---- */
+  .form-control, .form-control-sm {
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: #ffffff;
+    color: #1e293b;
+    transition: all 0.2s ease;
+  }
+  .form-control:focus, .form-control-sm:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    outline: none;
   }
 
   /* ---- Filter bar ---- */
@@ -38,86 +90,139 @@
   .filtros-bar .filtro-grupo label {
     font-size: .72rem;
     text-transform: uppercase;
-    letter-spacing: .04em;
-    color: #8a94a6;
-    margin-bottom: .25rem;
-    font-weight: 600;
+    letter-spacing: .05em;
+    color: var(--text-muted);
+    margin-bottom: .4rem;
+    font-weight: 700;
   }
-  .filtros-bar .filtro-limpiar {
-    flex: 0 0 auto;
+
+  /* ---- Buttons ---- */
+  .btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+  .btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  .btn-primary:hover {
+    background-color: var(--primary-hover);
+    border-color: var(--primary-hover);
+    transform: translateY(-1px);
+  }
+  .btn-outline-secondary {
+    border-color: var(--border-color);
+    color: #475569;
+  }
+  .btn-outline-secondary:hover {
+    background-color: #f1f5f9;
+    color: #0f172a;
+    border-color: #cbd5e1;
   }
 
   /* ---- Sortable table headers ---- */
+  .table {
+    margin-bottom: 0;
+  }
+  .table th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.85rem 1rem;
+    vertical-align: middle;
+  }
+  .table td {
+    padding: 0.85rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+  }
   th.sortable {
     cursor: pointer;
     user-select: none;
     white-space: nowrap;
+    transition: background-color 0.2s;
+  }
+  th.sortable:hover {
+    background-color: #f1f5f9;
   }
   th.sortable .sort-icon {
     margin-left: 4px;
-    opacity: .35;
+    opacity: .3;
     font-size: .75em;
+    transition: opacity 0.2s;
   }
   th.sortable.sort-active .sort-icon {
     opacity: 1;
+    color: var(--primary-color);
   }
 
-  .resultados-count {
-    font-size: .8rem;
-    color: #8a94a6;
-  }
-
-  /* ---- Modal ---- */
+  /* ---- Modal Moderno ---- */
   .modal-backdrop-custom {
     position: fixed;
     inset: 0;
-    background: rgba(20, 24, 34, .55);
+    background: rgba(15, 23, 42, 0.45);
     z-index: 1050;
     display: none;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
-    padding: 4vh 1rem;
-    overflow-y: auto;
+    padding: 1.5rem;
+    backdrop-filter: blur(8px);
   }
   .modal-backdrop-custom.open {
     display: flex;
   }
   .modal-custom-panel {
-    background: #fff;
-    border-radius: 10px;
+    background: #ffffff;
+    border-radius: 16px;
     width: 100%;
     max-width: 520px;
-    box-shadow: 0 12px 40px rgba(0,0,0,.25);
-    animation: modalIn .15s ease-out;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    animation: modalPop .2s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 1px solid rgba(255,255,255,0.8);
+    overflow: hidden;
   }
-  @keyframes modalIn {
-    from { opacity: 0; transform: translateY(-8px); }
-    to { opacity: 1; transform: translateY(0); }
+  @keyframes modalPop {
+    from { opacity: 0; transform: scale(0.96) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
   }
   .modal-custom-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid #eef0f4;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
   }
   .modal-custom-header h3 {
     margin: 0;
-    font-size: 1.05rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #0f172a;
   }
   .modal-custom-close {
     background: none;
     border: none;
-    font-size: 1.1rem;
-    color: #8a94a6;
+    font-size: 1.25rem;
+    color: var(--text-muted);
     cursor: pointer;
+    border-radius: 6px;
+    padding: 2px 8px;
+    transition: all 0.2s;
+  }
+  .modal-custom-close:hover {
+    background-color: #f1f5f9;
+    color: #0f172a;
   }
   .modal-custom-body {
-    padding: 1.25rem;
+    padding: 1.5rem;
   }
   .modal-custom-footer {
-    padding: 1rem 1.25rem;
-    border-top: 1px solid #eef0f4;
+    padding: 1rem 1.5rem;
+    background-color: #f8fafc;
+    border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: flex-end;
     gap: .5rem;
@@ -128,71 +233,69 @@
 {% block content %}
 <div class="container-fluid">
 
-  <!-- Toast -->
-  <div id="toastArea" style="position:fixed;top:1rem;right:1rem;z-index:9999;"></div>
+  <!-- Toast Container -->
+  <div id="toastArea" style="position:fixed;top:1rem;right:1rem;z-index:9999;display:flex;flex-direction:column;gap:0.5rem;"></div>
 
   <!-- Filtros -->
-  <div class="card">
-    <div class="card-body">
-      <div class="filtros-bar">
-        <div class="filtro-grupo">
-          <label for="fOperador">Operador</label>
-          <select id="fOperador" class="form-control form-control-sm">
-            <option value="">Todos</option>
-          </select>
-        </div>
-        <div class="filtro-grupo">
-          <label for="fTipo">Intensidad / Tipo</label>
-          <select id="fTipo" class="form-control form-control-sm">
-            <option value="">Todas</option>
-          </select>
-        </div>
-        <div class="filtro-grupo">
-          <label for="fEstado">Estado</label>
-          <select id="fEstado" class="form-control form-control-sm">
-            <option value="">Todos</option>
-            <option value="1">Activo</option>
-            <option value="0">Inactivo</option>
-          </select>
-        </div>
-        <div class="filtro-grupo" style="flex:2 1 220px;">
-          <label for="fBusqueda">Buscar en el mensaje</label>
-          <input type="text" id="fBusqueda" class="form-control form-control-sm" placeholder="Texto dentro de la plantilla...">
-        </div>
-        <div class="filtro-limpiar">
-          <button id="btnLimpiarFiltros" class="btn btn-sm btn-outline-secondary">
-            <i class="fas fa-eraser"></i> Limpiar
-          </button>
-        </div>
+  <div class="card-modern p-3">
+    <div class="filtros-bar">
+      <div class="filtro-grupo">
+        <label for="fOperador">Operador</label>
+        <select id="fOperador" class="form-control form-control-sm">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div class="filtro-grupo">
+        <label for="fTipo">Intensidad / Tipo</label>
+        <select id="fTipo" class="form-control form-control-sm">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="filtro-grupo">
+        <label for="fEstado">Estado</label>
+        <select id="fEstado" class="form-control form-control-sm">
+          <option value="">Todos</option>
+          <option value="1">Activo</option>
+          <option value="0">Inactivo</option>
+        </select>
+      </div>
+      <div class="filtro-grupo" style="flex:2 1 220px;">
+        <label for="fBusqueda">Buscar en el mensaje</label>
+        <input type="text" id="fBusqueda" class="form-control form-control-sm" placeholder="Texto dentro de la plantilla...">
+      </div>
+      <div class="filtro-limpiar">
+        <button id="btnLimpiarFiltros" class="btn btn-sm btn-outline-secondary" title="Limpiar filtros">
+          <i class="fas fa-eraser"></i> Limpiar
+        </button>
       </div>
     </div>
   </div>
 
   <!-- Tabla -->
-  <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-      <h3 class="card-title mb-0">Mensajes Configurados</h3>
+  <div class="card-modern">
+    <div class="p-3 d-flex justify-content-between align-items-center border-bottom">
+      <h3 class="h6 font-weight-bold mb-0 text-dark">Mensajes Configurados</h3>
       <div class="d-flex align-items-center" style="gap:1rem;">
-        <span class="resultados-count" id="resultadosCount"></span>
+        <span class="text-muted small" id="resultadosCount"></span>
         <button id="btnNuevoMensaje" class="btn btn-primary btn-sm">
-          <i class="fas fa-plus"></i> Nuevo Mensaje
+          <i class="fas fa-plus mr-1"></i> Nuevo Mensaje
         </button>
       </div>
     </div>
-    <div class="card-body table-responsive p-0" style="max-height:560px;overflow-y:auto;">
-      <table class="table table-hover table-striped mb-0">
-        <thead>
+    <div class="table-responsive" style="max-height:560px;overflow-y:auto;">
+      <table class="table table-hover mb-0">
+        <thead class="bg-light sticky-top">
           <tr>
             <th class="sortable" data-sort="id">ID <i class="fas fa-sort sort-icon"></i></th>
             <th class="sortable" data-sort="operador">Operador <i class="fas fa-sort sort-icon"></i></th>
             <th class="sortable" data-sort="tipo">Tipo <i class="fas fa-sort sort-icon"></i></th>
             <th>Mensaje</th>
             <th class="sortable" data-sort="estado">Estado <i class="fas fa-sort sort-icon"></i></th>
-            <th>Acciones</th>
+            <th class="text-right">Acciones</th>
           </tr>
         </thead>
         <tbody id="tablaMensajes">
-          <tr><td colspan="6" class="text-center">Cargando...</td></tr>
+          <tr><td colspan="6" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin mr-2"></i> Cargando datos...</td></tr>
         </tbody>
       </table>
     </div>
@@ -200,35 +303,41 @@
 </div>
 
 <!-- Modal de mensaje -->
-<div class="modal-backdrop-custom" id="modalMensaje">
+<div class="modal-backdrop-custom" id="modalMensaje" role="dialog" aria-modal="true" aria-labelledby="formTitulo">
   <div class="modal-custom-panel">
     <div class="modal-custom-header">
       <h3 id="formTitulo">Nuevo Mensaje</h3>
-      <button class="modal-custom-close" id="btnCerrarModal"><i class="fas fa-times"></i></button>
+      <button class="modal-custom-close" id="btnCerrarModal" aria-label="Cerrar"><i class="fas fa-times"></i></button>
     </div>
     <div class="modal-custom-body">
       <input type="hidden" id="mensajeId" value="">
 
-      <div class="form-group">
-        <label for="msgOperador">Operador <span class="text-danger">*</span></label>
+      <div class="form-group mb-3">
+        <label for="msgOperador" class="form-label font-weight-bold small">Operador <span class="text-danger">*</span></label>
         <select id="msgOperador" class="form-control">
           <option value="">-- Selecciona --</option>
         </select>
         <small class="text-muted">También puedes escribir uno nuevo</small>
       </div>
 
-      <div class="form-group">
-        <label for="msgTipo">Tipo / Intensidad</label>
-        <input type="text" id="msgTipo" class="form-control" placeholder="Ej: baja, media, alta">
+      <div class="form-group mb-3">
+        <label for="msgTipo" class="form-label font-weight-bold small">Tipo</label>
+        <select id="msgTipo" class="form-control">
+            <option value="">-- Selecciona --</option>
+            <option value="baja">Baja</option>
+            <option value="media">Media</option>
+            <option value="media-alta">Media-Alta</option>
+            <option value="alta">Alta</option>
+        </select>
       </div>
 
-      <div class="form-group">
-        <label for="msgMensaje">Mensaje <span class="text-danger">*</span></label>
-        <textarea id="msgMensaje" class="form-control" rows="5" placeholder="Plantilla del SMS con {{variables}}"></textarea>
+      <div class="form-group mb-3">
+        <label for="msgMensaje" class="form-label font-weight-bold small">Mensaje <span class="text-danger">*</span></label>
+        <textarea id="msgMensaje" class="form-control" rows="4" placeholder="Plantilla del SMS con {{variables}}"></textarea>
       </div>
 
       <div class="form-group mb-0">
-        <label for="msgEstado">Estado</label>
+        <label for="msgEstado" class="form-label font-weight-bold small">Estado</label>
         <select id="msgEstado" class="form-control">
           <option value="1">Activo</option>
           <option value="0">Inactivo</option>
@@ -237,7 +346,7 @@
     </div>
     <div class="modal-custom-footer">
       <button id="btnCancelar" class="btn btn-outline-secondary">Cancelar</button>
-      <button id="btnGuardar" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+      <button id="btnGuardar" class="btn btn-primary"><i class="fas fa-save mr-1"></i> Guardar</button>
     </div>
   </div>
 </div>
@@ -276,50 +385,79 @@
   let TODOS_LOS_MENSAJES = [];
   let ordenActual = { campo: 'operador', dir: 'asc' };
 
+  // ---- Utilidad de Escape HTML (Seguridad XSS) ----
+  const escapeHTML = str => {
+    if (!str) return '';
+    return str.toString().replace(/[&<>'"]/g, 
+      tag => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          "'": '&#39;',
+          '"': '&quot;'
+      }[tag])
+    );
+  };
+
+  // ---- Notificaciones (Toast) ----
   function toast(msg, type = 'success') {
-    const colors = { success: '#17A673', danger: '#E24C4B', warning: '#B8790A', info: '#00B4D8' };
+    const colors = { success: '#047857', danger: '#b91c1c', warning: '#b45309', info: '#0284c7' };
+    const borders = { success: '#a7f3d0', danger: '#fecaca', warning: '#fde68a', info: '#bae6fd' };
+    const bg = { success: '#ecfdf5', danger: '#fef2f2', warning: '#fffbeb', info: '#f0f9ff' };
+    
     const t = document.createElement('div');
-    t.style.cssText = `background:#fff;border-left:4px solid ${colors[type]||colors.info};padding:12px 16px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.1);margin-bottom:8px;font-size:.85rem;`;
+    t.style.cssText = `background:${bg[type]||bg.info}; border:1px solid ${borders[type]||borders.info}; color:${colors[type]||colors.info}; padding:12px 16px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,.05); font-size:.85rem; font-weight:600; animation: modalPop .2s ease-out;`;
     t.textContent = msg;
     toastArea.appendChild(t);
-    setTimeout(() => t.remove(), 4000);
+    setTimeout(() => {
+        t.style.opacity = '0';
+        t.style.transition = 'opacity 0.3s';
+        setTimeout(() => t.remove(), 300);
+    }, 4000);
   }
 
   // ---- Modal open/close ----
   function abrirModal() {
     modalEl.classList.add('open');
+    msgOperadorEl.focus();
   }
   function cerrarModal() {
     modalEl.classList.remove('open');
     resetForm();
   }
+  
   btnNuevoMensaje.addEventListener('click', abrirModal);
   btnCerrarModal.addEventListener('click', cerrarModal);
   btnCancelar.addEventListener('click', cerrarModal);
   modalEl.addEventListener('click', (e) => { if (e.target === modalEl) cerrarModal(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modalEl.classList.contains('open')) cerrarModal(); });
 
-  // ---- Cargar select de operador (form) + poblar filtros ----
+  // ---- Cargar select de operador + filtros ----
   function poblarSelect(select, valores, placeholder) {
     const actual = select.value;
     select.innerHTML = `<option value="">${placeholder}</option>` +
-      valores.map(v => `<option value="${v}">${v}</option>`).join('');
+      valores.map(v => `<option value="${escapeHTML(v)}">${escapeHTML(v)}</option>`).join('');
     if (valores.includes(actual)) select.value = actual;
   }
 
   async function cargarOperadores() {
     try {
       const resp = await fetch('/api/sms/operadores');
+      if (!resp.ok) throw new Error('Error en la red');
       const data = await resp.json();
+      
       if (data.success) {
         const operadoresBase = data.items;
         const todos = [...new Set([...operadoresBase, ...TODOS_LOS_MENSAJES.map(i => i.operador)])]
-          .filter(Boolean).sort();
+          .filter(Boolean).sort((a,b) => a.localeCompare(b));
+        
         msgOperadorEl.innerHTML = '<option value="">-- Selecciona --</option>' +
-          todos.map(op => `<option value="${op}">${op}</option>`).join('') +
+          todos.map(op => `<option value="${escapeHTML(op)}">${escapeHTML(op)}</option>`).join('') +
           '<option value="__otro__">+ Nuevo operador...</option>';
       }
-    } catch(e) { console.log(e); }
+    } catch(e) {
+        console.error('Error al cargar operadores:', e);
+    }
   }
 
   msgOperadorEl.addEventListener('change', function() {
@@ -327,8 +465,9 @@
       const nuevo = prompt('Nombre del nuevo operador:');
       if (nuevo && nuevo.trim()) {
         const opt = document.createElement('option');
-        opt.value = nuevo.trim();
-        opt.textContent = nuevo.trim();
+        const nuevoSaneado = escapeHTML(nuevo.trim());
+        opt.value = nuevoSaneado;
+        opt.textContent = nuevoSaneado;
         opt.selected = true;
         this.insertBefore(opt, this.lastChild);
       } else {
@@ -337,10 +476,10 @@
     }
   });
 
-  // ---- Filtros: poblar dinámicamente según datos cargados ----
+  // ---- Filtros ----
   function actualizarOpcionesFiltro() {
-    const operadores = [...new Set(TODOS_LOS_MENSAJES.map(i => i.operador).filter(Boolean))].sort();
-    const tipos = [...new Set(TODOS_LOS_MENSAJES.map(i => i.tipo).filter(Boolean))].sort();
+    const operadores = [...new Set(TODOS_LOS_MENSAJES.map(i => i.operador).filter(Boolean))].sort((a,b) => a.localeCompare(b));
+    const tipos = [...new Set(TODOS_LOS_MENSAJES.map(i => i.tipo).filter(Boolean))].sort((a,b) => a.localeCompare(b));
     poblarSelect(fOperador, operadores, 'Todos');
     poblarSelect(fTipo, tipos, 'Todas');
   }
@@ -362,11 +501,15 @@
     const { campo, dir } = ordenActual;
     items.sort((a, b) => {
       let va = a[campo], vb = b[campo];
-      if (campo === 'id' || campo === 'estado') { va = Number(va); vb = Number(vb); }
-      else { va = (va||'').toString().toLowerCase(); vb = (vb||'').toString().toLowerCase(); }
-      if (va < vb) return dir === 'asc' ? -1 : 1;
-      if (va > vb) return dir === 'asc' ? 1 : -1;
-      return 0;
+      if (campo === 'id' || campo === 'estado') { 
+          va = Number(va) || 0; 
+          vb = Number(vb) || 0; 
+          return dir === 'asc' ? va - vb : vb - va;
+      } else { 
+          va = (va||'').toString(); 
+          vb = (vb||'').toString(); 
+          return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+      }
     });
 
     return items;
@@ -413,7 +556,7 @@
     resultadosCount.textContent = `${items.length} de ${TODOS_LOS_MENSAJES.length} mensajes`;
 
     if (!items.length) {
-      tablaMensajes.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay mensajes que coincidan con los filtros</td></tr>';
+      tablaMensajes.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5"><i class="fas fa-inbox fa-2x mb-2 d-block text-black-50"></i> No se encontraron resultados</td></tr>';
       return;
     }
 
@@ -422,17 +565,22 @@
       const estadoBadge = m.estado == 1
         ? '<span class="badge badge-activo">Activo</span>'
         : '<span class="badge badge-inactivo">Inactivo</span>';
+        
+      const mensajeSeguro = escapeHTML(m.mensaje);
+      const operadorSeguro = escapeHTML(m.operador);
+      const tipoSeguro = escapeHTML(m.tipo);
+      
       html += `
         <tr>
-          <td>${m.id}</td>
-          <td><strong>${m.operador||'—'}</strong></td>
-          <td>${m.tipo||'—'}</td>
-          <td class="mensaje-preview" title="${(m.mensaje||'').replace(/"/g,'&quot;')}">${(m.mensaje||'').substring(0,60)}${(m.mensaje||'').length>60?'...':''}</td>
+          <td class="text-muted small">${m.id}</td>
+          <td><strong class="text-dark">${operadorSeguro||'—'}</strong></td>
+          <td><span class="text-capitalize small font-weight-bold text-secondary">${tipoSeguro||'—'}</span></td>
+          <td class="mensaje-preview" title="${mensajeSeguro}">${mensajeSeguro.substring(0,60)}${mensajeSeguro.length>60?'...':''}</td>
           <td>${estadoBadge}</td>
-          <td>
-            <button class="btn btn-sm btn-outline-primary editar-btn" data-id="${m.id}"><i class="fas fa-edit"></i></button>
-            <button class="btn btn-sm btn-outline-warning toggle-btn" data-id="${m.id}" data-estado="${m.estado}"><i class="fas fa-power-off"></i></button>
-            <button class="btn btn-sm btn-outline-danger eliminar-btn" data-id="${m.id}"><i class="fas fa-trash"></i></button>
+          <td class="text-right">
+            <button class="btn btn-sm btn-outline-secondary editar-btn border-0 mr-1" data-id="${m.id}" title="Editar"><i class="fas fa-pen"></i></button>
+            <button class="btn btn-sm btn-outline-secondary toggle-btn border-0 mr-1" data-id="${m.id}" title="Cambiar estado"><i class="fas fa-power-off"></i></button>
+            <button class="btn btn-sm btn-outline-danger eliminar-btn border-0" data-id="${m.id}" title="Eliminar"><i class="fas fa-trash-alt"></i></button>
           </td>
         </tr>`;
     });
@@ -452,13 +600,23 @@
   async function cargarMensajes() {
     try {
       const resp = await fetch('/api/sms/mensajes');
+      if (!resp.ok) throw new Error('Falló la conexión');
       const data = await resp.json();
-      if (!data.success) return;
+      
+      if (!data.success) {
+          toast(data.message || 'Error al cargar datos', 'danger');
+          return;
+      }
+      
       TODOS_LOS_MENSAJES = data.items;
       actualizarOpcionesFiltro();
       actualizarIndicadoresOrden();
       renderTabla();
-    } catch(e) { console.log(e); }
+    } catch(e) { 
+        console.error(e);
+        tablaMensajes.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Error al conectar con el servidor.</td></tr>';
+        toast('Error al cargar datos', 'danger'); 
+    }
   }
 
   function editarMensaje(id) {
@@ -470,7 +628,7 @@
     msgMensajeEl.value = m.mensaje || '';
     msgEstadoEl.value = m.estado;
     formTitulo.textContent = 'Editar Mensaje';
-    btnGuardar.innerHTML = '<i class="fas fa-save"></i> Actualizar';
+    btnGuardar.innerHTML = '<i class="fas fa-save mr-1"></i> Actualizar';
     abrirModal();
   }
 
@@ -481,7 +639,7 @@
     msgMensajeEl.value = '';
     msgEstadoEl.value = '1';
     formTitulo.textContent = 'Nuevo Mensaje';
-    btnGuardar.innerHTML = '<i class="fas fa-save"></i> Guardar';
+    btnGuardar.innerHTML = '<i class="fas fa-save mr-1"></i> Guardar';
   }
 
   btnGuardar.addEventListener('click', async () => {
@@ -496,6 +654,10 @@
       return;
     }
 
+    btnGuardar.disabled = true;
+    const btnTextoOriginal = btnGuardar.innerHTML;
+    btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Guardando...';
+
     const payload = { operador, mensaje, tipo, estado };
     const url = id ? `/api/sms/mensajes/${id}` : '/api/sms/mensajes';
     const method = id ? 'PUT' : 'POST';
@@ -506,6 +668,8 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+      if (!resp.ok) throw new Error('Error de petición');
+      
       const data = await resp.json();
       if (data.success) {
         toast(id ? 'Mensaje actualizado' : 'Mensaje creado');
@@ -513,38 +677,49 @@
         cargarMensajes();
         cargarOperadores();
       } else {
-        toast(data.message || 'Error', 'danger');
+        toast(data.message || 'Error al guardar', 'danger');
       }
     } catch(e) {
-      toast('Error de conexión', 'danger');
+      toast('Error de red o del servidor', 'danger');
+    } finally {
+      btnGuardar.disabled = false;
+      btnGuardar.innerHTML = btnTextoOriginal;
     }
   });
 
   async function toggleMensaje(id) {
     try {
       const resp = await fetch(`/api/sms/mensajes/${id}/toggle`, { method: 'POST' });
+      if (!resp.ok) throw new Error('Fallo');
       const data = await resp.json();
+      
       if (data.success) {
         toast(data.message);
         cargarMensajes();
       }
-    } catch(e) { toast('Error', 'danger'); }
+    } catch(e) { 
+        toast('Error al cambiar de estado', 'danger'); 
+    }
   }
 
   async function eliminarMensaje(id) {
-    if (!confirm('¿Eliminar este mensaje permanentemente?')) return;
+    if (!confirm('¿Estás seguro de eliminar este mensaje?')) return;
     try {
       const resp = await fetch(`/api/sms/mensajes/${id}`, { method: 'DELETE' });
+      if (!resp.ok) throw new Error('Fallo');
       const data = await resp.json();
+      
       if (data.success) {
         toast('Mensaje eliminado');
         cargarMensajes();
         cargarOperadores();
       }
-    } catch(e) { toast('Error', 'danger'); }
+    } catch(e) { 
+        toast('Error al eliminar', 'danger'); 
+    }
   }
 
-  // Iniciar
+  // Inicializar
   cargarMensajes().then(cargarOperadores);
 })();
 </script>

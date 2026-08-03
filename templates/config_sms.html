@@ -509,11 +509,11 @@
         <div class="sms-row" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
           <div class="sms-field">
             <label for="campana">Campaña</label>
-            <input id="campana" class="form-control" placeholder="Nombre de campaña" value="Promoción Julio 2026">
+            <input id="campana" class="form-control" placeholder="Nombre de campaña" value="">
           </div>
           <div class="sms-field">
             <label for="usuario">Responsable</label>
-            <input id="usuario" class="form-control" placeholder="Tu nombre" value="{{ session.get('user', 'admin') }}">
+            <input id="usuario" class="form-control" placeholder="Tu nombre" value="{{ session.get('user', '') }}">
           </div>
         </div>
 
