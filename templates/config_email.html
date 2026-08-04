@@ -5,7 +5,7 @@
 {% block page_title %}
   <div class="d-flex align-items-center">
     <div class="mr-3" style="font-size:2rem; color: #3452E1;">
-      <i class="fas fa-envelope"></i>
+      <i class="fas fa-envelope-open-text"></i>
     </div>
     <div>
       <h1 class="m-0" style="font-weight:700;">Campañas Email</h1>
@@ -23,7 +23,9 @@
 <style>
   :root {
     --em-primary: #3452E1;
+    --em-primary-dark: #2438B0;
     --em-primary-light: #EEF1FD;
+    --em-accent: #7B6EF6;
     --em-success: #17A673;
     --em-success-bg: #E7F8F1;
     --em-danger: #E24C4B;
@@ -36,14 +38,13 @@
     --em-bg: #F5F6FA;
     --em-radius: 16px;
     --em-shadow: 0 8px 30px rgba(31, 41, 102, 0.08);
-    --em-transition: all 0.25s ease;
   }
 
   .content-wrapper { background: var(--em-bg); }
 
   .em-container {
     display: grid;
-    grid-template-columns: 1fr 380px;
+    grid-template-columns: 1fr 420px;
     gap: 24px;
     align-items: start;
   }
@@ -52,8 +53,9 @@
   .em-card {
     background: #ffffff; border: 1px solid var(--em-border);
     border-radius: var(--em-radius); box-shadow: var(--em-shadow);
-    overflow: hidden; transition: var(--em-transition);
+    overflow: hidden; transition: all 0.25s ease;
   }
+  .em-card:hover { box-shadow: 0 12px 40px rgba(31, 41, 102, 0.12); }
   .em-card-body { padding: 24px 26px 26px; }
 
   .em-tabs {
@@ -61,9 +63,9 @@
     border-radius: 10px; padding: 4px; margin-bottom: 22px;
   }
   .em-tabs .tab {
-    flex: 1; padding: 8px 14px; border: none; border-radius: 8px;
-    background: transparent; font-weight: 600; font-size: 0.82rem;
-    color: var(--em-muted); cursor: pointer; transition: var(--em-transition); text-align: center;
+    flex: 1; padding: 10px 16px; border: none; border-radius: 8px;
+    background: transparent; font-weight: 600; font-size: 0.84rem;
+    color: var(--em-muted); cursor: pointer; transition: all 0.25s ease; text-align: center;
   }
   .em-tabs .tab:hover { color: var(--em-text); background: rgba(255,255,255,0.5); }
   .em-tabs .tab.active { background: #ffffff; color: var(--em-primary); box-shadow: 0 2px 8px rgba(31, 41, 102, 0.06); }
@@ -72,42 +74,47 @@
   @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
   .em-field { margin-bottom: 18px; }
-  .em-field label { font-weight: 600; font-size: 0.85rem; color: var(--em-text); margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
-  .em-field label .badge-required { background: var(--em-danger); color: #fff; font-size: 0.6rem; padding: 1px 8px; border-radius: 20px; }
-  .em-help { font-size: 0.76rem; color: var(--em-muted); margin-top: 5px; display: flex; justify-content: space-between; align-items: center; }
+  .em-field label {
+    font-weight: 600; font-size: 0.85rem; color: var(--em-text);
+    margin-bottom: 5px; display: flex; align-items: center; gap: 6px;
+  }
+  .em-field label .badge-required {
+    background: var(--em-danger); color: #fff; font-size: 0.6rem;
+    padding: 1px 8px; border-radius: 20px;
+  }
+  .em-help {
+    font-size: 0.76rem; color: var(--em-muted); margin-top: 5px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
 
   .form-control {
     border: 1.5px solid var(--em-border); border-radius: 10px;
-    font-size: 0.9rem; color: var(--em-text); transition: var(--em-transition);
+    font-size: 0.9rem; color: var(--em-text); transition: all 0.25s ease;
   }
-  .form-control:focus { border-color: var(--em-primary); box-shadow: 0 0 0 4px rgba(52, 82, 225, 0.12); }
+  .form-control:focus {
+    border-color: var(--em-primary);
+    box-shadow: 0 0 0 4px rgba(52, 82, 225, 0.12); outline: none;
+  }
   textarea.textarea-code {
-    min-height: 120px; font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-    font-size: 0.82rem; line-height: 1.6; background: #FBFBFE; tab-size: 2;
+    min-height: 140px; font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.82rem; line-height: 1.6; background: #FBFBFE;
   }
-
-  .em-schedule-row {
-    display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
-    background: #FAFAFD; border: 1.5px dashed var(--em-border);
-    border-radius: 12px; padding: 16px 18px; margin-bottom: 20px;
-  }
-  .em-schedule-row .form-group { margin-bottom: 0; flex: 1; min-width: 180px; }
-  .em-schedule-row .btn-schedule {
-    background: transparent; border: 1.5px solid var(--em-border);
-    border-radius: 10px; padding: 8px 18px; font-weight: 600;
-    font-size: 0.82rem; color: var(--em-muted); cursor: pointer;
+  textarea.textarea-html {
+    min-height: 300px; font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.8rem; line-height: 1.5; background: #FBFBFE;
   }
 
   .em-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
   .btn {
     border-radius: 10px; font-weight: 600; font-size: 0.86rem;
-    padding: 0.55rem 1.2rem; transition: var(--em-transition);
+    padding: 0.55rem 1.2rem; transition: all 0.25s ease;
     border: none; display: inline-flex; align-items: center; gap: 8px;
   }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
   .btn-outline-primary { background: #fff; color: var(--em-primary); border: 1.5px solid var(--em-primary); }
-  .btn-outline-primary:hover { background: var(--em-primary-light); }
-  .btn-success { background: var(--em-success); color: #fff; }
-  .btn-success:disabled { background: #B9C0CC; cursor: not-allowed; }
+  .btn-outline-primary:hover { background: var(--em-primary-light); color: var(--em-primary-dark); }
+  .btn-success { background: var(--em-success); color: #fff; box-shadow: 0 6px 16px rgba(23, 166, 115, 0.28); }
+  .btn-success:disabled { background: #B9C0CC; box-shadow: none; cursor: not-allowed; transform: none; }
   .btn-outline-secondary { background: #fff; color: var(--em-muted); border: 1.5px solid var(--em-border); }
 
   .em-side { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 16px; }
@@ -117,39 +124,50 @@
     border-radius: var(--em-radius); box-shadow: var(--em-shadow); overflow: hidden;
   }
   .em-preview-box .preview-header {
-    background: #1B1F3B; color: #fff; padding: 10px 14px;
-    font-size: 0.75rem; font-weight: 600; display: flex; justify-content: space-between;
+    background: linear-gradient(135deg, #1B1F3B, #262B52); color: #fff;
+    padding: 12px 16px; font-size: 0.8rem; font-weight: 700;
+    display: flex; justify-content: space-between; align-items: center;
   }
   .em-preview-box .preview-body {
-    padding: 14px; max-height: 300px; overflow-y: auto; font-size: 0.82rem;
+    padding: 14px; max-height: 500px; overflow-y: auto; font-size: 0.8rem;
   }
-  .em-preview-box .preview-body .preview-item {
-    border: 1px solid var(--em-border); border-radius: 8px; padding: 10px; margin-bottom: 8px; background: #FAFAFD;
+  .em-preview-item {
+    border: 1px solid var(--em-border); border-radius: 8px;
+    padding: 10px; margin-bottom: 8px; background: #FAFAFD;
   }
-  .em-preview-box .preview-body .preview-item .preview-email { font-weight: 700; color: var(--em-text); }
-  .em-preview-box .preview-body .preview-item .preview-subject { font-size: 0.78rem; color: var(--em-muted); }
-  .em-preview-box .preview-body .preview-item .preview-content { font-size: 0.8rem; margin-top: 4px; white-space: pre-wrap; }
+  .em-preview-item .preview-email { font-weight: 700; color: var(--em-text); font-size: 0.82rem; }
+  .em-preview-item .preview-subject { font-size: 0.76rem; color: var(--em-muted); margin: 2px 0; }
+  .em-preview-item .preview-content {
+    font-size: 0.78rem; margin-top: 4px; white-space: pre-wrap;
+    max-height: 150px; overflow-y: auto; border: 1px solid var(--em-border);
+    border-radius: 4px; padding: 6px; background: #fff;
+  }
 
   .em-stats {
     background: #fff; border: 1px solid var(--em-border);
     border-radius: var(--em-radius); padding: 16px 18px; box-shadow: var(--em-shadow);
   }
-  .em-stats .row { display: flex; justify-content: space-between; font-size: 0.82rem; padding: 5px 0; }
-  .em-stats .row + .row { border-top: 1px dashed var(--em-border); }
-  .em-stats .label { color: var(--em-muted); }
-  .em-stats .value { font-weight: 700; color: var(--em-text); }
+  .em-stats .stat-row { display: flex; justify-content: space-between; font-size: 0.82rem; padding: 6px 0; }
+  .em-stats .stat-row + .stat-row { border-top: 1px dashed var(--em-border); }
+  .em-stats .stat-label { color: var(--em-muted); }
+  .em-stats .stat-value { font-weight: 700; color: var(--em-text); }
 
   .em-result { margin-top: 20px; display: none; }
   .em-result.visible { display: block; animation: fadeIn 0.3s ease; }
 
-  #emToastArea { position: fixed; top: 1.2rem; right: 1.2rem; z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 420px; }
+  #emToastArea {
+    position: fixed; top: 1.2rem; right: 1.2rem; z-index: 9999;
+    display: flex; flex-direction: column; gap: 10px; max-width: 420px;
+  }
   .em-toast {
     background: #fff; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.12);
     padding: 14px 18px; border-left: 5px solid var(--em-primary);
     animation: slideIn 0.3s ease; display: flex; align-items: flex-start; gap: 12px;
+    font-size: 0.85rem;
   }
   .em-toast.success { border-left-color: var(--em-success); }
   .em-toast.danger { border-left-color: var(--em-danger); }
+  .em-toast.warning { border-left-color: var(--em-warning); }
   @keyframes slideIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
 
   .spinner-sm {
@@ -158,6 +176,10 @@
     border-radius: 50%; animation: spin 0.7s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 768px) {
+    .em-card-body { padding: 16px; }
+  }
 </style>
 {% endblock %}
 
@@ -167,6 +189,7 @@
 
 <div class="em-container">
 
+  <!-- PANEL IZQUIERDO -->
   <div class="em-card">
     <div class="em-card-body">
 
@@ -191,23 +214,23 @@
         <!-- ASUNTO -->
         <div class="em-field">
           <label for="asunto">Asunto <span class="badge-required">requerido</span></label>
-          <input type="text" id="asunto" class="form-control" placeholder="Hola {Nombre Cliente}, mira esta oferta...">
+          <input type="text" id="asunto" class="form-control" placeholder="Aviso importante - %Member:CustomField4%">
           <div class="em-help">
-            <span>Puedes usar <code>%Member:CustomFieldX%</code> para personalizar.</span>
+            <span>Usa <code>%Member:CustomFieldX%</code> para personalizar con campos de la API.</span>
           </div>
         </div>
 
         <!-- PLANTILLA HTML -->
         <div class="em-field">
           <label for="plantilla">Contenido HTML <span class="badge-required">requerido</span></label>
-          <textarea id="plantilla" class="form-control textarea-code" rows="15" placeholder="<h1>Hola %Member:CustomField1%</h1>"><h1>Hola %Member:CustomField1%,</h1><p>Tienes un pago pendiente de $%Member:CustomField5%.</p></textarea>
+          <textarea id="plantilla" class="form-control textarea-html" placeholder="<h1>Hola %Member:CustomField1%</h1><p>Tienes un pago pendiente.</p>"></textarea>
           <div class="em-help">
-            <span>Usa <code>%Member:CustomFieldX%</code> para personalizar con campos de la API.</span>
+            <span>Usa <code>%Member:CustomFieldX%</code> para personalizar. Estilos inline recomendados para clientes de correo.</span>
           </div>
         </div>
 
         <!-- CAMPOS ADICIONALES -->
-        <div class="em-row" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px;">
           <div class="em-field">
             <label for="campana">Campaña</label>
             <input id="campana" class="form-control" placeholder="Nombre de campaña">
@@ -238,31 +261,31 @@
           <input id="histFiltroFecha" type="date" class="form-control" style="width:auto;flex:1;min-width:140px;">
           <input id="histFiltroCampana" class="form-control" style="width:auto;flex:1;min-width:140px;" placeholder="Campaña">
           <input id="histFiltroEmail" class="form-control" style="width:auto;flex:1;min-width:140px;" placeholder="Email">
-          <button id="histFiltrarBtn" class="btn btn-outline-primary"><i class="fas fa-search"></i> Filtrar</button>
+          <button id="histFiltrarBtn" class="btn btn-outline-primary btn-sm"><i class="fas fa-search"></i> Filtrar</button>
         </div>
-        <div id="histResult" style="max-height:400px;overflow-y:auto;">
-          <div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Cargando historial...</div>
-        </div>
+        <div id="histResult" style="max-height:400px;overflow-y:auto;"></div>
       </div>
 
     </div>
   </div>
 
-  <!-- COLUMNA DERECHA -->
+  <!-- PANEL DERECHO -->
   <div class="em-side">
+    <!-- ESTADÍSTICAS -->
     <div class="em-stats">
-      <div class="row"><span class="label"><i class="fas fa-users"></i> Total destinatarios</span><span class="value" id="statTotal">—</span></div>
-      <div class="row"><span class="label"><i class="fas fa-check-circle" style="color:var(--em-success);"></i> Emails válidos</span><span class="value" id="statValidos">—</span></div>
-      <div class="row" style="border-top:2px solid var(--em-border);padding-top:8px;margin-top:4px;">
-        <span class="label" style="font-weight:700;">📤 A enviar</span>
-        <span class="value" id="statAEnviar" style="font-size:1.1rem;color:var(--em-primary);">—</span>
+      <div class="stat-row"><span class="stat-label"><i class="fas fa-users"></i> Total destinatarios</span><span class="stat-value" id="statTotal">—</span></div>
+      <div class="stat-row"><span class="stat-label"><i class="fas fa-check-circle" style="color:var(--em-success);"></i> Emails válidos</span><span class="stat-value" id="statValidos">—</span></div>
+      <div class="stat-row" style="border-top:2px solid var(--em-border);padding-top:8px;margin-top:4px;">
+        <span class="stat-label" style="font-weight:700;">📤 A enviar</span>
+        <span class="stat-value" id="statAEnviar" style="font-size:1.1rem;color:var(--em-primary);">—</span>
       </div>
     </div>
 
+    <!-- VISTA PREVIA -->
     <div class="em-preview-box" id="previewBox" style="display:none;">
       <div class="preview-header">
-        <span>📧 Vista previa</span>
-        <span id="previewCount"></span>
+        <span><i class="fas fa-eye"></i> Vista previa</span>
+        <span id="previewCount" style="font-size:0.75rem;opacity:0.8;"></span>
       </div>
       <div class="preview-body" id="previewContent"></div>
     </div>
@@ -317,14 +340,14 @@
     };
   }
 
-  function showToast(message, type = 'info', duration = 6000) {
+  function showToast(msg, type = 'info', dur = 5000) {
     const area = document.getElementById('emToastArea');
-    const iconMap = { success: 'fa-check-circle', danger: 'fa-exclamation-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
-    const toast = document.createElement('div');
-    toast.className = `em-toast ${type}`;
-    toast.innerHTML = `<span class="icon"><i class="fas ${iconMap[type]}"></i></span><div class="content">${message}</div>`;
-    area.appendChild(toast);
-    setTimeout(() => { if (toast.parentElement) toast.remove(); }, duration);
+    const icons = { success: 'fa-check-circle', danger: 'fa-exclamation-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+    const t = document.createElement('div');
+    t.className = `em-toast ${type}`;
+    t.innerHTML = `<span><i class="fas ${icons[type]}"></i></span><span>${msg}</span>`;
+    area.appendChild(t);
+    setTimeout(() => t.remove(), dur);
   }
 
   function showResult(html) {
@@ -342,125 +365,106 @@
 
   function setLoading(btn, loading) {
     if (loading) {
-      btn._originalHtml = btn.innerHTML;
+      btn._orig = btn.innerHTML;
       btn.disabled = true;
-      btn.innerHTML = `<span class="spinner-sm"></span> Procesando...`;
+      btn.innerHTML = '<span class="spinner-sm"></span> Procesando...';
     } else {
       btn.disabled = false;
-      if (btn._originalHtml) btn.innerHTML = btn._originalHtml;
+      if (btn._orig) btn.innerHTML = btn._orig;
     }
   }
 
-  async function callAPI(endpoint, payload, method = 'POST') {
+  async function callAPI(url, payload, method = 'POST') {
     const opts = { method, headers: { 'Content-Type': 'application/json' } };
     if (method === 'POST') opts.body = JSON.stringify(payload);
-    const response = await fetch(endpoint, opts);
+    const resp = await fetch(url, opts);
     let data;
-    try { data = await response.json(); } catch (e) { data = { message: 'Error al parsear respuesta' }; }
-    if (!response.ok || (data && data.success === false)) throw new Error(data.message || data.error || `Error HTTP ${response.status}`);
+    try { data = await resp.json(); } catch (e) { data = { message: 'Error' }; }
+    if (!resp.ok || !data.success) throw new Error(data.message || 'Error HTTP');
     return data;
   }
 
-  // ========== PROBAR CONSULTA ==========
   previewBtn.addEventListener('click', async () => {
-    const payload = getPayload();
-    if (!payload.query) { showToast('⚠️ Escribe una consulta SQL', 'warning'); return; }
-    if (!payload.plantilla) { showToast('⚠️ Escribe la plantilla HTML', 'warning'); return; }
-
+    const p = getPayload();
+    if (!p.query) { showToast('Escribe una consulta SQL', 'warning'); return; }
+    if (!p.plantilla) { showToast('Escribe la plantilla HTML', 'warning'); return; }
     try {
       setLoading(previewBtn, true);
-      showToast('🔍 Validando consulta...', 'info', 3000);
-
-      const data = await callAPI('/api/email/preview', payload);
+      const data = await callAPI('/api/email/preview', p);
       previewData = data;
       totalAEnviar = data.total_filas || 0;
-
       statTotal.textContent = data.total_filas || 0;
       statValidos.textContent = data.total_filas || 0;
       statAEnviar.textContent = data.total_filas || 0;
       rowCount.textContent = `${data.total_filas || 0} filas`;
-
-      if (data.preview && data.preview.length > 0) {
+      if (data.preview?.length) {
         previewBox.style.display = 'block';
         previewCount.textContent = `${data.preview.length} de ${data.total_filas}`;
         previewContent.innerHTML = data.preview.map(item => `
-          <div class="preview-item">
+          <div class="em-preview-item">
             <div class="preview-email">📧 ${escapeHtml(item.email)}</div>
-            <div class="preview-subject"><strong>Asunto:</strong> ${escapeHtml(item.asunto)}</div>
+            <div class="preview-subject">Asunto: ${escapeHtml(item.asunto)}</div>
             <div class="preview-content">${item.contenido}</div>
           </div>`).join('');
       }
-
       sendBtn.disabled = (totalAEnviar === 0);
-      showToast(totalAEnviar === 0 ? '⚠️ Sin destinatarios' : `✅ ${totalAEnviar} emails listos`, totalAEnviar === 0 ? 'warning' : 'success');
-
-    } catch (error) {
-      showToast(`❌ ${escapeHtml(error.message)}`, 'danger');
-      sendBtn.disabled = true;
-    } finally { setLoading(previewBtn, false); }
+      showToast(totalAEnviar ? `${totalAEnviar} emails listos` : 'Sin destinatarios', totalAEnviar ? 'success' : 'warning');
+    } catch (e) { showToast(e.message, 'danger'); }
+    finally { setLoading(previewBtn, false); }
   });
 
-  // ========== ENVIAR ==========
   sendBtn.addEventListener('click', async () => {
-    if (!previewData) { showToast('⚠️ Primero prueba la consulta', 'warning'); return; }
-    if (totalAEnviar === 0) { showToast('⚠️ No hay destinatarios', 'warning'); return; }
-    if (!confirm(`📤 ¿Enviar email a ${totalAEnviar} destinatarios?`)) return;
-
+    if (!previewData) { showToast('Primero prueba la consulta', 'warning'); return; }
+    if (!totalAEnviar) { showToast('No hay destinatarios', 'warning'); return; }
+    if (!confirm(`¿Enviar email a ${totalAEnviar} destinatarios?`)) return;
     try {
       setLoading(sendBtn, true);
-      showToast('📤 Enviando emails...', 'info', 10000);
+      showToast('Enviando emails...', 'info', 10000);
       const data = await callAPI('/api/email/enviar', getPayload());
-
       showResult(`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div><strong>✅ Enviados:</strong> ${data.enviados || 0}</div>
         <div><strong>❌ Fallidos:</strong> ${data.fallidos || 0}</div>
-        <div><strong>📦 Campaña ID:</strong> <code>${data.campana_id || 'N/A'}</code></div></div>`);
-      
-      showToast(data.enviados > 0 ? `✅ ${data.enviados} emails enviados` : '❌ Error', data.enviados > 0 ? 'success' : 'danger');
-      if (data.enviados > 0) clearResult();
-    } catch (error) { showToast(`❌ ${escapeHtml(error.message)}`, 'danger'); }
+        <div><strong>📦 ID:</strong> <code>${data.campana_id || 'N/A'}</code></div></div>`);
+      showToast(data.enviados ? `${data.enviados} emails enviados` : 'Error', data.enviados ? 'success' : 'danger');
+      if (data.enviados) clearResult();
+    } catch (e) { showToast(e.message, 'danger'); }
     finally { setLoading(sendBtn, false); }
   });
 
-  // ========== LIMPIAR ==========
   clearBtn.addEventListener('click', () => {
-    queryEl.value = ''; asuntoEl.value = ''; plantillaEl.value = ''; campanaEl.value = ''; usuarioEl.value = ''; replyEmailEl.value = '';
+    queryEl.value = ''; asuntoEl.value = ''; plantillaEl.value = '';
+    campanaEl.value = ''; usuarioEl.value = ''; replyEmailEl.value = '';
     clearResult(); rowCount.textContent = '0 filas';
-    showToast('🧹 Limpiado', 'info', 2000);
+    showToast('Limpiado', 'info', 2000);
   });
 
-  // ========== TABS ==========
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      tabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      Object.keys(panels).forEach(key => panels[key].classList.toggle('active', key === tab.dataset.tab));
-      if (tab.dataset.tab === 'history') loadHistory();
-    });
-  });
+  tabs.forEach(tab => tab.addEventListener('click', () => {
+    tabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    Object.keys(panels).forEach(k => panels[k].classList.toggle('active', k === tab.dataset.tab));
+    if (tab.dataset.tab === 'history') loadHistory();
+  }));
 
-  // ========== HISTORIAL ==========
   async function loadHistory() {
-    const container = document.getElementById('histResult');
-    container.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+    const c = document.getElementById('histResult');
+    c.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
     try {
       const resp = await fetch('/api/email/historial');
       const data = await resp.json();
-      if (!data.items || !data.items.length) { container.innerHTML = '<div class="text-center text-muted py-4">Sin registros</div>'; return; }
-      container.innerHTML = '<table class="table table-hover table-sm"><thead><tr><th>Fecha</th><th>Email</th><th>Asunto</th><th>Campaña</th><th>Estado</th></tr></thead><tbody>' +
-        data.items.slice(0, 50).map(row => `<tr>
+      if (!data.items?.length) { c.innerHTML = '<div class="text-center text-muted py-4">Sin registros</div>'; return; }
+      c.innerHTML = '<table class="table table-hover table-sm"><thead><tr><th>Fecha</th><th>Email</th><th>Campaña</th><th>Estado</th></tr></thead><tbody>' +
+        data.items.slice(0,50).map(row => `<tr>
           <td>${row.fecha_envio ? new Date(row.fecha_envio).toLocaleString() : '—'}</td>
           <td>${escapeHtml(row.email||'')}</td>
-          <td>${escapeHtml((row.asunto||'').substring(0,40))}</td>
           <td>${escapeHtml(row.campana||'—')}</td>
           <td><span class="badge badge-${row.resultado==='enviado'?'success':'danger'}">${row.resultado||'?'}</span></td>
         </tr>`).join('') + '</tbody></table>';
-    } catch(e) { container.innerHTML = `<div class="alert alert-danger">${escapeHtml(e.message)}</div>`; }
+    } catch(e) { c.innerHTML = '<div class="alert alert-danger">Error</div>'; }
   }
 
   document.getElementById('histFiltrarBtn').addEventListener('click', loadHistory);
   loadHistory();
-  setTimeout(() => showToast('💬 Listo · Usa "Probar consulta"', 'info', 4000), 500);
+  setTimeout(() => showToast('Listo · Usa "Probar consulta"', 'info', 4000), 500);
 })();
 </script>
 {% endblock %}

@@ -91,18 +91,54 @@ def preview_email(rows: List[Dict], plantilla: str, asunto: str, limit: int = 3)
     
     except EmailServiceError as e:
         return {"success": False, "message": str(e)}
-
-
 def guardar_email_log(client, registros: List[Dict]) -> None:
-    """Guarda registros en EmailLog (BigQuery)."""
+    """Guarda registros en EmailLog usando INSERT SQL con escaping seguro."""
     if not client or not registros:
         return
     
+    logger.info(f"📧 Guardando {len(registros)} registros con INSERT SQL")
+    
     try:
-        errors = client.insert_rows_json(EMAIL_LOG_TABLE, registros)
-        if errors:
-            logger.error(f"Error guardando logs de email: {errors}")
-        else:
-            logger.info(f"✅ {len(registros)} registros guardados en EmailLog")
+        for registro in registros:
+            id_val = _escape_sql(registro.get("id", ""))
+            email_val = _escape_sql(registro.get("email", ""))
+            asunto_val = _escape_sql(registro.get("asunto", ""))
+            contenido_val = _escape_sql(registro.get("contenido", ""))
+            campana_id_val = _escape_sql(registro.get("campana_id", ""))
+            campana_nombre_val = _escape_sql(registro.get("campana_nombre", ""))
+            fecha_envio_val = registro.get("fecha_envio", "")
+            resultado_val = _escape_sql(registro.get("resultado", ""))
+            bulk_id_val = _escape_sql(registro.get("bulk_id", ""))
+            error_val = _escape_sql(registro.get("error", ""))
+            campana_val = _escape_sql(registro.get("campana", ""))
+            usuario_val = _escape_sql(registro.get("usuario", ""))
+            fecha_creacion_val = registro.get("fecha_creacion", "")
+            fecha_actualizacion_val = registro.get("fecha_actualizacion", "")
+            
+            insert_sql = f"""
+                INSERT INTO `{EMAIL_LOG_TABLE}` 
+                (id, email, asunto, contenido, campana_id, campana_nombre, 
+                 fecha_envio, resultado, bulk_id, error, campana, usuario, 
+                 fecha_creacion, fecha_actualizacion)
+                VALUES (
+                    '{id_val}', '{email_val}', '{asunto_val}', '''{contenido_val}''', 
+                    '{campana_id_val}', '{campana_nombre_val}', 
+                    TIMESTAMP('{fecha_envio_val}'), '{resultado_val}', 
+                    '{bulk_id_val}', '{error_val}', '{campana_val}', 
+                    '{usuario_val}', TIMESTAMP('{fecha_creacion_val}'), 
+                    TIMESTAMP('{fecha_actualizacion_val}')
+                )
+            """
+            client.query(insert_sql).result()
+        
+        logger.info(f"✅ {len(registros)} registros guardados en EmailLog")
     except Exception as e:
         logger.error(f"Error guardando logs: {e}")
+
+
+def _escape_sql(valor: str) -> str:
+    """Escapa un valor para ser usado en SQL."""
+    if valor is None:
+        return ""
+    # Escapar backslash primero, luego comillas simples
+    return str(valor).replace("\\", "\\\\").replace("'", "\\'")

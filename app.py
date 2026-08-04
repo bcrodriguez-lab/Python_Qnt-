@@ -2650,7 +2650,9 @@ def email_send():
                 "fecha_actualizacion": now
             })
 
-        guardar_email_log(bq_client, registros)
+        logger.info(f"📧 Intentando guardar {len(registros)} registros en EmailLog")
+        logger.info(f"📧 Primer registro: {registros[0] if registros else 'vacío'}")
+        guardar_email_log(bq_client, registros)    
         log_gui_action("Envio Email", campana_id=campana_id, enviados=len(emails_enviados))
         
         return jsonify({
