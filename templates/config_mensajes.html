@@ -128,12 +128,21 @@
   }
   .modal-backdrop-custom.open { display: flex; }
   .modal-custom-panel {
-    background: #ffffff; border-radius: 16px;
-    width: 100%; max-width: 560px;
+    background: #ffffff;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 560px;
     box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
     animation: modalPop .2s cubic-bezier(0.16,1,0.3,1);
     overflow: hidden;
-  }
+}
+
+@media (max-height: 700px) {
+    .modal-custom-panel {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+}
   @keyframes modalPop {
     from { opacity: 0; transform: scale(0.96) translateY(10px); }
     to { opacity: 1; transform: scale(1) translateY(0); }
