@@ -1,0 +1,466 @@
+{% extends "layouts/adminlte.html" %}
+
+{% block title %}Campañas Email{% endblock %}
+
+{% block page_title %}
+  <div class="d-flex align-items-center">
+    <div class="mr-3" style="font-size:2rem; color: #3452E1;">
+      <i class="fas fa-envelope"></i>
+    </div>
+    <div>
+      <h1 class="m-0" style="font-weight:700;">Campañas Email</h1>
+      <small class="text-muted">Destinatarios desde BigQuery · Envío vía Email Marketing API</small>
+    </div>
+  </div>
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/">Inicio</a></li>
+<li class="breadcrumb-item active">Email</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --em-primary: #3452E1;
+    --em-primary-light: #EEF1FD;
+    --em-success: #17A673;
+    --em-success-bg: #E7F8F1;
+    --em-danger: #E24C4B;
+    --em-danger-bg: #FCEAEA;
+    --em-warning: #B8790A;
+    --em-warning-bg: #FDF2E1;
+    --em-text: #1C2333;
+    --em-muted: #6B7280;
+    --em-border: #E4E7F0;
+    --em-bg: #F5F6FA;
+    --em-radius: 16px;
+    --em-shadow: 0 8px 30px rgba(31, 41, 102, 0.08);
+    --em-transition: all 0.25s ease;
+  }
+
+  .content-wrapper { background: var(--em-bg); }
+
+  .em-container {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 1199px) { .em-container { grid-template-columns: 1fr; } }
+
+  .em-card {
+    background: #ffffff; border: 1px solid var(--em-border);
+    border-radius: var(--em-radius); box-shadow: var(--em-shadow);
+    overflow: hidden; transition: var(--em-transition);
+  }
+  .em-card-body { padding: 24px 26px 26px; }
+
+  .em-tabs {
+    display: flex; gap: 2px; background: #F0F2F8;
+    border-radius: 10px; padding: 4px; margin-bottom: 22px;
+  }
+  .em-tabs .tab {
+    flex: 1; padding: 8px 14px; border: none; border-radius: 8px;
+    background: transparent; font-weight: 600; font-size: 0.82rem;
+    color: var(--em-muted); cursor: pointer; transition: var(--em-transition); text-align: center;
+  }
+  .em-tabs .tab:hover { color: var(--em-text); background: rgba(255,255,255,0.5); }
+  .em-tabs .tab.active { background: #ffffff; color: var(--em-primary); box-shadow: 0 2px 8px rgba(31, 41, 102, 0.06); }
+  .em-tab-panel { display: none; animation: fadeIn 0.3s ease; }
+  .em-tab-panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .em-field { margin-bottom: 18px; }
+  .em-field label { font-weight: 600; font-size: 0.85rem; color: var(--em-text); margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
+  .em-field label .badge-required { background: var(--em-danger); color: #fff; font-size: 0.6rem; padding: 1px 8px; border-radius: 20px; }
+  .em-help { font-size: 0.76rem; color: var(--em-muted); margin-top: 5px; display: flex; justify-content: space-between; align-items: center; }
+
+  .form-control {
+    border: 1.5px solid var(--em-border); border-radius: 10px;
+    font-size: 0.9rem; color: var(--em-text); transition: var(--em-transition);
+  }
+  .form-control:focus { border-color: var(--em-primary); box-shadow: 0 0 0 4px rgba(52, 82, 225, 0.12); }
+  textarea.textarea-code {
+    min-height: 120px; font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.82rem; line-height: 1.6; background: #FBFBFE; tab-size: 2;
+  }
+
+  .em-schedule-row {
+    display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
+    background: #FAFAFD; border: 1.5px dashed var(--em-border);
+    border-radius: 12px; padding: 16px 18px; margin-bottom: 20px;
+  }
+  .em-schedule-row .form-group { margin-bottom: 0; flex: 1; min-width: 180px; }
+  .em-schedule-row .btn-schedule {
+    background: transparent; border: 1.5px solid var(--em-border);
+    border-radius: 10px; padding: 8px 18px; font-weight: 600;
+    font-size: 0.82rem; color: var(--em-muted); cursor: pointer;
+  }
+
+  .em-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  .btn {
+    border-radius: 10px; font-weight: 600; font-size: 0.86rem;
+    padding: 0.55rem 1.2rem; transition: var(--em-transition);
+    border: none; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-outline-primary { background: #fff; color: var(--em-primary); border: 1.5px solid var(--em-primary); }
+  .btn-outline-primary:hover { background: var(--em-primary-light); }
+  .btn-success { background: var(--em-success); color: #fff; }
+  .btn-success:disabled { background: #B9C0CC; cursor: not-allowed; }
+  .btn-outline-secondary { background: #fff; color: var(--em-muted); border: 1.5px solid var(--em-border); }
+
+  .em-side { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+  .em-preview-box {
+    background: #fff; border: 1px solid var(--em-border);
+    border-radius: var(--em-radius); box-shadow: var(--em-shadow); overflow: hidden;
+  }
+  .em-preview-box .preview-header {
+    background: #1B1F3B; color: #fff; padding: 10px 14px;
+    font-size: 0.75rem; font-weight: 600; display: flex; justify-content: space-between;
+  }
+  .em-preview-box .preview-body {
+    padding: 14px; max-height: 300px; overflow-y: auto; font-size: 0.82rem;
+  }
+  .em-preview-box .preview-body .preview-item {
+    border: 1px solid var(--em-border); border-radius: 8px; padding: 10px; margin-bottom: 8px; background: #FAFAFD;
+  }
+  .em-preview-box .preview-body .preview-item .preview-email { font-weight: 700; color: var(--em-text); }
+  .em-preview-box .preview-body .preview-item .preview-subject { font-size: 0.78rem; color: var(--em-muted); }
+  .em-preview-box .preview-body .preview-item .preview-content { font-size: 0.8rem; margin-top: 4px; white-space: pre-wrap; }
+
+  .em-stats {
+    background: #fff; border: 1px solid var(--em-border);
+    border-radius: var(--em-radius); padding: 16px 18px; box-shadow: var(--em-shadow);
+  }
+  .em-stats .row { display: flex; justify-content: space-between; font-size: 0.82rem; padding: 5px 0; }
+  .em-stats .row + .row { border-top: 1px dashed var(--em-border); }
+  .em-stats .label { color: var(--em-muted); }
+  .em-stats .value { font-weight: 700; color: var(--em-text); }
+
+  .em-result { margin-top: 20px; display: none; }
+  .em-result.visible { display: block; animation: fadeIn 0.3s ease; }
+
+  #emToastArea { position: fixed; top: 1.2rem; right: 1.2rem; z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 420px; }
+  .em-toast {
+    background: #fff; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+    padding: 14px 18px; border-left: 5px solid var(--em-primary);
+    animation: slideIn 0.3s ease; display: flex; align-items: flex-start; gap: 12px;
+  }
+  .em-toast.success { border-left-color: var(--em-success); }
+  .em-toast.danger { border-left-color: var(--em-danger); }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+
+  .spinner-sm {
+    display: inline-block; width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div id="emToastArea"></div>
+
+<div class="em-container">
+
+  <div class="em-card">
+    <div class="em-card-body">
+
+      <div class="em-tabs" id="emTabs">
+        <button class="tab active" data-tab="send"><i class="fas fa-paper-plane"></i> Enviar</button>
+        <button class="tab" data-tab="history"><i class="fas fa-history"></i> Historial</button>
+      </div>
+
+      <!-- PANEL ENVIAR -->
+      <div class="em-tab-panel active" id="panel-send">
+
+        <!-- CONSULTA SQL -->
+        <div class="em-field">
+          <label for="query">Consulta SQL <span class="badge-required">requerido</span></label>
+          <textarea id="query" class="form-control textarea-code" placeholder="SELECT email, nombre, monto FROM ..." rows="4">SELECT * FROM Temporal.sms_prueba_python WHERE email IS NOT NULL</textarea>
+          <div class="em-help">
+            <span>Incluye columna de email: <code>email</code>, <code>correo</code>, <code>mail</code>.</span>
+            <span id="rowCount" style="font-weight:600;color:var(--em-primary);">0 filas</span>
+          </div>
+        </div>
+
+        <!-- ASUNTO -->
+        <div class="em-field">
+          <label for="asunto">Asunto <span class="badge-required">requerido</span></label>
+          <input type="text" id="asunto" class="form-control" placeholder="Hola {Nombre Cliente}, mira esta oferta...">
+          <div class="em-help">
+            <span>Puedes usar <code>%Member:CustomFieldX%</code> para personalizar.</span>
+          </div>
+        </div>
+
+        <!-- PLANTILLA HTML -->
+        <div class="em-field">
+          <label for="plantilla">Contenido HTML <span class="badge-required">requerido</span></label>
+          <textarea id="plantilla" class="form-control textarea-code" rows="15" placeholder="<h1>Hola %Member:CustomField1%</h1>"><h1>Hola %Member:CustomField1%,</h1><p>Tienes un pago pendiente de $%Member:CustomField5%.</p></textarea>
+          <div class="em-help">
+            <span>Usa <code>%Member:CustomFieldX%</code> para personalizar con campos de la API.</span>
+          </div>
+        </div>
+
+        <!-- CAMPOS ADICIONALES -->
+        <div class="em-row" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px;">
+          <div class="em-field">
+            <label for="campana">Campaña</label>
+            <input id="campana" class="form-control" placeholder="Nombre de campaña">
+          </div>
+          <div class="em-field">
+            <label for="usuario">Responsable</label>
+            <input id="usuario" class="form-control" placeholder="Tu nombre" value="{{ session.get('user', 'admin') }}">
+          </div>
+          <div class="em-field">
+            <label for="replyEmail">Reply-To</label>
+            <input id="replyEmail" class="form-control" placeholder="responder@ejemplo.com">
+          </div>
+        </div>
+
+        <!-- BOTONES -->
+        <div class="em-actions">
+          <button id="previewBtn" class="btn btn-outline-primary"><i class="fas fa-eye"></i> Probar consulta</button>
+          <button id="sendBtn" class="btn btn-success" disabled><i class="fas fa-paper-plane"></i> Enviar Email</button>
+          <button id="clearBtn" class="btn btn-outline-secondary"><i class="fas fa-undo"></i> Limpiar</button>
+        </div>
+
+        <div id="emResult" class="em-result"></div>
+      </div>
+
+      <!-- PANEL HISTORIAL -->
+      <div class="em-tab-panel" id="panel-history">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+          <input id="histFiltroFecha" type="date" class="form-control" style="width:auto;flex:1;min-width:140px;">
+          <input id="histFiltroCampana" class="form-control" style="width:auto;flex:1;min-width:140px;" placeholder="Campaña">
+          <input id="histFiltroEmail" class="form-control" style="width:auto;flex:1;min-width:140px;" placeholder="Email">
+          <button id="histFiltrarBtn" class="btn btn-outline-primary"><i class="fas fa-search"></i> Filtrar</button>
+        </div>
+        <div id="histResult" style="max-height:400px;overflow-y:auto;">
+          <div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Cargando historial...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- COLUMNA DERECHA -->
+  <div class="em-side">
+    <div class="em-stats">
+      <div class="row"><span class="label"><i class="fas fa-users"></i> Total destinatarios</span><span class="value" id="statTotal">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-check-circle" style="color:var(--em-success);"></i> Emails válidos</span><span class="value" id="statValidos">—</span></div>
+      <div class="row" style="border-top:2px solid var(--em-border);padding-top:8px;margin-top:4px;">
+        <span class="label" style="font-weight:700;">📤 A enviar</span>
+        <span class="value" id="statAEnviar" style="font-size:1.1rem;color:var(--em-primary);">—</span>
+      </div>
+    </div>
+
+    <div class="em-preview-box" id="previewBox" style="display:none;">
+      <div class="preview-header">
+        <span>📧 Vista previa</span>
+        <span id="previewCount"></span>
+      </div>
+      <div class="preview-body" id="previewContent"></div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  'use strict';
+
+  const queryEl = document.getElementById('query');
+  const asuntoEl = document.getElementById('asunto');
+  const plantillaEl = document.getElementById('plantilla');
+  const campanaEl = document.getElementById('campana');
+  const usuarioEl = document.getElementById('usuario');
+  const replyEmailEl = document.getElementById('replyEmail');
+  const previewBtn = document.getElementById('previewBtn');
+  const sendBtn = document.getElementById('sendBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const resultEl = document.getElementById('emResult');
+  const previewBox = document.getElementById('previewBox');
+  const previewContent = document.getElementById('previewContent');
+  const previewCount = document.getElementById('previewCount');
+  const statTotal = document.getElementById('statTotal');
+  const statValidos = document.getElementById('statValidos');
+  const statAEnviar = document.getElementById('statAEnviar');
+  const rowCount = document.getElementById('rowCount');
+
+  const tabs = document.querySelectorAll('.em-tabs .tab');
+  const panels = { send: document.getElementById('panel-send'), history: document.getElementById('panel-history') };
+
+  let previewData = null;
+  let totalAEnviar = 0;
+
+  function escapeHtml(str) {
+    const el = document.createElement('span');
+    el.textContent = String(str);
+    return el.innerHTML;
+  }
+
+  function getPayload() {
+    return {
+      query: queryEl.value.trim(),
+      asunto: asuntoEl.value.trim(),
+      plantilla: plantillaEl.value.trim(),
+      campana: campanaEl.value.trim(),
+      usuario: usuarioEl.value.trim(),
+      reply_email: replyEmailEl.value.trim()
+    };
+  }
+
+  function showToast(message, type = 'info', duration = 6000) {
+    const area = document.getElementById('emToastArea');
+    const iconMap = { success: 'fa-check-circle', danger: 'fa-exclamation-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+    const toast = document.createElement('div');
+    toast.className = `em-toast ${type}`;
+    toast.innerHTML = `<span class="icon"><i class="fas ${iconMap[type]}"></i></span><div class="content">${message}</div>`;
+    area.appendChild(toast);
+    setTimeout(() => { if (toast.parentElement) toast.remove(); }, duration);
+  }
+
+  function showResult(html) {
+    resultEl.className = 'em-result visible';
+    resultEl.innerHTML = `<div class="em-card"><div class="em-card-body" style="padding:18px 20px;">${html}</div></div>`;
+  }
+
+  function clearResult() {
+    resultEl.className = 'em-result'; resultEl.innerHTML = '';
+    statTotal.textContent = '—'; statValidos.textContent = '—'; statAEnviar.textContent = '—';
+    previewBox.style.display = 'none';
+    sendBtn.disabled = true;
+    previewData = null; totalAEnviar = 0;
+  }
+
+  function setLoading(btn, loading) {
+    if (loading) {
+      btn._originalHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `<span class="spinner-sm"></span> Procesando...`;
+    } else {
+      btn.disabled = false;
+      if (btn._originalHtml) btn.innerHTML = btn._originalHtml;
+    }
+  }
+
+  async function callAPI(endpoint, payload, method = 'POST') {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (method === 'POST') opts.body = JSON.stringify(payload);
+    const response = await fetch(endpoint, opts);
+    let data;
+    try { data = await response.json(); } catch (e) { data = { message: 'Error al parsear respuesta' }; }
+    if (!response.ok || (data && data.success === false)) throw new Error(data.message || data.error || `Error HTTP ${response.status}`);
+    return data;
+  }
+
+  // ========== PROBAR CONSULTA ==========
+  previewBtn.addEventListener('click', async () => {
+    const payload = getPayload();
+    if (!payload.query) { showToast('⚠️ Escribe una consulta SQL', 'warning'); return; }
+    if (!payload.plantilla) { showToast('⚠️ Escribe la plantilla HTML', 'warning'); return; }
+
+    try {
+      setLoading(previewBtn, true);
+      showToast('🔍 Validando consulta...', 'info', 3000);
+
+      const data = await callAPI('/api/email/preview', payload);
+      previewData = data;
+      totalAEnviar = data.total_filas || 0;
+
+      statTotal.textContent = data.total_filas || 0;
+      statValidos.textContent = data.total_filas || 0;
+      statAEnviar.textContent = data.total_filas || 0;
+      rowCount.textContent = `${data.total_filas || 0} filas`;
+
+      if (data.preview && data.preview.length > 0) {
+        previewBox.style.display = 'block';
+        previewCount.textContent = `${data.preview.length} de ${data.total_filas}`;
+        previewContent.innerHTML = data.preview.map(item => `
+          <div class="preview-item">
+            <div class="preview-email">📧 ${escapeHtml(item.email)}</div>
+            <div class="preview-subject"><strong>Asunto:</strong> ${escapeHtml(item.asunto)}</div>
+            <div class="preview-content">${item.contenido}</div>
+          </div>`).join('');
+      }
+
+      sendBtn.disabled = (totalAEnviar === 0);
+      showToast(totalAEnviar === 0 ? '⚠️ Sin destinatarios' : `✅ ${totalAEnviar} emails listos`, totalAEnviar === 0 ? 'warning' : 'success');
+
+    } catch (error) {
+      showToast(`❌ ${escapeHtml(error.message)}`, 'danger');
+      sendBtn.disabled = true;
+    } finally { setLoading(previewBtn, false); }
+  });
+
+  // ========== ENVIAR ==========
+  sendBtn.addEventListener('click', async () => {
+    if (!previewData) { showToast('⚠️ Primero prueba la consulta', 'warning'); return; }
+    if (totalAEnviar === 0) { showToast('⚠️ No hay destinatarios', 'warning'); return; }
+    if (!confirm(`📤 ¿Enviar email a ${totalAEnviar} destinatarios?`)) return;
+
+    try {
+      setLoading(sendBtn, true);
+      showToast('📤 Enviando emails...', 'info', 10000);
+      const data = await callAPI('/api/email/enviar', getPayload());
+
+      showResult(`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div><strong>✅ Enviados:</strong> ${data.enviados || 0}</div>
+        <div><strong>❌ Fallidos:</strong> ${data.fallidos || 0}</div>
+        <div><strong>📦 Campaña ID:</strong> <code>${data.campana_id || 'N/A'}</code></div></div>`);
+      
+      showToast(data.enviados > 0 ? `✅ ${data.enviados} emails enviados` : '❌ Error', data.enviados > 0 ? 'success' : 'danger');
+      if (data.enviados > 0) clearResult();
+    } catch (error) { showToast(`❌ ${escapeHtml(error.message)}`, 'danger'); }
+    finally { setLoading(sendBtn, false); }
+  });
+
+  // ========== LIMPIAR ==========
+  clearBtn.addEventListener('click', () => {
+    queryEl.value = ''; asuntoEl.value = ''; plantillaEl.value = ''; campanaEl.value = ''; usuarioEl.value = ''; replyEmailEl.value = '';
+    clearResult(); rowCount.textContent = '0 filas';
+    showToast('🧹 Limpiado', 'info', 2000);
+  });
+
+  // ========== TABS ==========
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      Object.keys(panels).forEach(key => panels[key].classList.toggle('active', key === tab.dataset.tab));
+      if (tab.dataset.tab === 'history') loadHistory();
+    });
+  });
+
+  // ========== HISTORIAL ==========
+  async function loadHistory() {
+    const container = document.getElementById('histResult');
+    container.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+    try {
+      const resp = await fetch('/api/email/historial');
+      const data = await resp.json();
+      if (!data.items || !data.items.length) { container.innerHTML = '<div class="text-center text-muted py-4">Sin registros</div>'; return; }
+      container.innerHTML = '<table class="table table-hover table-sm"><thead><tr><th>Fecha</th><th>Email</th><th>Asunto</th><th>Campaña</th><th>Estado</th></tr></thead><tbody>' +
+        data.items.slice(0, 50).map(row => `<tr>
+          <td>${row.fecha_envio ? new Date(row.fecha_envio).toLocaleString() : '—'}</td>
+          <td>${escapeHtml(row.email||'')}</td>
+          <td>${escapeHtml((row.asunto||'').substring(0,40))}</td>
+          <td>${escapeHtml(row.campana||'—')}</td>
+          <td><span class="badge badge-${row.resultado==='enviado'?'success':'danger'}">${row.resultado||'?'}</span></td>
+        </tr>`).join('') + '</tbody></table>';
+    } catch(e) { container.innerHTML = `<div class="alert alert-danger">${escapeHtml(e.message)}</div>`; }
+  }
+
+  document.getElementById('histFiltrarBtn').addEventListener('click', loadHistory);
+  loadHistory();
+  setTimeout(() => showToast('💬 Listo · Usa "Probar consulta"', 'info', 4000), 500);
+})();
+</script>
+{% endblock %}

@@ -60,7 +60,7 @@ SCHEMA_POSITIVOS = {
     "Fecha_dia":                    "STRING",
     "DATE":                         "DATETIME",
     "Rango_Horario":                "STRING",
-    "Hora":                         "INT64",
+    "Hora":                         "INT64", 
     "agent_id":                     "STRING",
 
     "Dia_Semana":                   "STRING",
@@ -988,7 +988,7 @@ def subir_a_embudo_consolidado(df_cdr: pd.DataFrame, fecha: str, client) -> bool
     #COLUMNAS QUE SE VAN A SUBIR
 
     for col in ["Operado_Por__c","Hora","Dia_Semana", "Rango_Horario","Numero_Dia_Semana","CONN_ID", "Contacto__c", "COD_ACT",
-                "tipo_reporte", "Fecha_dia", "campaign_id", "agent_id"]:
+                "tipo_reporte", "Fecha_dia", "campaign_id"]:
         if col in df_subir.columns:
             df_subir[col] = df_subir[col].astype(str).replace({'nan': None, 'None': None, '': None})
 

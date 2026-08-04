@@ -1906,3 +1906,15 @@ requests.exceptions.HTTPError: 404 Client Error: Not Found for url: https://wv00
 2026-08-03 18:05:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-08-03...
 2026-08-03 18:07:33 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-08-03
 2026-08-03 18:07:36 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-08-03
+2026-08-04 09:51:18 - WARNING - [Email] Envío rechazado: Configure email.api_key en config.json
+2026-08-04 09:54:02 - WARNING - [Email] Envío rechazado: Configure email.api_key en config.json
+2026-08-04 09:57:05 - WARNING - [Email] Envío rechazado: Configure email.api_key en config.json
+2026-08-04 09:57:37 - WARNING - [Email] Envío rechazado: Configure email.api_key en config.json
+2026-08-04 09:58:33 - WARNING - [Email] Envío rechazado: ['errorMsg_campaignIntegrityFail-content']
+2026-08-04 09:59:29 - WARNING - [Email] Envío rechazado: No se pudieron crear contactos
+2026-08-04 10:00:54 - WARNING - [Email] Envío rechazado: No se pudieron crear contactos
+2026-08-04 10:04:07 - WARNING - [Email] Envío rechazado: ['errorMsg_campaignIntegrityFail-content']
+2026-08-04 10:04:42 - WARNING - [Email] Envío rechazado: ['errorMsg_campaignIntegrityFail-content']
+2026-08-04 10:05:09 - WARNING - [Email] Envío rechazado: ['errorMsg_campaignIntegrityFail-content']
+2026-08-04 10:06:50 - WARNING - [Email] Envío rechazado: ['errorMsg_campaignIntegrityFail-content']
+2026-08-04 10:49:04 - INFO - [SMS] Campaña='' Usuario='' Total=2 Enviados=500 Fallidos=0 Estado=exitoso

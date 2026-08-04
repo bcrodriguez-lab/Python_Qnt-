@@ -1,5 +1,7 @@
-﻿from datetime import datetime, date
+﻿from datetime import datetime, date,timezone
 from flask import jsonify, render_template, request, send_from_directory, send_file
+
+from uuid import uuid4
 import io
 import csv
 from openpyxl import Workbook
@@ -7,7 +9,6 @@ from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.filters import AutoFilter
 from excel_report_builder import build_wolkvox_excel, _safe_filename
-
 
 import json
 import requests
@@ -97,6 +98,13 @@ from auto_campaign_executor import (
     request_stop_auto_campaign,
     start_auto_campaign_async,
 )
+
+from services.email_client import EmailClient, EmailClientError
+from services.email_service import (
+    EMAIL_LOG_TABLE, EmailServiceError, detectar_columna_email,
+    construir_contenido, preview_email, guardar_email_log, extraer_variables
+)
+
 # ========== CONFIGURACIÓN ==========
 PROJECT_ID = "capable-arbor-209819"
 # Crear conexión global a BigQuery al iniciar la aplicación
@@ -2441,6 +2449,296 @@ def sms_mensajes_operacion_flexible():
         return jsonify({"success": True, "items": items})
     except Exception as exc:
         logger.exception("Error obteniendo mensajes de operación")
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+"""
+Email Envio
+
+"""
+@app.route("/config-email")
+def config_email():
+    """Página de envío de emails."""
+    return render_template("config_email.html")
+
+@app.route("/api/email/preview", methods=["POST"])
+def email_preview():
+    """Genera vista previa del email con variables reemplazadas."""
+    data = request.get_json(silent=True) or {}
+    query = (data.get("query") or "").strip()
+    plantilla = (data.get("plantilla") or "").strip()
+    asunto = (data.get("asunto") or "").strip()
+
+    if not query:
+        return jsonify({"success": False, "message": "La consulta SQL es obligatoria."}), 400
+    if not plantilla:
+        return jsonify({"success": False, "message": "La plantilla del email es obligatoria."}), 400
+
+    try:
+        rows, error_response = _get_sms_rows(query)  # Reutilizamos la función de BigQuery
+        if error_response:
+            return error_response
+
+        result = preview_email(rows, plantilla, asunto)
+        
+        if not result.get("success"):
+            return jsonify(result), 400
+
+        log_gui_action("Vista previa Email", total=result.get("total_filas", 0))
+        return jsonify({"success": True, **result})
+
+    except Exception as exc:
+        logger.exception("Error en vista previa Email")
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+@app.route("/api/email/enviar", methods=["POST"])
+def email_send():
+    """Envía emails usando campos personalizados de la API."""
+    data = request.get_json(silent=True) or {}
+    query = (data.get("query") or "").strip()
+    plantilla = (data.get("plantilla") or "").strip()
+    asunto = (data.get("asunto") or "").strip()
+    campana_nombre = (data.get("campana") or "").strip()
+    usuario = (data.get("usuario") or "").strip()
+    reply_email = (data.get("reply_email") or "").strip()
+
+    if not query or not plantilla:
+        return jsonify({"success": False, "message": "La consulta SQL y la plantilla son obligatorias."}), 400
+
+    try:
+        config = (CONFIG or load_config())
+        email_config = config.get("email", {})
+        api_key = email_config.get("api_key", "")
+        from_email = email_config.get("from_email", "")
+        from_alias = email_config.get("from_alias", "")
+
+        if not api_key:
+            raise EmailServiceError("Configure email.api_key en config.json")
+        if not from_email:
+            raise EmailServiceError("Configure email.from_email en config.json")
+
+        rows, error_response = _get_sms_rows(query)
+        if error_response:
+            return error_response
+
+        email_column = detectar_columna_email(rows)
+        client = EmailClient(api_key)
+
+        # Obtener mapeo de campos personalizados
+        campos_result = client.obtener_campos_personalizados()
+        if not campos_result.get("success"):
+            raise EmailServiceError("No se pudieron obtener los campos personalizados")
+        
+        campos_api = campos_result.get("data", [])
+        mapeo_campos = {}
+        for campo in campos_api:
+            mapeo_campos[campo["name"].lower()] = campo["id"]
+
+        # Crear lista temporal
+        lista_nombre = f"API_Email_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        lista_result = client.crear_lista(lista_nombre)
+        if not lista_result.get("success"):
+            raise EmailServiceError("No se pudo crear la lista de contactos")
+        lista_id = lista_result["data"]["id"]
+
+        contact_ids = []
+        emails_enviados = []
+        errores = []
+        contenido_preview = ""
+
+        for i, row in enumerate(rows):
+            email = str(row.get(email_column, "")).strip()
+            if not email or "@" not in email:
+                continue
+
+            # Construir contenido personalizado
+            contenido = construir_contenido(row, plantilla)
+            if i == 0:
+                contenido_preview = contenido
+
+            # Mapear valores de la fila a campos personalizados
+            campos_personalizados = {}
+            for col_name, col_value in row.items():
+                if col_value is None or str(col_value).strip() == "":
+                    continue
+                col_lower = col_name.lower().strip()
+                if col_lower in mapeo_campos:
+                    campo_id = mapeo_campos[col_lower]
+                    campos_personalizados[campo_id] = str(col_value).strip()
+
+            logger.info(f"📧 Campos para {email}: {len(campos_personalizados)} campos")
+
+            # Crear contacto con campos personalizados
+            contact_result = client.crear_contacto(email, campos_personalizados)
+            
+            if contact_result.get("success"):
+                contact_id = contact_result.get("data", {}).get("id")
+                ya_existe = contact_result.get("ya_existe", False)
+                
+                if contact_id:
+                    contact_ids.append(contact_id)
+                    emails_enviados.append(email)
+                elif ya_existe:
+                    buscar = client.obtener_contactos(email=email)
+                    if buscar.get("success"):
+                        encontrados = buscar.get("data", {}).get("data", [])
+                        if encontrados:
+                            # Eliminar y recrear para actualizar campos
+                            old_id = encontrados[0]["id"]
+                            client.eliminar_contactos([old_id])
+                            nuevo_result = client.crear_contacto(email, campos_personalizados)
+                            if nuevo_result.get("success") and nuevo_result.get("data", {}).get("id"):
+                                contact_ids.append(nuevo_result["data"]["id"])
+                                emails_enviados.append(email)
+                            else:
+                                errores.append({"email": email, "error": "No se pudo recrear contacto"})
+                        else:
+                            errores.append({"email": email, "error": "Contacto no encontrado"})
+                    else:
+                        errores.append({"email": email, "error": "Error buscando contacto"})
+                else:
+                    errores.append({"email": email, "error": "No se obtuvo ID"})
+            else:
+                errores.append({"email": email, "error": str(contact_result.get("error", "Error"))})
+
+        if not contact_ids:
+            raise EmailServiceError("No se pudieron crear contactos")
+
+        # Suscribir contactos a la lista
+        client.suscribir_contactos(contact_ids, lista_id)
+
+        if not contenido_preview or len(str(contenido_preview).strip()) < 50:
+            contenido_preview = plantilla
+
+        # Crear campaña
+        campana_result = client.crear_campana({
+            "name": campana_nombre or f"Email {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            "subject": asunto or "Sin asunto",
+            "fromAlias": from_alias or "QNT",
+            "fromEmail": from_email,
+            "replyEmail": reply_email or from_email,
+            "content": contenido_preview,
+            "mailListsIds": [lista_id]
+        })
+
+        if not campana_result.get("success"):
+            raise EmailServiceError("No se pudo crear la campaña")
+
+        campana_id = campana_result["data"]["id"]
+        send_result = client.enviar_campana(campana_id, send_now=1)
+        
+        if not send_result.get("success"):
+            raise EmailServiceError("No se pudo enviar la campaña")
+
+        # Guardar en EmailLog
+        now = datetime.now(timezone.utc).isoformat()
+        registros = []
+        for email in emails_enviados:
+            registros.append({
+                "id": str(uuid4()),
+                "email": email,
+                "asunto": asunto,
+                "contenido": str(contenido_preview)[:1000],
+                "campana_id": str(campana_id),
+                "campana_nombre": campana_nombre or "",
+                "fecha_envio": now,
+                "resultado": "enviado",
+                "bulk_id": str(campana_id),
+                "error": "",
+                "campana": campana_nombre or "",
+                "usuario": usuario or "",
+                "fecha_creacion": now,
+                "fecha_actualizacion": now
+            })
+
+        guardar_email_log(bq_client, registros)
+        log_gui_action("Envio Email", campana_id=campana_id, enviados=len(emails_enviados))
+        
+        return jsonify({
+            "success": True,
+            "campana_id": campana_id,
+            "enviados": len(emails_enviados),
+            "fallidos": len(errores),
+            "errores": errores[:10],
+            "message": f"{len(emails_enviados)} emails enviados"
+        })
+
+    except (EmailServiceError, EmailClientError) as exc:
+        log_task(f"[Email] Envío rechazado: {exc}", level="WARNING")
+        return jsonify({"success": False, "message": str(exc)}), 400
+    except Exception as exc:
+        logger.exception("Error enviando emails")
+        return jsonify({"success": False, "message": str(exc)}), 500
+@app.route("/api/email/historial")
+def email_history():
+    """Historial de envíos de email."""
+    try:
+        from google.cloud import bigquery
+        
+        page = max(1, int(request.args.get("page", 1)))
+        per_page = min(100, max(1, int(request.args.get("per_page", 25))))
+        offset = (page - 1) * per_page
+
+        clauses = []
+        parameters = []
+
+        fecha = (request.args.get("fecha") or "").strip()
+        if fecha:
+            clauses.append("DATE(fecha_envio) = @fecha")
+            parameters.append(bigquery.ScalarQueryParameter("fecha", "DATE", fecha))
+
+        campana = (request.args.get("campana") or "").strip()
+        if campana:
+            clauses.append("LOWER(campana) LIKE LOWER(@campana)")
+            parameters.append(bigquery.ScalarQueryParameter("campana", "STRING", f"%{campana}%"))
+
+        email = (request.args.get("email") or "").strip()
+        if email:
+            clauses.append("email LIKE @email")
+            parameters.append(bigquery.ScalarQueryParameter("email", "STRING", f"%{email}%"))
+
+        where = " WHERE " + " AND ".join(clauses) if clauses else ""
+        parameters.extend([
+            bigquery.ScalarQueryParameter("limit", "INT64", per_page),
+            bigquery.ScalarQueryParameter("offset", "INT64", offset)
+        ])
+
+        query_sql = f"""
+            SELECT * FROM `{EMAIL_LOG_TABLE}`
+            {where}
+            ORDER BY fecha_envio DESC
+            LIMIT @limit OFFSET @offset
+        """
+        
+        job_config = bigquery.QueryJobConfig(query_parameters=parameters)
+        df = bq_client.query(query_sql, job_config=job_config).to_dataframe()
+        items = df.to_dict('records') if not df.empty else []
+
+        return jsonify({"success": True, "page": page, "items": items})
+
+    except Exception as exc:
+        logger.exception("Error en historial Email")
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+@app.route("/api/email/campanas", methods=["GET"])
+def email_campanas():
+    """Lista campañas existentes en la plataforma."""
+    try:
+        email_config = (CONFIG or load_config()).get("email", {})
+        api_key = email_config.get("api_key", "")
+        
+        if not api_key:
+            return jsonify({"success": False, "message": "API Key no configurada"}), 400
+
+        client = EmailClient(api_key)
+        result = client.obtener_campanas(limit=50)
+        
+        if result.get("success"):
+            campanas = result.get("data", {}).get("data", [])
+            return jsonify({"success": True, "items": campanas})
+        
+        return jsonify({"success": False, "message": "Error obteniendo campañas"}), 500
+
+    except Exception as exc:
         return jsonify({"success": False, "message": str(exc)}), 500
 
 if __name__ == "__main__":

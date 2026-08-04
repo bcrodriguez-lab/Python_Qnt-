@@ -11,6 +11,11 @@
     "table_name": "Temporal_Robot_Campañas",
     "enabled": true
   },
+  "email": {
+    "api_key": "eyJpdiI6Ik1UTTVNelkwTXpjeU16WXdOemd6Tnc9PSIsInZhbHVlIjoiS3NCa2FQTmc5ZGdVU01NaDg4RmtweTBzYlUxNS9pOFFuTHlJRk5jejRWcz0iLCJtYWMiOiIwOGM1YTc4ZjJiODAyZTEwZmVjNjQxY2UwOWFmMDNhNzJjMDc1YTEwZGVhZTcyOWEyY2IzZDM5NjZjNDhlMGFmIn0=",
+    "from_email": "noreply@qnt.com.co",
+    "from_alias": "QNT"
+  },
   "infobip": {
     "api_key": "04ca14df6c5a47e6713cdb13e8272ab3-aa42acbb-c69f-4a29-a3f5-3ec8b2fae16d",
     "base_url": "https://2knxjz.api.infobip.com",
