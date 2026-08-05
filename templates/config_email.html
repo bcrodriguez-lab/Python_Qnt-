@@ -199,6 +199,7 @@
       <div class="em-tabs" id="emTabs">
         <button class="tab active" data-tab="send"><i class="fas fa-paper-plane"></i> Enviar</button>
         <button class="tab" data-tab="history"><i class="fas fa-history"></i> Historial</button>
+        <button class="tab" data-tab="scheduled"><i class="fas fa-clock"></i> Programados</button>
       </div>
 
       <!-- PANEL ENVIAR -->
@@ -276,6 +277,12 @@
         </div>
         <div id="histResult" style="max-height:400px;overflow-y:auto;"></div>
       </div>
+      <!-- PANEL PROGRAMADOS -->
+      <div class="em-tab-panel" id="panel-scheduled">
+        <div id="scheduledResult" style="max-height:400px;overflow-y:auto;">
+          <div class="text-center text-muted py-4">Cargando programaciones...</div>
+        </div>
+      </div>
 
     </div>
   </div>
@@ -290,6 +297,25 @@
         <span class="stat-label" style="font-weight:700;">📤 A enviar</span>
         <span class="stat-value" id="statAEnviar" style="font-size:1.1rem;color:var(--em-primary);">—</span>
       </div>
+    </div>
+        <!-- PANEL DE VALIDACIÓN -->
+    <div class="em-stats" id="validationPanel" style="display:none;">
+      <div style="font-weight:700;font-size:0.85rem;margin-bottom:10px;color:var(--em-primary);">
+        <i class="fas fa-check-circle"></i> Validación de variables
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">📊 Variables requeridas</span>
+        <span class="stat-value" id="valRequeridas">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label" style="color:var(--em-success);">✅ Encontradas</span>
+        <span class="stat-value" id="valEncontradas" style="color:var(--em-success);">—</span>
+      </div>
+      <div class="stat-row" id="valFaltantesRow" style="display:none;">
+        <span class="stat-label" style="color:var(--em-danger);">❌ Faltantes</span>
+        <span class="stat-value" id="valFaltantes" style="color:var(--em-danger);">—</span>
+      </div>
+      <div id="valFaltantesList" style="font-size:0.75rem;color:var(--em-danger);margin-top:5px;"></div>
     </div>
 
     <!-- VISTA PREVIA -->
@@ -330,7 +356,8 @@
   const fechaProgramadaEl = document.getElementById('fechaProgramada');
   const scheduleBtn = document.getElementById('scheduleBtn');
   const tabs = document.querySelectorAll('.em-tabs .tab');
-  const panels = { send: document.getElementById('panel-send'), history: document.getElementById('panel-history') };
+  const panels = { send: document.getElementById('panel-send'), history: document.getElementById('panel-history'),  scheduled: document.getElementById('panel-scheduled')
+ };
 
   let previewData = null;
   let totalAEnviar = 0;
@@ -410,22 +437,34 @@
         statAEnviar.textContent = data.total_filas || 0;
         rowCount.textContent = `${data.total_filas || 0} filas`;
         
-        // Mostrar UN SOLO preview completo
+        // Mostrar validación
+        if (data.validacion) {
+          const v = data.validacion;
+          document.getElementById('validationPanel').style.display = 'block';
+          document.getElementById('valRequeridas').textContent = v.total_variables || 0;
+          document.getElementById('valEncontradas').textContent = (v.variables_encontradas || []).length;
+          
+          if (v.variables_faltantes && v.variables_faltantes.length > 0) {
+            document.getElementById('valFaltantesRow').style.display = 'flex';
+            document.getElementById('valFaltantes').textContent = v.variables_faltantes.length;
+            document.getElementById('valFaltantesList').innerHTML = 
+            '<strong>Faltan en la consulta:</strong> ' + v.variables_faltantes.map(v => '<code>' + v + '</code>').join(', ');
+            sendBtn.disabled = true;
+            showToast('⚠️ Faltan variables en la consulta', 'warning');
+          } else {
+            document.getElementById('valFaltantesRow').style.display = 'none';
+            document.getElementById('valFaltantesList').innerHTML = '';
+            sendBtn.disabled = (totalAEnviar === 0);
+          }
+        }
+        
+        // Mostrar preview
         if (data.preview_html) {
           previewBox.style.display = 'block';
           previewCount.textContent = 'Vista previa completa';
           previewContent.innerHTML = data.preview_html;
-        } else if (data.preview && data.preview.length > 0) {
-          // Compatibilidad con la versión anterior
-          previewBox.style.display = 'block';
-          previewCount.textContent = `1 de ${data.total_filas}`;
-          previewContent.innerHTML = data.preview[0].contenido;
-        } else {
-          previewBox.style.display = 'none';
         }
         
-        sendBtn.disabled = (totalAEnviar === 0);
-        showToast(totalAEnviar ? `${totalAEnviar} emails listos` : 'Sin destinatarios', totalAEnviar ? 'success' : 'warning');
       } catch (e) { showToast(e.message, 'danger'); }
       finally { setLoading(previewBtn, false); }
   });
@@ -477,8 +516,33 @@
     tab.classList.add('active');
     Object.keys(panels).forEach(k => panels[k].classList.toggle('active', k === tab.dataset.tab));
     if (tab.dataset.tab === 'history') loadHistory();
+    if (tab.dataset.tab === 'scheduled') loadScheduled();
   }));
-
+  async function loadScheduled() {
+    const c = document.getElementById('scheduledResult');
+    c.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+    try {
+      const resp = await fetch('/api/email/programaciones');
+      const data = await resp.json();
+      if (!data.items?.length) { c.innerHTML = '<div class="text-center text-muted py-4">Sin programaciones</div>'; return; }
+      c.innerHTML = '<table class="table table-hover table-sm"><thead><tr><th>ID</th><th>Fecha</th><th>Campaña</th><th>Estado</th><th></th></tr></thead><tbody>' +
+        data.items.map(row => `<tr>
+          <td><code>${escapeHtml(row.id||'')}</code></td>
+          <td>${row.fecha_programada ? new Date(row.fecha_programada).toLocaleString() : '—'}</td>
+          <td>${escapeHtml(row.campana||'—')}</td>
+          <td><span class="badge badge-${row.estado==='pendiente'?'warning':'success'}">${row.estado}</span></td>
+          <td>${row.estado==='pendiente' ? `<button class="btn btn-sm btn-outline-danger cancelar-btn" data-id="${row.id}"><i class="fas fa-times"></i></button>` : ''}</td>
+        </tr>`).join('') + '</tbody></table>';
+      
+      c.querySelectorAll('.cancelar-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('¿Cancelar programación?')) return;
+          await fetch(`/api/email/cancelar/${btn.dataset.id}`, {method:'POST'});
+          loadScheduled();
+        });
+      });
+    } catch(e) { c.innerHTML = '<div class="alert alert-danger">Error</div>'; }
+  }
   async function loadHistory() {
     const c = document.getElementById('histResult');
     c.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
