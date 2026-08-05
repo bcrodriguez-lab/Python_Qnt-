@@ -91,6 +91,7 @@ def preview_email(rows: List[Dict], plantilla: str, asunto: str, limit: int = 3)
     
     except EmailServiceError as e:
         return {"success": False, "message": str(e)}
+
 def guardar_email_log(client, registros: List[Dict]) -> None:
     """Guarda registros en EmailLog usando INSERT SQL con escaping seguro."""
     if not client or not registros:
@@ -135,7 +136,32 @@ def guardar_email_log(client, registros: List[Dict]) -> None:
     except Exception as e:
         logger.error(f"Error guardando logs: {e}")
 
-
+def traducir_a_member(html: str, mapeo: Dict[str, int]) -> str:
+    """
+    Traduce {{Nombre Columna}} a %Member:CustomFieldX%
+    """
+    import re
+    
+    resultado = html
+    
+    variables = re.findall(r"{{\s*([^{}]+?)\s*}}", html)
+    
+    for var in variables:
+        var_original = var.strip()
+        var_lower = var_original.lower()
+        
+        if var_lower in mapeo:
+            campo_id = mapeo[var_lower]
+            resultado = re.sub(
+                r"{{\s*" + re.escape(var_original) + r"\s*}}",
+                f"%Member:CustomField{campo_id}%",
+                resultado,
+                flags=re.IGNORECASE
+            )
+        else:
+            logger.warning(f"⚠️ Variable sin mapeo: '{var_original}'")
+    
+    return resultado
 def _escape_sql(valor: str) -> str:
     """Escapa un valor para ser usado en SQL."""
     if valor is None:

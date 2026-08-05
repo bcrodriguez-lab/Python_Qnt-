@@ -129,7 +129,10 @@
     display: flex; justify-content: space-between; align-items: center;
   }
   .em-preview-box .preview-body {
-    padding: 14px; max-height: 500px; overflow-y: auto; font-size: 0.8rem;
+    padding: 0;
+    max-height: 600px;
+    overflow-y: auto;
+    font-size: 0.8rem;
   }
   .em-preview-item {
     border: 1px solid var(--em-border); border-radius: 8px;
@@ -385,34 +388,40 @@
   }
 
   previewBtn.addEventListener('click', async () => {
-    const p = getPayload();
-    if (!p.query) { showToast('Escribe una consulta SQL', 'warning'); return; }
-    if (!p.plantilla) { showToast('Escribe la plantilla HTML', 'warning'); return; }
-    try {
-      setLoading(previewBtn, true);
-      const data = await callAPI('/api/email/preview', p);
-      previewData = data;
-      totalAEnviar = data.total_filas || 0;
-      statTotal.textContent = data.total_filas || 0;
-      statValidos.textContent = data.total_filas || 0;
-      statAEnviar.textContent = data.total_filas || 0;
-      rowCount.textContent = `${data.total_filas || 0} filas`;
-      if (data.preview?.length) {
-        previewBox.style.display = 'block';
-        previewCount.textContent = `${data.preview.length} de ${data.total_filas}`;
-        previewContent.innerHTML = data.preview.map(item => `
-          <div class="em-preview-item">
-            <div class="preview-email">📧 ${escapeHtml(item.email)}</div>
-            <div class="preview-subject">Asunto: ${escapeHtml(item.asunto)}</div>
-            <div class="preview-content">${item.contenido}</div>
-          </div>`).join('');
-      }
-      sendBtn.disabled = (totalAEnviar === 0);
-      showToast(totalAEnviar ? `${totalAEnviar} emails listos` : 'Sin destinatarios', totalAEnviar ? 'success' : 'warning');
-    } catch (e) { showToast(e.message, 'danger'); }
-    finally { setLoading(previewBtn, false); }
+      const p = getPayload();
+      if (!p.query) { showToast('Escribe una consulta SQL', 'warning'); return; }
+      if (!p.plantilla) { showToast('Escribe la plantilla HTML', 'warning'); return; }
+      try {
+        setLoading(previewBtn, true);
+        const data = await callAPI('/api/email/preview', p);
+        previewData = data;
+        totalAEnviar = data.total_filas || 0;
+        statTotal.textContent = data.total_filas || 0;
+        statValidos.textContent = data.total_filas || 0;
+        statAEnviar.textContent = data.total_filas || 0;
+        rowCount.textContent = `${data.total_filas || 0} filas`;
+        
+        // Mostrar UN SOLO preview completo
+        if (data.preview_html) {
+          previewBox.style.display = 'block';
+          previewCount.textContent = 'Vista previa completa';
+          previewContent.innerHTML = data.preview_html;
+        } else if (data.preview && data.preview.length > 0) {
+          // Compatibilidad con la versión anterior
+          previewBox.style.display = 'block';
+          previewCount.textContent = `1 de ${data.total_filas}`;
+          previewContent.innerHTML = data.preview[0].contenido;
+        } else {
+          previewBox.style.display = 'none';
+        }
+        
+        sendBtn.disabled = (totalAEnviar === 0);
+        showToast(totalAEnviar ? `${totalAEnviar} emails listos` : 'Sin destinatarios', totalAEnviar ? 'success' : 'warning');
+      } catch (e) { showToast(e.message, 'danger'); }
+      finally { setLoading(previewBtn, false); }
   });
 
+  
   sendBtn.addEventListener('click', async () => {
     if (!previewData) { showToast('Primero prueba la consulta', 'warning'); return; }
     if (!totalAEnviar) { showToast('No hay destinatarios', 'warning'); return; }

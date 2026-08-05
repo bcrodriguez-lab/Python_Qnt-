@@ -2603,23 +2603,28 @@ def email_send():
         if not contact_ids:
             raise EmailServiceError("No se pudieron crear contactos")
 
+
         # Suscribir contactos a la lista
         client.suscribir_contactos(contact_ids, lista_id)
 
         if not contenido_preview or len(str(contenido_preview).strip()) < 50:
             contenido_preview = plantilla
+              # Traducir {{variables}} a %Member:CustomFieldX%
+        from services.email_service import traducir_a_member
+        
+        plantilla_api = traducir_a_member(plantilla, mapeo_campos)
+        asunto_api = traducir_a_member(asunto, mapeo_campos) if asunto else ""
 
         # Crear campaña
         campana_result = client.crear_campana({
             "name": campana_nombre or f"Email {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-            "subject": asunto or "Sin asunto",
+            "subject": asunto_api or "Sin asunto",
             "fromAlias": from_alias or "QNT",
             "fromEmail": from_email,
             "replyEmail": reply_email or from_email,
-            "content": contenido_preview,
+            "content": plantilla_api,
             "mailListsIds": [lista_id]
         })
-
         if not campana_result.get("success"):
             raise EmailServiceError("No se pudo crear la campaña")
 
