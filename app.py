@@ -104,7 +104,6 @@ from services.email_service import (
     EMAIL_LOG_TABLE, EmailServiceError, detectar_columna_email,
     construir_contenido, preview_email, guardar_email_log, extraer_variables
 )
-import pandas as pd
 
 # ========== CONFIGURACIÓN ==========
 PROJECT_ID = "capable-arbor-209819"
@@ -125,26 +124,6 @@ def _to_wolkvox_ts(s: str, is_end: bool = False) -> str:
     except Exception:
         return s
 
-def limpiar_dataframe(df):
-    """Limpia un DataFrame de BigQuery para serialización JSON."""
-    if df is None or df.empty:
-        return df
-    
-    df_copy = df.copy()
-    
-    # Columnas datetime
-    for col in df_copy.select_dtypes(include=['datetime64[ns]', 'datetime64[ns, UTC]']).columns:
-        df_copy[col] = df_copy[col].where(pd.notna(df_copy[col]), None)
-    
-    # Columnas numéricas
-    for col in df_copy.select_dtypes(include=['float64', 'int64']).columns:
-        df_copy[col] = df_copy[col].where(pd.notna(df_copy[col]), None)
-    
-    # Columnas de texto
-    for col in df_copy.select_dtypes(include=['object']).columns:
-        df_copy[col] = df_copy[col].where(pd.notna(df_copy[col]), None)
-    
-    return df_copy
 
 @app.context_processor
 def inject_admin_ui():
@@ -951,13 +930,11 @@ def sms_schedule():
 
 
 
+
 @app.route("/api/sms/historial")
 def sms_history():
-    """Historial de envíos SMS."""
     try:
         from google.cloud import bigquery
-        import pandas as pd
-        
         page = max(1, int(request.args.get("page", 1)))
         per_page = min(100, max(1, int(request.args.get("per_page", 25))))
         offset = (page - 1) * per_page
@@ -986,30 +963,14 @@ def sms_history():
             bigquery.ScalarQueryParameter("offset", "INT64", offset)
         ])
 
-        query_sql = f"""
+        query = f"""
             SELECT * FROM `{SMS_LOG_TABLE}`
             {where}
             ORDER BY fecha_envio DESC
             LIMIT @limit OFFSET @offset
         """
-        
         job_config = bigquery.QueryJobConfig(query_parameters=parameters)
-        df = bq_client.query(query_sql, job_config=job_config).to_dataframe()
-        
-        # 🔧 CONVERTIR NaT a None ANTES de serializar
-        if not df.empty:
-            # Convertir columnas datetime
-            for col in df.select_dtypes(include=['datetime64[ns]', 'datetime64[ns, UTC]']).columns:
-                df[col] = df[col].where(pd.notna(df[col]), None)
-            
-            # Convertir NaN en columnas numéricas
-            for col in df.select_dtypes(include=['float64', 'int64']).columns:
-                df[col] = df[col].where(pd.notna(df[col]), None)
-            
-            # Convertir objetos
-            for col in df.select_dtypes(include=['object']).columns:
-                df[col] = df[col].where(pd.notna(df[col]), None)
-        
+        df = bq_client.query(query, job_config=job_config).to_dataframe()
         items = df.to_dict('records') if not df.empty else []
 
         return jsonify({"success": True, "page": page, "items": items})
@@ -2106,36 +2067,81 @@ def auto_download_run_now():
 
 # ========== MENSAJES OPERACIÓN (SQLite) ==========
 
-
-@app.route("/api/sms/operadores", methods=["GET"])
-def sms_operadores():
-    """Lista los operadores desde la columna Operadores."""
+@app.route("/api/sms/mensajes-operacion", methods=["GET"])
+def sms_mensajes_operacion_sqlite():
+    """Lista los mensajes de operación desde SQLite con filtros opcionales."""
     try:
         from database import MensajeOperacion
         
-        # Obtener operadores de la columna Operadores
-        operadores_list = MensajeOperacion.query \
+        operador = (request.args.get("operador") or "").strip()
+        tipo = (request.args.get("tipo") or "").strip()
+        
+        query = MensajeOperacion.query.filter(MensajeOperacion.Estado == 1)
+        
+        if operador:
+            query = query.filter(MensajeOperacion.Operador == operador)
+        if tipo:
+            query = query.filter(MensajeOperacion.Tipo == tipo)
+        if operador:
+            query = query.filter(
+                (MensajeOperacion.Operador == operador) | 
+                (MensajeOperacion.Operadores.contains(operador))
+            )
+        mensajes = query.order_by(MensajeOperacion.Operador, MensajeOperacion.Tipo).all()
+        items = [m.to_dict() for m in mensajes]
+        
+        return jsonify({"success": True, "items": items})
+    except Exception as exc:
+        logger.exception("Error obteniendo mensajes de operación")
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@app.route("/api/sms/operadores", methods=["GET"])
+def sms_operadores():
+    """Lista los operadores disponibles desde SQLite."""
+    try:
+        from database import MensajeOperacion
+        
+        operadores = MensajeOperacion.query \
             .filter(MensajeOperacion.Estado == 1) \
-            .filter(MensajeOperacion.Operadores != '') \
-            .with_entities(MensajeOperacion.Operadores) \
+            .with_entities(MensajeOperacion.Operador) \
+            .distinct() \
+            .order_by(MensajeOperacion.Operador) \
             .all()
         
-        # Procesar y limpiar
-        operadores_set = set()
-        for ops in operadores_list:
-            if ops[0]:
-                # Dividir por comas y limpiar
-                for op in ops[0].split(','):
-                    op = op.strip()
-                    if op:
-                        operadores_set.add(op)
+        items = [op[0] for op in operadores if op[0]]
         
-        items = sorted(list(operadores_set))
         return jsonify({"success": True, "items": items})
-        
     except Exception as exc:
         logger.exception("Error obteniendo operadores")
         return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@app.route("/api/sms/tipos-por-operador", methods=["GET"])
+def sms_tipos_por_operador():
+    """Lista los tipos disponibles para un operador específico."""
+    try:
+        from database import MensajeOperacion
+        
+        operador = (request.args.get("operador") or "").strip()
+        
+        if not operador:
+            return jsonify({"success": False, "message": "Se requiere operador"}), 400
+        
+        tipos = MensajeOperacion.query \
+            .filter(MensajeOperacion.Operador == operador, MensajeOperacion.Estado == 1) \
+            .with_entities(MensajeOperacion.Tipo) \
+            .distinct() \
+            .order_by(MensajeOperacion.Tipo) \
+            .all()
+        
+        items = [t[0] for t in tipos if t[0]]
+        
+        return jsonify({"success": True, "items": items})
+    except Exception as exc:
+        logger.exception("Error obteniendo tipos")
+        return jsonify({"success": False, "message": str(exc)}), 500
+
 
 @app.route("/api/sms/mensaje-por-operador-tipo", methods=["GET"])
 def sms_mensaje_por_operador_tipo():
@@ -2172,36 +2178,7 @@ def sms_mensaje_por_operador_tipo():
         logger.exception("Error obteniendo mensaje")
         return jsonify({"success": False, "message": str(exc)}), 500
 # ========== GESTIÓN DE MENSAJES (CRUD) ==========
-@app.route("/api/sms/tipos-por-operador", methods=["GET"])
-def sms_tipos_por_operador():
-    """Lista los tipos disponibles para un operador específico."""
-    try:
-        from database import MensajeOperacion
-        
-        operador = (request.args.get("operador") or "").strip()
-        
-        if not operador:
-            return jsonify({"success": False, "message": "Se requiere operador"}), 400
-        
-        # Buscar en ambas columnas: Operador y Operadores
-        tipos = MensajeOperacion.query \
-            .filter(
-                MensajeOperacion.Estado == 1,
-                (MensajeOperacion.Operador == operador) | 
-                (MensajeOperacion.Operadores.contains(operador))
-            ) \
-            .with_entities(MensajeOperacion.Tipo) \
-            .distinct() \
-            .order_by(MensajeOperacion.Tipo) \
-            .all()
-        
-        items = [t[0] for t in tipos if t[0]]
-        
-        return jsonify({"success": True, "items": items})
-    except Exception as exc:
-        import logging
-        logging.exception("Error obteniendo tipos")
-        return jsonify({"success": False, "message": str(exc)}), 500
+
 @app.route("/config-mensajes")
 def config_mensajes():
     """Página de gestión de mensajes de operación."""
@@ -2997,39 +2974,6 @@ def email_campanas():
     except Exception as exc:
         return jsonify({"success": False, "message": str(exc)}), 500
 
-@app.route("/api/email/programaciones")
-def email_programaciones():
-    """Lista programaciones de email."""
-    try:
-        query_sql = """
-            SELECT * FROM `capable-arbor-209819.Temporal.ProgramacionEmail`
-            ORDER BY fecha_programada DESC
-            LIMIT 50
-        """
-        df = bq_client.query(query_sql).to_dataframe()
-        items = df.to_dict('records') if not df.empty else []
-        return jsonify({"success": True, "items": items})
-    except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 500
-@app.route("/api/email/cancelar/<schedule_id>", methods=["POST"])
-def email_cancel_schedule(schedule_id):
-    """Cancela una programación de email."""
-    try:
-        job_id = f"email_programado_{schedule_id}"
-        if scheduler.get_job(job_id):
-            scheduler.remove_job(job_id)
-
-        query_sql = f"""
-            UPDATE `capable-arbor-209819.Temporal.ProgramacionEmail`
-            SET estado = 'cancelada', fecha_actualizacion = CURRENT_TIMESTAMP()
-            WHERE id = '{schedule_id}' AND estado = 'pendiente'
-        """
-        bq_client.query(query_sql).result()
-        
-        log_gui_action("Email programado cancelado", programacion=schedule_id)
-        return jsonify({"success": True, "message": "Programación cancelada."})
-    except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 500
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
