@@ -92,6 +92,7 @@ def preview_email(rows: List[Dict], plantilla: str, asunto: str, limit: int = 3)
     except EmailServiceError as e:
         return {"success": False, "message": str(e)}
 
+
 def guardar_email_log(client, registros: List[Dict]) -> None:
     """Guarda registros en EmailLog usando INSERT SQL con escaping seguro."""
     if not client or not registros:
@@ -162,6 +163,72 @@ def traducir_a_member(html: str, mapeo: Dict[str, int]) -> str:
             logger.warning(f"⚠️ Variable sin mapeo: '{var_original}'")
     
     return resultado
+
+def execute_email_schedule(schedule_id: str):
+    """Ejecuta un envío de email programado."""
+    try:
+        query_sql = f"""
+            SELECT * FROM `capable-arbor-209819.Temporal.ProgramacionEmail`
+            WHERE id = '{schedule_id}' AND estado = 'pendiente'
+        """
+        df = bq_client.query(query_sql).to_dataframe()
+        if df.empty:
+            logger.warning(f"Programación {schedule_id} no encontrada")
+            return
+
+        prog = df.iloc[0].to_dict()
+        
+        # Simular el request al endpoint de envío
+        with app.test_request_context():
+            from flask import jsonify
+            # Aquí iría la lógica de envío...
+        
+    except Exception as exc:
+        logger.exception(f"Error ejecutando programación {schedule_id}")
+
+def validar_variables_plantilla(rows: List[Dict], plantilla: str, asunto: str = "") -> Dict:
+    """
+    Valida que todas las variables de la plantilla existan en los datos.
+    Retorna errores si faltan columnas.
+    """
+    import re
+    
+    # Extraer todas las variables de la plantilla y el asunto
+    vars_plantilla = re.findall(r"{{\s*([^{}]+?)\s*}}", plantilla)
+    vars_asunto = re.findall(r"{{\s*([^{}]+?)\s*}}", asunto) if asunto else []
+    todas_vars = set(vars_plantilla + vars_asunto)
+    
+    if not rows:
+        return {
+            "valido": False,
+            "error": "La consulta no devolvió registros.",
+            "variables_faltantes": list(todas_vars),
+            "variables_encontradas": []
+        }
+    
+    # Columnas disponibles en la primera fila
+    columnas_disponibles = {str(k).strip().lower() for k in rows[0].keys()}
+    
+    # Verificar cada variable
+    faltantes = []
+    encontradas = []
+    
+    for var in todas_vars:
+        var_lower = var.strip().lower()
+        if var_lower in columnas_disponibles:
+            encontradas.append(var)
+        else:
+            faltantes.append(var)
+    
+    return {
+        "valido": len(faltantes) == 0,
+        "error": f"Faltan {len(faltantes)} variables en la consulta: {', '.join(faltantes)}" if faltantes else None,
+        "variables_faltantes": faltantes,
+        "variables_encontradas": encontradas,
+        "total_variables": len(todas_vars),
+        "columnas_disponibles": list(columnas_disponibles)
+    }
+
 def _escape_sql(valor: str) -> str:
     """Escapa un valor para ser usado en SQL."""
     if valor is None:

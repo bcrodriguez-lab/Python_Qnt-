@@ -247,6 +247,14 @@
             <input id="replyEmail" class="form-control" placeholder="responder@ejemplo.com">
           </div>
         </div>
+        <!-- PROGRAMAR -->
+        <div class="em-schedule-row" style="margin-top:16px;">
+          <div class="form-group">
+            <label for="fechaProgramada"><i class="far fa-calendar-alt"></i> Programar para</label>
+            <input id="fechaProgramada" type="datetime-local" class="form-control">
+          </div>
+          <button id="scheduleBtn" class="btn-schedule"><i class="fas fa-clock"></i> Programar envío</button>
+        </div>
 
         <!-- BOTONES -->
         <div class="em-actions">
@@ -319,7 +327,8 @@
   const statValidos = document.getElementById('statValidos');
   const statAEnviar = document.getElementById('statAEnviar');
   const rowCount = document.getElementById('rowCount');
-
+  const fechaProgramadaEl = document.getElementById('fechaProgramada');
+  const scheduleBtn = document.getElementById('scheduleBtn');
   const tabs = document.querySelectorAll('.em-tabs .tab');
   const panels = { send: document.getElementById('panel-send'), history: document.getElementById('panel-history') };
 
@@ -445,6 +454,22 @@
     campanaEl.value = ''; usuarioEl.value = ''; replyEmailEl.value = '';
     clearResult(); rowCount.textContent = '0 filas';
     showToast('Limpiado', 'info', 2000);
+  });
+  scheduleBtn.addEventListener('click', async () => {
+    const fecha = fechaProgramadaEl.value;
+    if (!fecha) { showToast('Selecciona una fecha', 'warning'); return; }
+    if (new Date(fecha) <= new Date()) { showToast('La fecha debe ser futura', 'warning'); return; }
+    
+    const p = getPayload();
+    p.fecha_programada = fecha;
+    
+    try {
+      setLoading(scheduleBtn, true);
+      const data = await callAPI('/api/email/programar', p);
+      showToast(`Programado: ${data.id}`, 'success');
+      fechaProgramadaEl.value = '';
+    } catch (e) { showToast(e.message, 'danger'); }
+    finally { setLoading(scheduleBtn, false); }
   });
 
   tabs.forEach(tab => tab.addEventListener('click', () => {

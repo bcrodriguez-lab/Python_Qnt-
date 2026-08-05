@@ -318,6 +318,7 @@ Los handlers se ubican en `api_handlers/` y son cargados dinámicamente por `api
 | **`services/query_validator.py`** | Validación de consultas y normalización de columnas. Funciones: `validate_and_normalize(rows)` (acepta múltiples variaciones de nombres de columnas), `normalize_row()`, `normalize_rows()`, `validate_query_results()`, `build_alias_map()`, `map_column_name()`. |
 | **`services/wolkvox_service.py`** | Servicio de integración con Wolkvox. Funciones: `_get_api_config()`, `_get_server_url()`, `upload_csv_to_campaign()`. |
 | **`services/csv_service.py`** | Servicio para guardar DataFrames como CSV. Función: `save_dataframe_to_csv()`. |
+| **`services/email_service.py`** | Servicio de envío de emails. Funciones: `detectar_columna_email()`, `extraer_variables()`, `construir_contenido()`, `preview_email()`, `guardar_email_log()`, `traducir_a_member()`, `execute_email_schedule()`, `validar_variables_plantilla()`, y manejo de logs en BigQuery. |
 
 ---
 
@@ -328,11 +329,14 @@ Los handlers se ubican en `api_handlers/` y son cargados dinámicamente por `api
 | `layouts/adminlte.html` | Base | Menú lateral (Tablero, Campañas BQ, Servidores, APIs, APIs×Servidor), navbar, breadcrumbs, bloques `content` / `extra_js`. |
 | `index.html` | `/` | Tablero: 3 indicadores, tabla por campaña, log en vivo. |
 | `config_bigquery.html` | `/config-bigquery` | Parametrización de campañas, filtros, sync a BQ, probar conteo SQL. |
+| `config_email.html` | `/config-email` | Configuración de plantillas y envío de emails. |
+| `config_general.html` | `/config-general` | Parámetros generales. |
+| `config_mensajes.html` | `/config-mensajes` | Configuración de mensajería (SMS, WhatsApp, etc.). |
+| `config_sms.html` | `/config-sms` | Configuración de SMS. |
 | `config_servers.html` | `/config-servers` | Alta/edición/borrado de servidores. |
 | `config_apis.html` | `/config-apis` | Registro de APIs (archivo, método HTTP, URL, frecuencia). |
 | `config_server_apis.html` | `/config-server-apis` | Tabla con checkboxes servidor × API. |
 | `config_flujos_proceso.html` | `/config-flujos-proceso` | Gestión de flujos de proceso. |
-| `config_general.html` | `/config-general` | Parámetros generales. |
 | `reportes.html` | `/reportes` | Vista para descarga de reportes XLSX. |
 
 ---

@@ -2726,6 +2726,215 @@ def email_history():
         logger.exception("Error en historial Email")
         return jsonify({"success": False, "message": str(exc)}), 500
 
+def execute_email_schedule(schedule_id: str):
+    """Job de APScheduler que ejecuta una programación de email."""
+    try:
+        from google.cloud import bigquery
+        
+        client = bq_client or get_bigquery_client()
+        if client is None:
+            raise EmailServiceError("No se pudo conectar a BigQuery")
+
+        # Obtener la programación
+        query = f"""
+            SELECT * FROM `capable-arbor-209819.Temporal.ProgramacionEmail`
+            WHERE id = '{schedule_id}' AND estado = 'pendiente'
+        """
+        df = client.query(query).to_dataframe()
+        if df.empty:
+            logger.warning(f"Programación {schedule_id} no encontrada o ya ejecutada")
+            return
+
+        prog = df.iloc[0].to_dict()
+        
+        # Configuración de email
+        config = CONFIG or load_config()
+        email_config = config.get("email", {})
+        api_key = email_config.get("api_key", "")
+        from_email = email_config.get("from_email", "")
+        from_alias = email_config.get("from_alias", "")
+
+        # Obtener filas de BigQuery
+        from bigquery import fetch_sms_query_rows
+        fetched = fetch_sms_query_rows(client, prog['consulta_sql'])
+        if not fetched.get("success"):
+            raise EmailServiceError(fetched.get("message", "Error en consulta"))
+
+        rows = fetched["rows"]
+        email_column = detectar_columna_email(rows)
+        email_client = EmailClient(api_key)
+
+        # Obtener mapeo de campos
+        campos_result = email_client.obtener_campos_personalizados()
+        mapeo_campos = {}
+        for campo in campos_result.get("data", []):
+            mapeo_campos[campo["name"].lower()] = campo["id"]
+
+        # Traducir plantilla
+        from services.email_service import traducir_a_member
+        plantilla_api = traducir_a_member(prog['plantilla'], mapeo_campos)
+        asunto_api = traducir_a_member(prog.get('asunto', ''), mapeo_campos)
+
+        # Crear lista y contactos
+        lista_nombre = f"API_Sched_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        lista_result = email_client.crear_lista(lista_nombre)
+        lista_id = lista_result["data"]["id"]
+
+        contact_ids = []
+        for row in rows:
+            email = str(row.get(email_column, "")).strip()
+            if not email or "@" not in email:
+                continue
+
+            campos_personalizados = {}
+            for col_name, col_value in row.items():
+                if col_value is None or str(col_value).strip() == "":
+                    continue
+                col_lower = col_name.lower().strip()
+                if col_lower in mapeo_campos:
+                    campos_personalizados[mapeo_campos[col_lower]] = str(col_value).strip()
+
+            contact_result = email_client.crear_contacto(email, campos_personalizados)
+            if contact_result.get("success"):
+                cid = contact_result.get("data", {}).get("id")
+                if cid:
+                    contact_ids.append(cid)
+                elif contact_result.get("ya_existe"):
+                    buscar = email_client.obtener_contactos(email=email)
+                    if buscar.get("success"):
+                        encontrados = buscar.get("data", {}).get("data", [])
+                        if encontrados:
+                            email_client.eliminar_contactos([encontrados[0]["id"]])
+                            nuevo = email_client.crear_contacto(email, campos_personalizados)
+                            if nuevo.get("success") and nuevo.get("data", {}).get("id"):
+                                contact_ids.append(nuevo["data"]["id"])
+
+        if not contact_ids:
+            raise EmailServiceError("No se pudieron crear contactos")
+
+        email_client.suscribir_contactos(contact_ids, lista_id)
+
+        # Crear y enviar campaña
+        campana_result = email_client.crear_campana({
+            "name": prog.get('campana') or f"Email Programado {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            "subject": asunto_api or "Sin asunto",
+            "fromAlias": from_alias or "QNT",
+            "fromEmail": from_email,
+            "replyEmail": prog.get('reply_email') or from_email,
+            "content": plantilla_api,
+            "mailListsIds": [lista_id]
+        })
+
+        campana_id = campana_result["data"]["id"]
+        email_client.enviar_campana(campana_id, send_now=1)
+
+        # Actualizar estado
+        client.query(f"""
+            UPDATE `capable-arbor-209819.Temporal.ProgramacionEmail`
+            SET estado = 'enviado', fecha_actualizacion = CURRENT_TIMESTAMP()
+            WHERE id = '{schedule_id}'
+        """).result()
+
+        log_gui_action("Email programado ejecutado", programacion=schedule_id)
+
+    except Exception as exc:
+        logger.exception(f"Error en programación Email {schedule_id}")
+        try:
+            client = bq_client or get_bigquery_client()
+            if client:
+                client.query(f"""
+                    UPDATE `capable-arbor-209819.Temporal.ProgramacionEmail`
+                    SET estado = 'fallido', fecha_actualizacion = CURRENT_TIMESTAMP()
+                    WHERE id = '{schedule_id}'
+                """).result()
+        except:
+            pass
+
+@app.route("/api/email/programar", methods=["POST"])
+def email_schedule():
+    """Programa un envío de email para una fecha futura."""
+    data = request.get_json(silent=True) or {}
+    query = (data.get("query") or "").strip()
+    plantilla = (data.get("plantilla") or "").strip()
+    asunto = (data.get("asunto") or "").strip()
+    campana_nombre = (data.get("campana") or "").strip()
+    usuario = (data.get("usuario") or "").strip()
+    reply_email = (data.get("reply_email") or "").strip()
+    fecha_programada = (data.get("fecha_programada") or "").strip()
+
+    if not query or not plantilla or not fecha_programada:
+        return jsonify({"success": False, "message": "Consulta, plantilla y fecha son obligatorias."}), 400
+
+    try:
+        run_date = datetime.fromisoformat(fecha_programada)
+        if run_date <= datetime.now():
+            raise EmailServiceError("La fecha programada debe ser futura.")
+
+        rows, error_response = _get_sms_rows(query)
+        if error_response:
+            return error_response
+
+        from services.email_service import validar_variables_plantilla
+        validacion = validar_variables_plantilla(rows, plantilla, asunto)
+        if not validacion["valido"]:
+            return jsonify({
+                "success": False, 
+                "message": validacion["error"],
+                "validacion": validacion
+            }), 400
+
+        schedule_id = str(uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+
+        # Usar parámetros de BigQuery para evitar inyección SQL
+        from google.cloud import bigquery
+        
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("id", "STRING", schedule_id),
+                bigquery.ScalarQueryParameter("fecha_prog", "TIMESTAMP", run_date.isoformat()),
+                bigquery.ScalarQueryParameter("consulta", "STRING", query),
+                bigquery.ScalarQueryParameter("plantilla_param", "STRING", plantilla),
+                bigquery.ScalarQueryParameter("asunto_param", "STRING", asunto),
+                bigquery.ScalarQueryParameter("campana", "STRING", campana_nombre or ""),
+                bigquery.ScalarQueryParameter("usuario", "STRING", usuario or ""),
+                bigquery.ScalarQueryParameter("reply", "STRING", reply_email or ""),
+                bigquery.ScalarQueryParameter("now", "TIMESTAMP", now),
+            ]
+        )
+        
+        insert_sql = """
+            INSERT INTO `capable-arbor-209819.Temporal.ProgramacionEmail`
+            (id, fecha_programada, consulta_sql, plantilla, asunto, campana, estado, usuario, reply_email, fecha_creacion, fecha_actualizacion)
+            VALUES (
+                @id, @fecha_prog, @consulta, @plantilla_param, @asunto_param, 
+                @campana, 'pendiente', @usuario, @reply, @now, @now
+            )
+        """
+        bq_client.query(insert_sql, job_config=job_config).result()
+
+        scheduler.add_job(
+            execute_email_schedule,
+            trigger="date",
+            run_date=run_date,
+            args=[schedule_id],
+            id=f"email_programado_{schedule_id}",
+            replace_existing=True
+        )
+
+        log_gui_action("Email programado", programacion=schedule_id, fecha=run_date.isoformat())
+        return jsonify({
+            "success": True,
+            "id": schedule_id,
+            "fecha_programada": run_date.isoformat(),
+            "message": "Envío programado correctamente."
+        })
+
+    except (ValueError, EmailServiceError) as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+    except Exception as exc:
+        logger.exception("Error programando email")
+        return jsonify({"success": False, "message": str(exc)}), 500
 @app.route("/api/email/campanas", methods=["GET"])
 def email_campanas():
     """Lista campañas existentes en la plataforma."""

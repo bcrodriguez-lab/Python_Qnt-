@@ -1921,3 +1921,5 @@ requests.exceptions.HTTPError: 404 Client Error: Not Found for url: https://wv00
 2026-08-04 18:05:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-08-04...
 2026-08-04 18:07:46 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-08-04
 2026-08-04 18:07:47 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-08-04
+2026-08-05 09:00:30 - WARNING - [Email] Envío rechazado: Error de red: HTTPSConnectionPool(host='api.esmsv.com', port=443): Read timed out. (read timeout=30)
+2026-08-05 09:01:02 - WARNING - [Email] Envío rechazado: Error de red: HTTPSConnectionPool(host='api.esmsv.com', port=443): Read timed out. (read timeout=30)
