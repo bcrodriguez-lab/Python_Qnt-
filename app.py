@@ -2477,6 +2477,14 @@ def email_preview():
         rows, error_response = _get_sms_rows(query)  # Reutilizamos la función de BigQuery
         if error_response:
             return error_response
+        from services.email_service import validar_variables_plantilla
+        validacion = validar_variables_plantilla(rows, plantilla, asunto)
+        if not validacion["valido"]:
+            return jsonify({
+                "success": False,
+                "message": validacion["error"],
+                "validacion": validacion
+            }), 400
 
         result = preview_email(rows, plantilla, asunto)
         
@@ -2521,6 +2529,15 @@ def email_send():
             return error_response
 
         email_column = detectar_columna_email(rows)
+        # Validar que todas las variables de la plantilla existan en los datos
+        from services.email_service import validar_variables_plantilla
+        validacion = validar_variables_plantilla(rows, plantilla, asunto)
+        if not validacion["valido"]:
+            return jsonify({
+                "success": False,
+                "message": validacion["error"],
+                "validacion": validacion
+            }), 400
         client = EmailClient(api_key)
 
         # Obtener mapeo de campos personalizados
