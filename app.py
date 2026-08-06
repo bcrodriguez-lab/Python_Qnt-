@@ -735,7 +735,82 @@ def _get_sms_rows(query):
     if not result.get("success"):
         return None, (jsonify(result), 400)
     return result["rows"], None
-
+def validar_destinatarios_email(rows, client, confirmar_reenvio=False):
+    """
+    Valida destinatarios de email:
+    - Detecta emails inválidos
+    - Detecta duplicados (ya enviados hoy)
+    - Detecta lista negra (Email_Tutela)
+    """
+    from datetime import datetime, timezone
+    
+    hoy = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    
+    # Detectar columna de email
+    email_column = None
+    for col in rows[0].keys():
+        if col.lower() in ['email', 'correo', 'mail']:
+            email_column = col
+            break
+    
+    if not email_column:
+        return {
+            "success": False,
+            "message": "No se encontró columna de email"
+        }
+    
+    # Extraer todos los emails
+    todos_emails = [str(row[email_column]).strip().lower() for row in rows if row.get(email_column)]
+    
+    total_consulta = len(todos_emails)
+    validos = [e for e in todos_emails if '@' in e]
+    invalidos = total_consulta - len(validos)
+    
+    # Consultar duplicados (enviados hoy)
+    emails_validos_str = "', '".join(validos)
+    
+    query_dup = f"""
+        SELECT DISTINCT LOWER(email) as email
+        FROM `{EMAIL_LOG_TABLE}`
+        WHERE DATE(fecha_envio) = '{hoy}'
+        AND LOWER(email) IN ('{emails_validos_str}')
+    """
+    
+    try:
+        df_dup = client.query(query_dup).to_dataframe()
+        duplicados_set = set(df_dup['email'].tolist()) if not df_dup.empty else set()
+    except:
+        duplicados_set = set()
+    
+    # Consultar lista negra
+    query_black = f"""
+        SELECT DISTINCT LOWER(EMAIL) as email
+        FROM `Tablas_Reporteria.Email_Tutela`
+        WHERE LOWER(EMAIL) IN ('{emails_validos_str}')
+    """
+    
+    try:
+        df_black = client.query(query_black).to_dataframe()
+        blacklist_set = set(df_black['email'].tolist()) if not df_black.empty else set()
+    except:
+        blacklist_set = set()
+    
+    # Calcular a enviar
+    if confirmar_reenvio:
+        a_enviar = [e for e in validos if e not in blacklist_set]
+    else:
+        a_enviar = [e for e in validos if e not in duplicados_set and e not in blacklist_set]
+    
+    return {
+        "success": True,
+        "total_consulta": total_consulta,
+        "total_validos": len(validos),
+        "invalidos": invalidos,
+        "duplicados": len(duplicados_set),
+        "blacklist": len(blacklist_set),
+        "a_enviar": len(a_enviar),
+        "email_column": email_column
+    }
 
 @app.route("/config-sms")
 def config_sms():
@@ -2480,10 +2555,11 @@ def email_preview():
     except Exception as exc:
         logger.exception("Error en vista previa Email")
         return jsonify({"success": False, "message": str(exc)}), 500
-
 @app.route("/api/email/enviar", methods=["POST"])
 def email_send():
     """Envía emails usando campos personalizados de la API."""
+    print("🚀🚀🚀 ENDPOINT EMAIL ENVIAR EJECUTADO 🚀🚀🚀")
+    
     data = request.get_json(silent=True) or {}
     query = (data.get("query") or "").strip()
     plantilla = (data.get("plantilla") or "").strip()
@@ -2491,6 +2567,9 @@ def email_send():
     campana_nombre = (data.get("campana") or "").strip()
     usuario = (data.get("usuario") or "").strip()
     reply_email = (data.get("reply_email") or "").strip()
+    confirmar_reenvio = data.get("confirmar_reenvio", False)
+
+    print(f"🔍 DEBUG - confirmar_reenvio recibido: {confirmar_reenvio}")
 
     if not query or not plantilla:
         return jsonify({"success": False, "message": "La consulta SQL y la plantilla son obligatorias."}), 400
@@ -2512,6 +2591,120 @@ def email_send():
             return error_response
 
         email_column = detectar_columna_email(rows)
+        
+        # 🆕 ========== DEBUG DEL FILTRO ==========
+        print(f"🔍 DEBUG - Total filas originales: {len(rows)}")
+        print(f"🔍 DEBUG - Email column detectada: {email_column}")
+        
+        # Mostrar primeros emails
+        for i, row in enumerate(rows[:5]):
+            email_val = str(row.get(email_column, "")).strip().lower()
+            print(f"🔍 DEBUG - Fila {i}: email='{email_val}'")
+        
+        # 🆕 ========== FILTRO DE LISTA NEGRA Y DUPLICADOS ==========
+        total_original = len(rows)
+        
+        # Extraer todos los emails
+        todos_emails = []
+        for row in rows:
+            email_val = str(row.get(email_column, "")).strip().lower()
+            if email_val and '@' in email_val:
+                todos_emails.append(email_val)
+        
+        print(f"🔍 DEBUG - Total emails válidos: {len(todos_emails)}")
+        print(f"🔍 DEBUG - Emails: {todos_emails}")
+        
+        blacklist = set()
+        duplicados = set()
+        
+        if todos_emails:
+            emails_str = "', '".join(todos_emails)
+            
+            # 1. CONSULTAR LISTA NEGRA
+            try:
+                query_black = f"""
+                    SELECT DISTINCT LOWER(EMAIL) as email
+                    FROM `Tablas_Reporteria.Email_Tutela`
+                    WHERE LOWER(EMAIL) IN ('{emails_str}')
+                """
+                print(f"🔍 DEBUG - [LISTA NEGRA] Ejecutando query...")
+                print(f"🔍 DEBUG - [LISTA NEGRA] Query: {query_black}")
+                
+                df_black = bq_client.query(query_black).to_dataframe()
+                print(f"🔍 DEBUG - [LISTA NEGRA] Resultados: {len(df_black)} filas")
+                
+                if not df_black.empty:
+                    blacklist = set(df_black['email'].tolist())
+                    print(f"🔍 DEBUG - [LISTA NEGRA] Emails en lista negra: {blacklist}")
+                else:
+                    print(f"🔍 DEBUG - [LISTA NEGRA] No se encontraron emails en lista negra")
+            except Exception as e:
+                print(f"❌ DEBUG - [LISTA NEGRA] Error: {e}")
+                import traceback
+                traceback.print_exc()
+            
+            # 2. CONSULTAR DUPLICADOS
+            if not confirmar_reenvio:
+                try:
+                    hoy = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+                    query_dup = f"""
+                        SELECT DISTINCT LOWER(email) as email
+                        FROM `{EMAIL_LOG_TABLE}`
+                        WHERE DATE(fecha_envio) = '{hoy}'
+                        AND LOWER(email) IN ('{emails_str}')
+                    """
+                    print(f"🔍 DEBUG - [DUPLICADOS] Ejecutando query...")
+                    print(f"🔍 DEBUG - [DUPLICADOS] Fecha hoy: {hoy}")
+                    print(f"🔍 DEBUG - [DUPLICADOS] Query: {query_dup}")
+                    
+                    df_dup = bq_client.query(query_dup).to_dataframe()
+                    print(f"🔍 DEBUG - [DUPLICADOS] Resultados: {len(df_dup)} filas")
+                    
+                    if not df_dup.empty:
+                        duplicados = set(df_dup['email'].tolist())
+                        print(f"🔍 DEBUG - [DUPLICADOS] Emails duplicados: {duplicados}")
+                    else:
+                        print(f"🔍 DEBUG - [DUPLICADOS] No se encontraron duplicados")
+                except Exception as e:
+                    print(f"❌ DEBUG - [DUPLICADOS] Error: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print(f"🔍 DEBUG - [DUPLICADOS] Reenvío confirmado, no se filtran duplicados")
+            
+            # 3. EXCLUIR
+            excluir = blacklist | duplicados
+            print(f"🔍 DEBUG - [EXCLUIR] Total a excluir: {len(excluir)}")
+            print(f"🔍 DEBUG - [EXCLUIR] Emails a excluir: {excluir}")
+            
+            if excluir:
+                rows_antes = len(rows)
+                rows = [
+                    row for row in rows 
+                    if str(row.get(email_column, "")).strip().lower() not in excluir
+                ]
+                print(f"🔍 DEBUG - [EXCLUIR] Filas antes: {rows_antes}, después: {len(rows)}")
+                print(f"🔍 DEBUG - [EXCLUIR] Se excluyeron {rows_antes - len(rows)} filas")
+            else:
+                print(f"🔍 DEBUG - [EXCLUIR] No hay emails para excluir")
+        else:
+            print(f"❌ DEBUG - No se encontraron emails válidos en la consulta")
+        
+        # Mostrar emails finales
+        emails_finales = [str(r.get(email_column, "")).strip().lower() for r in rows]
+        print(f"🔍 DEBUG - [FINAL] Emails que se enviarán ({len(emails_finales)}): {emails_finales}")
+        
+        # 🆕 ========== FIN DEL FILTRO ==========
+        
+        if not rows:
+            print(f"❌ DEBUG - No hay destinatarios después del filtro")
+            return jsonify({
+                "success": False,
+                "message": "No hay destinatarios después de aplicar filtros de lista negra y duplicados.",
+                "blacklist": len(blacklist),
+                "duplicados": len(duplicados)
+            }), 400
+
         # Validar que todas las variables de la plantilla existan en los datos
         from services.email_service import validar_variables_plantilla
         validacion = validar_variables_plantilla(rows, plantilla, asunto)
@@ -2521,6 +2714,7 @@ def email_send():
                 "message": validacion["error"],
                 "validacion": validacion
             }), 400
+            
         client = EmailClient(api_key)
 
         # Obtener mapeo de campos personalizados
@@ -2582,7 +2776,6 @@ def email_send():
                     if buscar.get("success"):
                         encontrados = buscar.get("data", {}).get("data", [])
                         if encontrados:
-                            # Eliminar y recrear para actualizar campos
                             old_id = encontrados[0]["id"]
                             client.eliminar_contactos([old_id])
                             nuevo_result = client.crear_contacto(email, campos_personalizados)
@@ -2603,19 +2796,16 @@ def email_send():
         if not contact_ids:
             raise EmailServiceError("No se pudieron crear contactos")
 
-
-        # Suscribir contactos a la lista
         client.suscribir_contactos(contact_ids, lista_id)
 
         if not contenido_preview or len(str(contenido_preview).strip()) < 50:
             contenido_preview = plantilla
-              # Traducir {{variables}} a %Member:CustomFieldX%
+        
         from services.email_service import traducir_a_member
         
         plantilla_api = traducir_a_member(plantilla, mapeo_campos)
         asunto_api = traducir_a_member(asunto, mapeo_campos) if asunto else ""
 
-        # Crear campaña
         campana_result = client.crear_campana({
             "name": campana_nombre or f"Email {datetime.now().strftime('%Y-%m-%d %H:%M')}",
             "subject": asunto_api or "Sin asunto",
@@ -2634,7 +2824,6 @@ def email_send():
         if not send_result.get("success"):
             raise EmailServiceError("No se pudo enviar la campaña")
 
-        # Guardar en EmailLog
         now = datetime.now(timezone.utc).isoformat()
         registros = []
         for email in emails_enviados:
@@ -2656,9 +2845,12 @@ def email_send():
             })
 
         logger.info(f"📧 Intentando guardar {len(registros)} registros en EmailLog")
-        logger.info(f"📧 Primer registro: {registros[0] if registros else 'vacío'}")
         guardar_email_log(bq_client, registros)    
         log_gui_action("Envio Email", campana_id=campana_id, enviados=len(emails_enviados))
+        
+        print(f"✅ DEBUG - Envío completado: {len(emails_enviados)} emails")
+        print(f"✅ DEBUG - Lista negra excluidos: {len(blacklist)}")
+        print(f"✅ DEBUG - Duplicados excluidos: {len(duplicados)}")
         
         return jsonify({
             "success": True,
@@ -2666,6 +2858,8 @@ def email_send():
             "enviados": len(emails_enviados),
             "fallidos": len(errores),
             "errores": errores[:10],
+            "blacklist_excluidos": len(blacklist),
+            "duplicados_excluidos": len(duplicados),
             "message": f"{len(emails_enviados)} emails enviados"
         })
 
@@ -2675,6 +2869,7 @@ def email_send():
     except Exception as exc:
         logger.exception("Error enviando emails")
         return jsonify({"success": False, "message": str(exc)}), 500
+
 @app.route("/api/email/historial")
 def email_history():
     """Historial de envíos de email."""
@@ -3085,6 +3280,50 @@ def email_programaciones():
         logger.exception("Error consultando programaciones Email")
         return jsonify({"success": False, "message": str(exc)}), 500
 
+@app.route("/api/email/validar", methods=["POST"])
+def email_validar():
+    """Valida consulta de email antes de enviar."""
+    try:
+        data = request.get_json(silent=True) or {}
+        query = (data.get("query") or "").strip()
+        plantilla = (data.get("plantilla") or "").strip()
+        asunto = (data.get("asunto") or "").strip()
+        confirmar_reenvio = data.get("confirmar_reenvio", False)
+        
+        if not query:
+            return jsonify({"success": False, "message": "Consulta SQL requerida"}), 400
+        
+        # Obtener filas de BigQuery
+        rows, error_response = _get_sms_rows(query)  # Reutiliza tu función existente
+        if error_response:
+            return error_response
+        
+        # Validar emails
+        validacion = validar_destinatarios_email(rows, bq_client, confirmar_reenvio)
+        
+        if not validacion.get("success"):
+            return jsonify(validacion), 400
+        
+        # Generar preview (primeros 3)
+        preview = []
+        email_column = validacion["email_column"]
+        for row in rows[:3]:
+            contenido = row.get(email_column, '')
+            preview.append({
+                "email": contenido,
+                "asunto": asunto or "(Sin asunto)",
+                "contenido": plantilla  # Simplificado - ajusta según tu lógica
+            })
+        
+        return jsonify({
+            "success": True,
+            **validacion,
+            "preview": preview
+        })
+        
+    except Exception as exc:
+        logger.exception("Error validando email")
+        return jsonify({"success": False, "message": str(exc)}), 500
 
 @app.route("/api/sms/cancelar/<schedule_id>", methods=["POST"])
 def sms_cancelar_programacion(schedule_id):
