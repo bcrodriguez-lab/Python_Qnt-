@@ -1,19 +1,25 @@
-from services.email_client import EmailClient
-import json
+from google.cloud import bigquery
 
-with open('config.json') as f:
-    config = json.load(f)
+client = bigquery.Client()
 
-api_key = config['email']['api_key']
-client = EmailClient(api_key)
+query = """
+    SELECT 
+        id,
+        fecha_programada,
+        fecha_creacion,
+        fecha_actualizacion,
+        fecha_ejecucion
+    FROM `capable-arbor-209819.Temporal.ProgramacionSMS`
+    ORDER BY fecha_programada DESC
+"""
 
-campos_faltantes = [
-    "Valor a pagar",
-    "Valor Oferta Esp",
-    "Porcentaje",
-    "Fecha de Pago"
-]
+df = client.query(query).to_dataframe()
 
-for nombre in campos_faltantes:
-    resultado = client.crear_campo_personalizado(nombre)
-    print(f"{nombre}: {resultado}")
+# Ver cuáles son NULL
+print("¿Hay NaT en fecha_creacion?:", df['fecha_creacion'].isna().any())
+print("¿Hay NaT en fecha_actualizacion?:", df['fecha_actualizacion'].isna().any())
+print("¿Hay NaT en fecha_ejecucion?:", df['fecha_ejecucion'].isna().any())
+
+# Mostrar filas con NaT
+print("\nFilas con NaT:")
+print(df[df.isna().any(axis=1)])

@@ -28,7 +28,7 @@ PHONE_COLUMNS = (
 )
 VARIABLE_PATTERN = re.compile(r"{{\s*([^{}]+?)\s*}}")
 SMS_LOG_TABLE = "capable-arbor-209819.Temporal.SmsLog"
-SCHEDULE_TABLE = "capable-arbor-209819.Temporal.ProgramacionSms"
+SCHEDULE_TABLE = "capable-arbor-209819.Temporal.ProgramacionSMS"
 BLACKLIST_TABLE = "capable-arbor-209819.Tablas_Reporteria.Telefonos_Tutela"
 
 BATCH_SIZE = 100
@@ -539,6 +539,7 @@ def guardar_sms_log(
         logger.info(f"✅ {len(mensajes)} registros guardados en SmsLog (vía query job)")
     except Exception as e:
         logger.error(f"Error guardando logs: {e}")
+
 def guardar_programacion(
     client,
     query: str,
@@ -548,42 +549,42 @@ def guardar_programacion(
     usuario: str = "",
     scheduled_at: str = "",
     allow_resend: bool = False,
+    total_dest: int = 0,
 ) -> str:
-    """Guarda una programación en BigQuery vía INSERT (query job, no streaming insert)."""
+    """Guarda una programación en BigQuery vía INSERT."""
     from google.cloud import bigquery
 
     schedule_id = str(uuid4())
     now = datetime.now(timezone.utc).isoformat()
 
-    insert_sql = f"""
-        INSERT INTO `{SCHEDULE_TABLE}` (
-            id, fecha_programada, consulta_sql, plantilla, estado,
-            total_destinatarios, usuario, periodo_duplicados_horas,
-            confirmar_duplicados, fecha_creacion, fecha_actualizacion
-        )
-        VALUES (
-            @id, @fecha_programada, @consulta_sql, @plantilla, @estado,
-            @total_destinatarios, @usuario, @periodo_duplicados_horas,
-            @confirmar_duplicados, @fecha_creacion, @fecha_actualizacion
-        )
+    insert_sql = """
+    INSERT INTO `capable-arbor-209819.Temporal.ProgramacionSMS`
+    (id, fecha_programada, consulta_sql, plantilla, campana, usuario, 
+     total_destinatarios, confirmar_reenvio, estado,
+     fecha_creacion, fecha_actualizacion)
+    VALUES (
+        @id, @fecha_prog, @consulta, @plantilla_param, @campana, @usuario,
+        @total_dest, @conf_reenvio, @estado, @now, @now
+    )
     """
+    
     job_config = bigquery.QueryJobConfig(query_parameters=[
+        # 👇 Los nombres DEBEN coincidir con @param en el INSERT
         bigquery.ScalarQueryParameter("id", "STRING", schedule_id),
-        bigquery.ScalarQueryParameter("fecha_programada", "TIMESTAMP", scheduled_at),
-        bigquery.ScalarQueryParameter("consulta_sql", "STRING", query),
-        bigquery.ScalarQueryParameter("plantilla", "STRING", plantilla),
-        bigquery.ScalarQueryParameter("estado", "STRING", "pendiente"),
-        bigquery.ScalarQueryParameter("total_destinatarios", "INT64", 0),
+        bigquery.ScalarQueryParameter("fecha_prog", "TIMESTAMP", scheduled_at),
+        bigquery.ScalarQueryParameter("consulta", "STRING", query),
+        bigquery.ScalarQueryParameter("plantilla_param", "STRING", plantilla),
+        bigquery.ScalarQueryParameter("campana", "STRING", campaign or ""),
         bigquery.ScalarQueryParameter("usuario", "STRING", usuario or ""),
-        bigquery.ScalarQueryParameter("periodo_duplicados_horas", "INT64", 24),
-        bigquery.ScalarQueryParameter("confirmar_duplicados", "BOOL", allow_resend),
-        bigquery.ScalarQueryParameter("fecha_creacion", "TIMESTAMP", now),
-        bigquery.ScalarQueryParameter("fecha_actualizacion", "TIMESTAMP", now),
+        bigquery.ScalarQueryParameter("total_dest", "INT64", total_dest),
+        bigquery.ScalarQueryParameter("conf_reenvio", "BOOL", allow_resend),
+        bigquery.ScalarQueryParameter("estado", "STRING", "pendiente"),
+        bigquery.ScalarQueryParameter("now", "TIMESTAMP", now),
     ])
 
     try:
         client.query(insert_sql, job_config=job_config).result()
-        logger.info(f"✅ Programación guardada (vía query job): {schedule_id}")
+        logger.info(f"✅ Programación guardada: {schedule_id}")
     except Exception as e:
         raise SmsServiceError(f"No se pudo guardar la programación: {e}")
 

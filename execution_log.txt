@@ -1929,3 +1929,22 @@ requests.exceptions.HTTPError: 404 Client Error: Not Found for url: https://wv00
 2026-08-05 18:05:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-08-05...
 2026-08-05 18:07:53 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-08-05
 2026-08-05 18:07:56 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-08-05
+2026-08-06 14:59:01 - INFO - [SMS] Campaña='Prueba api' Usuario='Bryan' Total=2 Enviados=500 Fallidos=0 Estado=exitoso
+2026-08-06 15:03:35 - WARNING - [SMS] Programación rechazada: Variables no encontradas en la consulta: Nombre Cliente, Link. Verifique los nombres de las variables en la plantilla.
+2026-08-06 15:03:52 - WARNING - [SMS] Programación rechazada: No se pudo guardar la programación: 404 Not found: Table capable-arbor-209819:Temporal.ProgramacionSms was not found in location US; reason: notFound, message: Not found: Table capable-arbor-209819:Temporal.ProgramacionSms was not found in location US
+
+Location: US
+Job ID: 53c1d2ed-7edc-4d3c-8b41-8a5899ae12a6
+
+2026-08-06 15:05:36 - WARNING - [SMS] Programación rechazada: No se pudo guardar la programación: 400 GET https://bigquery.googleapis.com/bigquery/v2/projects/capable-arbor-209819/queries/3b6d317a-2d5a-4eb0-b926-383c6d16adb5?maxResults=0&location=US&prettyPrint=false: Column confirmar_duplicados is not present in table capable-arbor-209819.Temporal.ProgramacionSms at [5:13]
+
+Location: US
+Job ID: 3b6d317a-2d5a-4eb0-b926-383c6d16adb5
+
+2026-08-06 15:05:51 - WARNING - [SMS] Programación rechazada: No se pudo guardar la programación: 400 Column confirmar_duplicados is not present in table capable-arbor-209819.Temporal.ProgramacionSms at [5:13]; reason: invalidQuery, location: query, message: Column confirmar_duplicados is not present in table capable-arbor-209819.Temporal.ProgramacionSms at [5:13]
+
+Location: US
+Job ID: ae71f4d4-d829-46a0-9b4f-f1e1303d5de8
+
+2026-08-06 15:39:28 - WARNING - [SMS] Programación rechazada: La programación no tiene destinatarios válidos.
+2026-08-06 15:39:42 - INFO - [SMS] Campaña='Prueba api' Usuario='Bryan' Total=2 Enviados=500 Fallidos=0 Estado=exitoso

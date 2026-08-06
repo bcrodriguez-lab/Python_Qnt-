@@ -831,7 +831,7 @@ def execute_sms_schedule(schedule_id: str):
             raise SmsServiceError("No se pudo conectar a BigQuery")
 
         query = f"""
-            SELECT * FROM `{PROJECT_ID}.Temporal.ProgramacionSms`
+            SELECT * FROM `{PROJECT_ID}.Temporal.ProgramacionSMS`
             WHERE id = '{schedule_id}' AND estado = 'pendiente'
             LIMIT 1
         """
@@ -858,7 +858,7 @@ def execute_sms_schedule(schedule_id: str):
         )
 
         client.query(f"""
-            UPDATE `{PROJECT_ID}.Temporal.ProgramacionSms`
+            UPDATE `{PROJECT_ID}.Temporal.ProgramacionSMS`
             SET estado = 'enviado', fecha_ejecucion = CURRENT_TIMESTAMP(), fecha_actualizacion = CURRENT_TIMESTAMP()
             WHERE id = '{schedule_id}'
         """).result()
@@ -871,7 +871,7 @@ def execute_sms_schedule(schedule_id: str):
             client = bq_client or get_bigquery_client()
             if client:
                 client.query(f"""
-                    UPDATE `{PROJECT_ID}.Temporal.ProgramacionSms`
+                    UPDATE `{PROJECT_ID}.Temporal.ProgramacionSMS`
                     SET estado = 'fallido', fecha_actualizacion = CURRENT_TIMESTAMP()
                     WHERE id = '{schedule_id}'
                 """).result()
@@ -1021,19 +1021,7 @@ def sms_history_detail(record_id):
         return jsonify({"success": False, "message": str(exc)}), 500
 
 
-@app.route("/api/sms/programaciones")
-def sms_schedules():
-    try:
-        query = f"""
-            SELECT * FROM `{SCHEDULE_TABLE}`
-            ORDER BY fecha_programada DESC
-            LIMIT 200
-        """
-        df = bq_client.query(query).to_dataframe()
-        items = df.to_dict('records') if not df.empty else []
-        return jsonify({"success": True, "items": items})
-    except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 500
+
 @app.route("/api/sms/programacion/<schedule_id>")
 def sms_schedule_detail(schedule_id):
     try:
@@ -2997,6 +2985,184 @@ def sms_tipos_por_categoria():
         return jsonify({"success": True, "items": items})
     except Exception as exc:
         logger.exception("Error obteniendo tipos por categoría")
+        return jsonify({"success": False, "message": str(exc)}), 500
+@app.route("/api/sms/programaciones", methods=["GET"])
+def sms_programaciones():
+    """Lista las programaciones de SMS - sin pandas, sin NaT"""
+    try:
+        from google.cloud import bigquery
+        
+        client = bq_client or get_bigquery_client()
+        if client is None:
+            return jsonify({"success": False, "message": "No se pudo conectar a BigQuery"}), 500
+
+        query = """
+            SELECT *
+            FROM `capable-arbor-209819.Temporal.ProgramacionSMS`
+            ORDER BY fecha_programada DESC
+            LIMIT 100
+        """
+        
+        print("🔍 Consultando programaciones SMS...")
+        result = client.query(query).result()
+        
+        items = []
+        for row in result:
+            item = {}
+            for key, value in row.items():
+                # Convertir cada valor manualmente
+                if value is None:
+                    item[key] = None
+                elif hasattr(value, 'strftime'):
+                    item[key] = value.strftime('%Y-%m-%d %H:%M:%S')
+                elif hasattr(value, 'isoformat'):
+                    item[key] = value.isoformat()
+                elif isinstance(value, (int, float)):
+                    item[key] = value
+                elif isinstance(value, bool):
+                    item[key] = value
+                else:
+                    item[key] = str(value)
+            items.append(item)
+        
+        print(f"✅ Programaciones SMS: {len(items)}")
+        return jsonify({"success": True, "items": items})
+        
+    except Exception as exc:
+        import traceback
+        print(f"❌ Error: {traceback.format_exc()}")
+        return jsonify({"success": False, "message": str(exc)}), 500
+@app.route("/api/email/programaciones", methods=["GET"])
+def email_programaciones():
+    """Lista las programaciones de Email pendientes y enviadas."""
+    try:
+        from google.cloud import bigquery
+        
+        client = bq_client or get_bigquery_client()
+        if client is None:
+            return jsonify({"success": False, "message": "No se pudo conectar a BigQuery"}), 500
+        
+        query = """
+            SELECT 
+                id,
+                fecha_programada,
+                consulta_sql,
+                plantilla,
+                asunto,
+                campana,
+                usuario,
+                reply_email,
+                estado,
+                fecha_creacion,
+                fecha_actualizacion
+            FROM `capable-arbor-209819.Temporal.ProgramacionEmail`
+            ORDER BY fecha_programada DESC
+            LIMIT 100
+        """
+        
+        df = client.query(query).to_dataframe()
+        
+        # Convertir timestamps a string para evitar errores de serialización
+        items = []
+        for _, row in df.iterrows():
+            item = {}
+            for col in df.columns:
+                val = row[col]
+                if pd.isna(val):
+                    item[col] = None
+                elif hasattr(val, 'isoformat'):
+                    item[col] = val.isoformat()
+                elif hasattr(val, 'strftime'):
+                    item[col] = val.strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    item[col] = val
+            items.append(item)
+        
+        print(f"✅ Programaciones Email encontradas: {len(items)}")
+        return jsonify({"success": True, "items": items})
+        
+    except Exception as exc:
+        logger.exception("Error consultando programaciones Email")
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@app.route("/api/sms/cancelar/<schedule_id>", methods=["POST"])
+def sms_cancelar_programacion(schedule_id):
+    """Cancela una programación de SMS pendiente."""
+    try:
+        from google.cloud import bigquery
+        
+        client = bq_client or get_bigquery_client()
+        if client is None:
+            return jsonify({"success": False, "message": "No se pudo conectar a BigQuery"}), 500
+        
+        # Cancelar en BigQuery
+        query = """
+            UPDATE `capable-arbor-209819.Temporal.ProgramacionSMS`
+            SET estado = 'cancelado', fecha_actualizacion = CURRENT_TIMESTAMP()
+            WHERE id = @schedule_id AND estado = 'pendiente'
+        """
+        
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("schedule_id", "STRING", schedule_id)
+            ]
+        )
+        
+        result = client.query(query, job_config=job_config).result()
+        
+        # Cancelar en scheduler si existe
+        try:
+            from apscheduler.jobstores.base import JobLookupError
+            scheduler.remove_job(f"sms_programado_{schedule_id}")
+        except:
+            pass
+        
+        log_gui_action("Cancelar programación SMS", id=schedule_id)
+        return jsonify({"success": True, "message": "Programación cancelada"})
+        
+    except Exception as exc:
+        logger.exception("Error cancelando programación SMS")
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@app.route("/api/email/cancelar/<schedule_id>", methods=["POST"])
+def email_cancelar_programacion(schedule_id):
+    """Cancela una programación de Email pendiente."""
+    try:
+        from google.cloud import bigquery
+        
+        client = bq_client or get_bigquery_client()
+        if client is None:
+            return jsonify({"success": False, "message": "No se pudo conectar a BigQuery"}), 500
+        
+        # Cancelar en BigQuery
+        query = """
+            UPDATE `capable-arbor-209819.Temporal.ProgramacionEmail`
+            SET estado = 'cancelado', fecha_actualizacion = CURRENT_TIMESTAMP()
+            WHERE id = @schedule_id AND estado = 'pendiente'
+        """
+        
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("schedule_id", "STRING", schedule_id)
+            ]
+        )
+        
+        result = client.query(query, job_config=job_config).result()
+        
+        # Cancelar en scheduler si existe
+        try:
+            from apscheduler.jobstores.base import JobLookupError
+            scheduler.remove_job(f"email_programado_{schedule_id}")
+        except:
+            pass
+        
+        log_gui_action("Cancelar programación Email", id=schedule_id)
+        return jsonify({"success": True, "message": "Programación cancelada"})
+        
+    except Exception as exc:
+        logger.exception("Error cancelando programación Email")
         return jsonify({"success": False, "message": str(exc)}), 500
 if __name__ == "__main__":
     with app.app_context():

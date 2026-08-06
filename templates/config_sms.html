@@ -1553,23 +1553,35 @@ async function cargarDatosIniciales() {
   });
 
   // ========== PROGRAMAR ==========
+  // ========== PROGRAMAR ==========
   scheduleBtn.addEventListener('click', async () => {
-    const fecha = fechaProgramadaEl.value;
-    if (!fecha) { showToast('⚠️ Selecciona fecha', 'warning'); return; }
-    if (new Date(fecha) <= new Date()) { showToast('⚠️ Fecha futura requerida', 'warning'); return; }
-    if (!queryEl.value.trim() || !plantillaEl.value.trim()) { showToast('⚠️ Completa consulta y plantilla', 'warning'); return; }
+      const fecha = fechaProgramadaEl.value;
+      if (!fecha) { showToast('⚠️ Selecciona fecha', 'warning'); return; }
+      if (new Date(fecha) <= new Date()) { showToast('⚠️ Fecha futura requerida', 'warning'); return; }
+      if (!queryEl.value.trim() || !plantillaEl.value.trim()) { showToast('⚠️ Completa consulta y plantilla', 'warning'); return; }
 
-    try {
-      setLoading(scheduleBtn, true);
-      const data = await callAPI('/api/sms/programar', getPayload());
-      showToast(`✅ Programado (ID: ${data.id})`, 'success', 5000);
-      showResult(`<div class="alert alert-success mb-0"><i class="fas fa-check-circle"></i> <strong>Programado</strong><br>ID: <code>${data.id}</code><br>Fecha: ${new Date(data.fecha_programada).toLocaleString()}<br>Destinatarios: ${data.total_destinatarios || '—'}</div>`);
-      fechaProgramadaEl.value = '';
-    } catch (error) {
-      showToast(`❌ ${escapeHtml(error.message)}`, 'danger');
-    } finally {
-      setLoading(scheduleBtn, false);
-    }
+      try {
+        setLoading(scheduleBtn, true);
+        const payload = getPayload();
+        payload.fecha_programada = fecha;
+        
+        // ✅ CORREGIDO: llamar a /api/sms/programar (no programaciones)
+        const data = await callAPI('/api/sms/programar', payload);
+        
+        showToast(`✅ Programado (ID: ${data.id})`, 'success', 5000);
+        showResult(`<div class="alert alert-success mb-0">
+          <i class="fas fa-check-circle"></i> 
+          <strong>Programado</strong><br>
+          ID: <code>${data.id}</code><br>
+          Fecha: ${new Date(data.fecha_programada).toLocaleString()}<br>
+          Destinatarios: ${data.total_destinatarios || '—'}
+        </div>`);
+        fechaProgramadaEl.value = '';
+      } catch (error) {
+        showToast(`❌ ${escapeHtml(error.message)}`, 'danger');
+      } finally {
+        setLoading(scheduleBtn, false);
+      }
   });
 
   // ========== LIMPIAR ==========
@@ -1638,6 +1650,7 @@ async function cargarDatosIniciales() {
     try {
       const resp = await fetch('/api/sms/programaciones');
       const data = await resp.json();
+      console.log('📦 Datos programaciones:', data);  
       if (!data.items || !data.items.length) {
         container.innerHTML = '<div class="text-center text-muted py-4">Sin programaciones</div>';
         return;
