@@ -1164,51 +1164,51 @@ async function cargarDatosIniciales() {
 }
 
 // 2. Cargar categorías según operadores seleccionados (o todas si no hay)
-  async function cargarCategorias(operadoresSeleccionados) {
-      console.log('📂 cargarCategorias llamado con:', operadoresSeleccionados);
-      const selCategoria = document.getElementById('maFiltroCategoria');
-      selCategoria.innerHTML = '<option value="">-- Cargando categorías --</option>';
-      const categoriaActual = selCategoria.value;
+async function cargarCategorias(operadoresSeleccionados) {
+    console.log('📂 cargarCategorias llamado con:', operadoresSeleccionados);
+    const selCategoria = document.getElementById('maFiltroCategoria');
+    selCategoria.innerHTML = '<option value="">-- Cargando categorías --</option>';
+    const categoriaActual = selCategoria.value;
 
-      try {
-          let url = '/api/sms/categorias';
-          const primerOperador = operadoresSeleccionados && operadoresSeleccionados.length > 0 ? operadoresSeleccionados[0] : null;
-          if (primerOperador) {
-              url = `/api/sms/categorias-por-operador?operador=${encodeURIComponent(primerOperador)}`;
-          }
-          console.log(`📡 Llamando a: ${url}`);
-          
-          const resp = await fetch(url);
-          const data = await resp.json();
-          console.log('📦 Categorías recibidas:', data);
-          
-          if (data.success) {
-              const items = data.items || [];
-              console.log(` ${items.length} categorías encontradas:`, items);
-              
-              selCategoria.innerHTML = '<option value="">-- Categoría --</option>' +
-                  items.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-              
-              if (categoriaActual && items.includes(categoriaActual)) {
-                  selCategoria.value = categoriaActual;
-                  console.log(` Restaurando categoría: ${categoriaActual}`);
-              }
-              
-              // Después de cargar categorías, si hay categoría seleccionada, cargar tipos
-              if (selCategoria.value) {
-                  console.log(`🔍 Cargando tipos para categoría: ${selCategoria.value}`);
-                  cargarTipos(operadoresSeleccionados, selCategoria.value);
-              } else {
-                  console.log(' No hay categoría seleccionada, limpiando tipos y mensajes');
-                  document.getElementById('maFiltroIntensidad').innerHTML = '<option value="">Tipo</option>';
-                  document.getElementById('maMensajeSelect').innerHTML = '<option value="">-- Selecciona mensaje --</option>';
-              }
-          }
-      } catch (e) {
-          console.error('❌ Error cargando categorías:', e);
-          selCategoria.innerHTML = '<option value="">-- Error --</option>';
-      }
-  }
+    try {
+        let url = '/api/sms/categorias';
+        const primerOperador = operadoresSeleccionados && operadoresSeleccionados.length > 0 ? operadoresSeleccionados[0] : null;
+        if (primerOperador) {
+            url = `/api/sms/categorias-por-operador?operador=${encodeURIComponent(primerOperador)}`;
+        }
+        console.log(`📡 Llamando a: ${url}`);
+        
+        const resp = await fetch(url);
+        const data = await resp.json();
+        console.log('📦 Categorías recibidas:', data);
+        
+        if (data.success) {
+            const items = data.items || [];
+            console.log(`✅ ${items.length} categorías encontradas:`, items);
+            
+            selCategoria.innerHTML = '<option value="">-- Categoría --</option>' +
+                items.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+            
+            if (categoriaActual && items.includes(categoriaActual)) {
+                selCategoria.value = categoriaActual;
+                console.log(`🔄 Restaurando categoría: ${categoriaActual}`);
+            }
+            
+            // Después de cargar categorías, si hay categoría seleccionada, cargar tipos
+            if (selCategoria.value) {
+                console.log(`🔍 Cargando tipos para categoría: ${selCategoria.value}`);
+                cargarTipos(operadoresSeleccionados, selCategoria.value);
+            } else {
+                console.log('ℹ️ No hay categoría seleccionada, limpiando tipos y mensajes');
+                document.getElementById('maFiltroIntensidad').innerHTML = '<option value="">Tipo</option>';
+                document.getElementById('maMensajeSelect').innerHTML = '<option value="">-- Selecciona mensaje --</option>';
+            }
+        }
+    } catch (e) {
+        console.error('❌ Error cargando categorías:', e);
+        selCategoria.innerHTML = '<option value="">-- Error --</option>';
+    }
+}
   // 1. Cargar operadores y categorías al inicio
   async function cargarDatosIniciales() {
     try {
@@ -1319,68 +1319,33 @@ async function cargarDatosIniciales() {
   }
 
   // 4. Cargar mensajes según operador, categoría, tipo
-  // 4. Cargar mensajes según operador, categoría, tipo
   async function cargarMensajes(operadoresSeleccionados, categoria, tipo) {
-      const selMensaje = document.getElementById('maMensajeSelect');
-      selMensaje.innerHTML = '<option value="">Cargando mensajes...</option>';
+    const selMensaje = document.getElementById('maMensajeSelect');
+    selMensaje.innerHTML = '<option value="">-- Selecciona mensaje --</option>';
 
-      const primerOperador = operadoresSeleccionados && operadoresSeleccionados.length > 0 ? operadoresSeleccionados[0] : null;
-      
-      console.log(`📡 cargarMensajes: operador=${primerOperador}, categoria=${categoria}, tipo=${tipo}`);
-      
-      try {
-          let url = '/api/sms/mensajes-operacion?';
-          const params = new URLSearchParams();
-          
-          // Siempre incluir tipo si está presente
-          if (tipo) params.append('tipo', tipo);
-          
-          // Incluir operador si hay
-          if (primerOperador) params.append('operador', primerOperador);
-          
-          // Incluir categoría si hay
-          if (categoria) params.append('categoria', categoria);
-          
-          url += params.toString();
-          console.log(`📡 Llamando a: ${url}`);
+    const primerOperador = operadoresSeleccionados && operadoresSeleccionados.length > 0 ? operadoresSeleccionados[0] : null;
+    try {
+      let url = '/api/sms/mensajes-operacion?';
+      const params = new URLSearchParams();
+      if (primerOperador) params.append('operador', primerOperador);
+      if (categoria) params.append('categoria', categoria);
+      if (tipo) params.append('tipo', tipo);
+      url += params.toString();
 
-          const resp = await fetch(url);
-          const data = await resp.json();
-          console.log('📦 Respuesta mensajes:', data);
-          
-          if (data.success) {
-              const items = data.items || [];
-              console.log(`✅ ${items.length} mensajes encontrados`);
-              
-              if (items.length === 0) {
-                  selMensaje.innerHTML = '<option value="">-- Sin mensajes --</option>';
-                  showToast('⚠️ No hay mensajes para esta combinación', 'warning', 2000);
-              } else {
-                  selMensaje.innerHTML = '<option value="">-- Selecciona mensaje --</option>' +
-                      items.map((m, i) => {
-                          const preview = (m.mensaje || '').substring(0, 50);
-                          return `<option value="${m.id}" data-mensaje="${escapeHtml(m.mensaje || '')}">${i+1}: ${escapeHtml(preview)}...</option>`;
-                      }).join('');
-                  
-                  // Auto-seleccionar el primer mensaje si solo hay uno
-                  if (items.length === 1) {
-                      selMensaje.value = items[0].id;
-                      // Disparar evento para cargar plantilla
-                      selMensaje.dispatchEvent(new Event('change'));
-                  }
-                  
-                  showToast(`✅ ${items.length} mensajes cargados`, 'success', 1500);
-              }
-          } else {
-              console.error('❌ Error en respuesta:', data);
-              selMensaje.innerHTML = '<option value="">-- Error --</option>';
-              showToast(`❌ ${data.message || 'Error cargando mensajes'}`, 'danger', 3000);
-          }
-      } catch (e) {
-          console.error('❌ Error cargando mensajes:', e);
-          selMensaje.innerHTML = '<option value="">-- Error de red --</option>';
-          showToast(`❌ Error: ${e.message}`, 'danger', 3000);
+      const resp = await fetch(url);
+      const data = await resp.json();
+      if (data.success) {
+        const items = data.items || [];
+        if (items.length === 0) {
+          selMensaje.innerHTML = '<option value="">-- Sin mensajes --</option>';
+        } else {
+          selMensaje.innerHTML = '<option value="">-- Selecciona mensaje --</option>' +
+            items.map((m, i) => `<option value="${m.id}" data-mensaje="${escapeHtml(m.mensaje)}">Mensaje ${i+1}: ${(m.mensaje||'').substring(0,50)}...</option>`).join('');
+        }
       }
+    } catch (e) {
+      console.error('Error cargando mensajes:', e);
+    }
   }
 
   // 5. Eventos de cambios en los filtros
@@ -1399,22 +1364,15 @@ async function cargarDatosIniciales() {
   });
 
   // Cambio de tipo
-  // Cambio de tipo - AHORA CARGA MENSAJES CON O SIN CATEGORÍA
   document.getElementById('maFiltroIntensidad').addEventListener('change', function() {
-      const tipo = this.value;
-      const categoria = document.getElementById('maFiltroCategoria').value;
-      const operadores = msOperador ? msOperador.getSelected() : [];
-      
-      console.log(`🔄 Cambio de tipo: "${tipo}", Categoría: "${categoria}", Operadores:`, operadores);
-      
-      // Si hay tipo seleccionado, cargar mensajes
-      if (tipo) {
-          // Siempre cargar mensajes si hay tipo, independientemente de la categoría
-          cargarMensajes(operadores, categoria, tipo);
-      } else {
-          // Si se quita el tipo, limpiar mensajes
-          document.getElementById('maMensajeSelect').innerHTML = '<option value="">-- Selecciona mensaje --</option>';
-      }
+    const tipo = this.value;
+    const categoria = document.getElementById('maFiltroCategoria').value;
+    const operadores = msOperador ? msOperador.getSelected() : [];
+    if (categoria && tipo) {
+      cargarMensajes(operadores, categoria, tipo);
+    } else {
+      document.getElementById('maMensajeSelect').innerHTML = '<option value="">-- Selecciona mensaje --</option>';
+    }
   });
 
   // Al seleccionar mensaje, cargar plantilla
