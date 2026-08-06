@@ -93,6 +93,7 @@ from auto_campaigns import (
     parse_auto_campaign_id,
     update_auto_campaign,
 )
+import pandas as pd
 from auto_campaign_executor import (
     is_auto_campaign_running,
     request_stop_auto_campaign,
@@ -124,6 +125,19 @@ def _to_wolkvox_ts(s: str, is_end: bool = False) -> str:
     except Exception:
         return s
 
+def _limpiar_nat(df):
+    """Convierte todas las columnas datetime a string ISO y reemplaza NaT/NaN por None."""
+    import pandas as pd
+    import numpy as np
+    
+    # 1. Convertir columnas datetime a string (así NaT se vuelve None automáticamente)
+    for col in df.select_dtypes(include=['datetime64[ns]', 'datetime64[ns, UTC]', 'datetimetz']).columns:
+        df[col] = df[col].apply(lambda x: x.isoformat() if pd.notnull(x) else None)
+    
+    # 2. Reemplazar cualquier NaN restante (float, object, etc.)
+    df = df.where(pd.notnull(df), None)
+    
+    return df
 
 @app.context_processor
 def inject_admin_ui():
@@ -971,9 +985,20 @@ def sms_history():
         """
         job_config = bigquery.QueryJobConfig(query_parameters=parameters)
         df = bq_client.query(query, job_config=job_config).to_dataframe()
-        items = df.to_dict('records') if not df.empty else []
+        df = _limpiar_nat(df)  # ← ESTA LÍNEA FALTA
+        # Justo antes del return jsonify
+        items = []
+        for row in df.to_dict('records'):
+            clean_row = {}
+            for k, v in row.items():
+                if pd.isna(v):
+                    clean_row[k] = None
+                else:
+                    clean_row[k] = v
+            items.append(clean_row)
 
         return jsonify({"success": True, "page": page, "items": items})
+
 
     except Exception as exc:
         logger.exception("Error en historial SMS")
@@ -1009,8 +1034,6 @@ def sms_schedules():
         return jsonify({"success": True, "items": items})
     except Exception as exc:
         return jsonify({"success": False, "message": str(exc)}), 500
-
-
 @app.route("/api/sms/programacion/<schedule_id>")
 def sms_schedule_detail(schedule_id):
     try:
@@ -2065,36 +2088,7 @@ def auto_download_run_now():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-# ========== MENSAJES OPERACIÓN (SQLite) ==========
-
-@app.route("/api/sms/mensajes-operacion", methods=["GET"])
-def sms_mensajes_operacion_sqlite():
-    """Lista los mensajes de operación desde SQLite con filtros opcionales."""
-    try:
-        from database import MensajeOperacion
-        
-        operador = (request.args.get("operador") or "").strip()
-        tipo = (request.args.get("tipo") or "").strip()
-        
-        query = MensajeOperacion.query.filter(MensajeOperacion.Estado == 1)
-        
-        if operador:
-            query = query.filter(MensajeOperacion.Operador == operador)
-        if tipo:
-            query = query.filter(MensajeOperacion.Tipo == tipo)
-        if operador:
-            query = query.filter(
-                (MensajeOperacion.Operador == operador) | 
-                (MensajeOperacion.Operadores.contains(operador))
-            )
-        mensajes = query.order_by(MensajeOperacion.Operador, MensajeOperacion.Tipo).all()
-        items = [m.to_dict() for m in mensajes]
-        
-        return jsonify({"success": True, "items": items})
-    except Exception as exc:
-        logger.exception("Error obteniendo mensajes de operación")
-        return jsonify({"success": False, "message": str(exc)}), 500
-
+# ========== MENSAJES OPERACIÓN (SQLite)
 
 @app.route("/api/sms/operadores", methods=["GET"])
 def sms_operadores():
@@ -2116,7 +2110,6 @@ def sms_operadores():
         logger.exception("Error obteniendo operadores")
         return jsonify({"success": False, "message": str(exc)}), 500
 
-
 @app.route("/api/sms/tipos-por-operador", methods=["GET"])
 def sms_tipos_por_operador():
     """Lista los tipos disponibles para un operador específico."""
@@ -2129,7 +2122,11 @@ def sms_tipos_por_operador():
             return jsonify({"success": False, "message": "Se requiere operador"}), 400
         
         tipos = MensajeOperacion.query \
-            .filter(MensajeOperacion.Operador == operador, MensajeOperacion.Estado == 1) \
+            .filter(
+                MensajeOperacion.Estado == 1,
+                (MensajeOperacion.Operador == operador) | 
+                (MensajeOperacion.Operadores.contains(operador))
+            ) \
             .with_entities(MensajeOperacion.Tipo) \
             .distinct() \
             .order_by(MensajeOperacion.Tipo) \
@@ -2141,8 +2138,6 @@ def sms_tipos_por_operador():
     except Exception as exc:
         logger.exception("Error obteniendo tipos")
         return jsonify({"success": False, "message": str(exc)}), 500
-
-
 @app.route("/api/sms/mensaje-por-operador-tipo", methods=["GET"])
 def sms_mensaje_por_operador_tipo():
     """Obtiene un mensaje específico por operador y tipo."""
@@ -2974,6 +2969,35 @@ def email_campanas():
     except Exception as exc:
         return jsonify({"success": False, "message": str(exc)}), 500
 
+@app.route("/api/sms/tipos-por-categoria", methods=["GET"])
+def sms_tipos_por_categoria():
+    """Lista los tipos disponibles para una categoría específica."""
+    try:
+        from database import MensajeOperacion
+        
+        categoria = (request.args.get("categoria") or "").strip()
+        
+        if not categoria:
+            return jsonify({"success": False, "message": "Se requiere categoría"}), 400
+        
+        tipos = MensajeOperacion.query \
+            .filter(
+                MensajeOperacion.Estado == 1,
+                MensajeOperacion.Categoria == categoria
+            ) \
+            .filter(MensajeOperacion.Tipo.isnot(None), MensajeOperacion.Tipo != '') \
+            .with_entities(MensajeOperacion.Tipo) \
+            .distinct() \
+            .order_by(MensajeOperacion.Tipo) \
+            .all()
+        
+        items = [t[0] for t in tipos if t[0]]
+        print(f"✅ Tipos encontrados para categoría '{categoria}': {items}")  # Debug
+        
+        return jsonify({"success": True, "items": items})
+    except Exception as exc:
+        logger.exception("Error obteniendo tipos por categoría")
+        return jsonify({"success": False, "message": str(exc)}), 500
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
