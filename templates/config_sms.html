@@ -21,7 +21,6 @@
 
 {% block extra_css %}
 <style>
-  /* ====== ESTILOS (igual que antes) ====== */
   :root {
     --sms-primary: #3452E1;
     --sms-primary-dark: #2438B0;
@@ -46,301 +45,149 @@
 
   .content-wrapper { background: var(--sms-bg); }
 
-  .sms-container {
-    display: grid;
-    grid-template-columns: 1fr 380px;
-    gap: 24px;
-    align-items: start;
-  }
-  @media (max-width: 1199px) {
-    .sms-container { grid-template-columns: 1fr; }
-  }
+  .sms-container { display: grid; grid-template-columns: 1fr 380px; gap: 24px; align-items: start; }
+  @media (max-width: 1199px) { .sms-container { grid-template-columns: 1fr; } }
 
   .sms-card {
-    background: #ffffff;
-    border: 1px solid var(--sms-border);
-    border-radius: var(--sms-radius);
-    box-shadow: var(--sms-shadow);
-    overflow: hidden;
-    transition: var(--sms-transition);
+    background: #ffffff; border: 1px solid var(--sms-border);
+    border-radius: var(--sms-radius); box-shadow: var(--sms-shadow);
+    overflow: hidden; transition: var(--sms-transition);
   }
   .sms-card:hover { box-shadow: 0 12px 40px rgba(31, 41, 102, 0.12); }
-
   .sms-card-body { padding: 24px 26px 26px; }
 
   .sms-tabs {
-    display: flex;
-    gap: 2px;
-    background: #F0F2F8;
-    border-radius: 10px;
-    padding: 4px;
-    margin-bottom: 22px;
+    display: flex; gap: 2px; background: #F0F2F8;
+    border-radius: 10px; padding: 4px; margin-bottom: 22px;
   }
   .sms-tabs .tab {
-    flex: 1;
-    padding: 8px 14px;
-    border: none;
-    border-radius: 8px;
-    background: transparent;
-    font-weight: 600;
-    font-size: 0.82rem;
-    color: var(--sms-muted);
-    cursor: pointer;
-    transition: var(--sms-transition);
-    text-align: center;
+    flex: 1; padding: 8px 14px; border: none; border-radius: 8px;
+    background: transparent; font-weight: 600; font-size: 0.82rem;
+    color: var(--sms-muted); cursor: pointer; transition: var(--sms-transition); text-align: center;
   }
   .sms-tabs .tab:hover { color: var(--sms-text); background: rgba(255,255,255,0.5); }
-  .sms-tabs .tab.active {
-    background: #ffffff;
-    color: var(--sms-primary);
-    box-shadow: 0 2px 8px rgba(31, 41, 102, 0.06);
-  }
+  .sms-tabs .tab.active { background: #ffffff; color: var(--sms-primary); box-shadow: 0 2px 8px rgba(31, 41, 102, 0.06); }
   .sms-tab-panel { display: none; animation: fadeIn 0.3s ease; }
   .sms-tab-panel.active { display: block; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
   .sms-field { margin-bottom: 18px; }
   .sms-field label {
-    font-weight: 600;
-    font-size: 0.85rem;
-    color: var(--sms-text);
-    margin-bottom: 5px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    font-weight: 600; font-size: 0.85rem; color: var(--sms-text);
+    margin-bottom: 5px; display: flex; align-items: center; gap: 6px;
   }
   .sms-field label .badge-required {
-    background: var(--sms-danger);
-    color: #fff;
-    font-size: 0.6rem;
-    padding: 1px 8px;
-    border-radius: 20px;
+    background: var(--sms-danger); color: #fff; font-size: 0.6rem;
+    padding: 1px 8px; border-radius: 20px;
   }
   .sms-help {
-    font-size: 0.76rem;
-    color: var(--sms-muted);
-    margin-top: 5px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    font-size: 0.76rem; color: var(--sms-muted); margin-top: 5px;
+    display: flex; justify-content: space-between; align-items: center;
   }
 
   .form-control {
-    border: 1.5px solid var(--sms-border);
-    border-radius: 10px;
-    font-size: 0.9rem;
-    color: var(--sms-text);
-    transition: var(--sms-transition);
+    border: 1.5px solid var(--sms-border); border-radius: 10px;
+    font-size: 0.9rem; color: var(--sms-text); transition: var(--sms-transition);
   }
-  .form-control:focus {
-    border-color: var(--sms-primary);
-    box-shadow: 0 0 0 4px rgba(52, 82, 225, 0.12);
-  }
+  .form-control:focus { border-color: var(--sms-primary); box-shadow: 0 0 0 4px rgba(52, 82, 225, 0.12); }
   textarea.textarea-code {
-    min-height: 120px;
-    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-    font-size: 0.82rem;
-    line-height: 1.6;
-    background: #FBFBFE;
-    tab-size: 2;
+    min-height: 120px; font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.82rem; line-height: 1.6; background: #FBFBFE; tab-size: 2;
   }
 
   .sms-auto-section {
-    background: #FAFAFD;
-    border: 1.5px dashed var(--sms-border);
-    border-radius: 12px;
-    padding: 14px 18px;
-    margin-bottom: 16px;
+    background: #FAFAFD; border: 1.5px dashed var(--sms-border);
+    border-radius: 12px; padding: 14px 18px; margin-bottom: 16px;
   }
   .sms-auto-section .section-title {
-    font-weight: 700;
-    font-size: 0.85rem;
-    color: var(--sms-primary);
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    font-weight: 700; font-size: 0.85rem; color: var(--sms-primary);
+    margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
   }
 
   .sms-schedule-row {
-    display: flex;
-    gap: 12px;
-    align-items: flex-end;
-    flex-wrap: wrap;
-    background: #FAFAFD;
-    border: 1.5px dashed var(--sms-border);
-    border-radius: 12px;
-    padding: 16px 18px;
-    margin-bottom: 20px;
+    display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
+    background: #FAFAFD; border: 1.5px dashed var(--sms-border);
+    border-radius: 12px; padding: 16px 18px; margin-bottom: 20px;
   }
-  .sms-schedule-row .form-group {
-    margin-bottom: 0;
-    flex: 1;
-    min-width: 180px;
-  }
+  .sms-schedule-row .form-group { margin-bottom: 0; flex: 1; min-width: 180px; }
   .sms-schedule-row .form-group label {
-    font-weight: 600;
-    font-size: 0.78rem;
-    color: var(--sms-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    font-weight: 600; font-size: 0.78rem; color: var(--sms-muted);
+    text-transform: uppercase; letter-spacing: 0.04em;
   }
-  .sms-schedule-row input[type="datetime-local"] {
-    padding: 6px 10px;
-  }
+  .sms-schedule-row input[type="datetime-local"] { padding: 6px 10px; }
   .sms-schedule-row .btn-schedule {
-    background: transparent;
-    border: 1.5px solid var(--sms-border);
-    border-radius: 10px;
-    padding: 8px 18px;
-    font-weight: 600;
-    font-size: 0.82rem;
-    color: var(--sms-muted);
-    transition: var(--sms-transition);
-    cursor: pointer;
-    white-space: nowrap;
+    background: transparent; border: 1.5px solid var(--sms-border);
+    border-radius: 10px; padding: 8px 18px; font-weight: 600;
+    font-size: 0.82rem; color: var(--sms-muted); transition: var(--sms-transition);
+    cursor: pointer; white-space: nowrap;
   }
   .sms-schedule-row .btn-schedule:hover {
-    border-color: var(--sms-primary);
-    color: var(--sms-primary);
+    border-color: var(--sms-primary); color: var(--sms-primary);
     background: var(--sms-primary-light);
   }
 
   .sms-flag {
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    background: var(--sms-warning-bg);
-    border: 1.5px solid #F3DFAE;
-    border-radius: 10px;
-    padding: 12px 16px;
-    font-size: 0.82rem;
-    color: #8A5A00;
-    margin-bottom: 20px;
-    transition: var(--sms-transition);
+    display: flex; gap: 10px; align-items: flex-start;
+    background: var(--sms-warning-bg); border: 1.5px solid #F3DFAE;
+    border-radius: 10px; padding: 12px 16px; font-size: 0.82rem;
+    color: #8A5A00; margin-bottom: 20px; transition: var(--sms-transition);
   }
   .sms-flag.warning { background: var(--sms-danger-bg); border-color: #F5C6CB; color: #721C24; }
   .sms-flag.success { background: var(--sms-success-bg); border-color: #C3E6CB; color: #155724; }
   .sms-flag input { margin-top: 2px; flex-shrink: 0; }
 
-  .sms-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-top: 6px;
-  }
+  .sms-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
   .btn {
-    border-radius: 10px;
-    font-weight: 600;
-    font-size: 0.86rem;
-    padding: 0.55rem 1.2rem;
-    transition: var(--sms-transition);
-    border: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
+    border-radius: 10px; font-weight: 600; font-size: 0.86rem;
+    padding: 0.55rem 1.2rem; transition: var(--sms-transition);
+    border: none; display: inline-flex; align-items: center; gap: 8px;
   }
   .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
   .btn:active { transform: translateY(0); }
-
-  .btn-outline-primary {
-    background: #fff;
-    color: var(--sms-primary);
-    border: 1.5px solid var(--sms-primary);
-  }
+  .btn-outline-primary { background: #fff; color: var(--sms-primary); border: 1.5px solid var(--sms-primary); }
   .btn-outline-primary:hover { background: var(--sms-primary-light); color: var(--sms-primary-dark); }
-
-  .btn-success {
-    background: var(--sms-success);
-    color: #fff;
-    box-shadow: 0 6px 16px rgba(23, 166, 115, 0.28);
-  }
+  .btn-success { background: var(--sms-success); color: #fff; box-shadow: 0 6px 16px rgba(23, 166, 115, 0.28); }
   .btn-success:hover { background: #13895D; }
-  .btn-success:disabled {
-    background: #B9C0CC;
-    box-shadow: none;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  .btn-outline-secondary {
-    background: #fff;
-    color: var(--sms-muted);
-    border: 1.5px solid var(--sms-border);
-  }
+  .btn-success:disabled { background: #B9C0CC; box-shadow: none; cursor: not-allowed; transform: none; }
+  .btn-primary { background: var(--sms-primary); color: #fff; }
+  .btn-primary:hover { background: var(--sms-primary-dark); }
+  .btn-outline-secondary { background: #fff; color: var(--sms-muted); border: 1.5px solid var(--sms-border); }
   .btn-outline-secondary:hover { background: #F0F2F8; color: var(--sms-text); }
-
-  .btn-danger {
-    background: var(--sms-danger);
-    color: #fff;
-    box-shadow: 0 6px 16px rgba(226, 76, 75, 0.25);
-  }
+  .btn-danger { background: var(--sms-danger); color: #fff; box-shadow: 0 6px 16px rgba(226, 76, 75, 0.25); }
   .btn-danger:hover { background: #C0392B; }
-
   .btn-sm { padding: 0.35rem 0.8rem; font-size: 0.78rem; }
 
   .sms-side { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 16px; }
 
   .sms-phone {
     background: linear-gradient(180deg, #1B1F3B, #262B52);
-    border-radius: 28px;
-    padding: 18px 16px 22px;
+    border-radius: 28px; padding: 18px 16px 22px;
     box-shadow: 0 16px 48px rgba(27, 31, 59, 0.25);
   }
-  .sms-phone .notch {
-    width: 80px;
-    height: 6px;
-    background: rgba(255,255,255,0.2);
-    border-radius: 4px;
-    margin: 0 auto 14px;
-  }
+  .sms-phone .notch { width: 80px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 4px; margin: 0 auto 14px; }
   .sms-phone .screen {
-    background: #F3F4F9;
-    border-radius: 16px;
-    min-height: 200px;
-    padding: 16px 14px;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    gap: 6px;
+    background: #F3F4F9; border-radius: 16px; min-height: 200px;
+    padding: 16px 14px; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px;
   }
   .sms-phone .bubble {
     background: linear-gradient(135deg, var(--sms-primary), var(--sms-accent));
-    color: #fff;
-    padding: 10px 14px;
-    border-radius: 16px 16px 4px 16px;
-    font-size: 0.82rem;
-    line-height: 1.4;
-    max-width: 92%;
-    align-self: flex-end;
-    white-space: pre-wrap;
-    word-break: break-word;
-    box-shadow: 0 4px 12px rgba(52, 82, 225, 0.25);
-    transition: var(--sms-transition);
+    color: #fff; padding: 10px 14px; border-radius: 16px 16px 4px 16px;
+    font-size: 0.82rem; line-height: 1.4; max-width: 92%; align-self: flex-end;
+    white-space: pre-wrap; word-break: break-word;
+    box-shadow: 0 4px 12px rgba(52, 82, 225, 0.25); transition: var(--sms-transition);
   }
   .sms-phone .bubble.is-placeholder {
-    background: #E2E4EE;
-    color: #8A90A6;
-    font-style: italic;
-    align-self: center;
-    text-align: center;
-    border-radius: 16px;
+    background: #E2E4EE; color: #8A90A6; font-style: italic;
+    align-self: center; text-align: center; border-radius: 16px;
   }
   .sms-phone .meta {
-    display: flex;
-    justify-content: space-between;
-    color: rgba(255,255,255,0.6);
-    font-size: 0.7rem;
-    margin-top: 10px;
-    padding: 0 4px;
+    display: flex; justify-content: space-between; color: rgba(255,255,255,0.6);
+    font-size: 0.7rem; margin-top: 10px; padding: 0 4px;
   }
 
   .sms-stats {
-    background: #fff;
-    border: 1px solid var(--sms-border);
-    border-radius: var(--sms-radius);
-    padding: 16px 18px;
-    box-shadow: var(--sms-shadow);
+    background: #fff; border: 1px solid var(--sms-border);
+    border-radius: var(--sms-radius); padding: 16px 18px; box-shadow: var(--sms-shadow);
   }
   .sms-stats .row { display: flex; justify-content: space-between; font-size: 0.82rem; padding: 5px 0; }
   .sms-stats .row + .row { border-top: 1px dashed var(--sms-border); }
@@ -351,61 +198,35 @@
   .sms-result.visible { display: block; animation: fadeIn 0.3s ease; }
 
   .sms-preview-item {
-    border: 1px solid var(--sms-border);
-    border-radius: 10px;
-    padding: 10px 14px;
-    margin-bottom: 8px;
-    background: #FAFAFD;
+    border: 1px solid var(--sms-border); border-radius: 10px;
+    padding: 10px 14px; margin-bottom: 8px; background: #FAFAFD;
   }
   .sms-preview-item .phone { font-weight: 700; font-size: 0.84rem; color: var(--sms-text); }
   .sms-preview-item .meta { font-size: 0.72rem; color: var(--sms-muted); }
   .sms-preview-item .msg {
-    white-space: pre-wrap;
-    font-size: 0.82rem;
-    color: var(--sms-text);
-    background: #fff;
-    border-radius: 6px;
-    padding: 6px 10px;
-    margin-top: 4px;
+    white-space: pre-wrap; font-size: 0.82rem; color: var(--sms-text);
+    background: #fff; border-radius: 6px; padding: 6px 10px; margin-top: 4px;
     border: 1px solid var(--sms-border);
   }
 
   #smsToastArea {
-    position: fixed;
-    top: 1.2rem;
-    right: 1.2rem;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    max-width: 420px;
-    width: 100%;
+    position: fixed; top: 0.6rem; right: 0.6rem; z-index: 9999;
+    display: flex; flex-direction: column; gap: 1px; max-width: 220px; width: 100%;
   }
   .sms-toast {
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.12);
-    padding: 14px 18px;
-    border-left: 5px solid var(--sms-primary);
-    animation: slideIn 0.3s ease;
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
+    background: #fff; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+    padding: 10px 12px; border-left: 5px solid var(--sms-primary);
+    animation: slideIn 0.3s ease; display: flex; align-items: flex-start; gap: 12px;
   }
   .sms-toast.success { border-left-color: var(--sms-success); }
   .sms-toast.danger { border-left-color: var(--sms-danger); }
   .sms-toast.warning { border-left-color: var(--sms-warning); }
   .sms-toast.info { border-left-color: var(--sms-info); }
-
   .sms-toast .icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 2px; }
   .sms-toast .content { flex: 1; font-size: 0.88rem; color: var(--sms-text); }
   .sms-toast .close-btn {
-    background: none;
-    border: none;
-    font-size: 1.2rem;
-    color: var(--sms-muted);
-    cursor: pointer;
-    padding: 0 4px;
+    background: none; border: none; font-size: 1.2rem;
+    color: var(--sms-muted); cursor: pointer; padding: 0 4px;
   }
   .sms-toast .close-btn:hover { color: var(--sms-text); }
 
@@ -415,140 +236,76 @@
   }
 
   .spinner-sm {
-    display: inline-block;
-    width: 18px;
-    height: 18px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
+    display: inline-block; width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  @media (max-width: 768px) {
-    .sms-card-body { padding: 16px; }
-    .sms-schedule-row { flex-direction: column; align-items: stretch; }
+  /* Switch toggle */
+  .switch-sm {
+    position: relative; display: inline-block; width: 44px; height: 24px;
   }
+  .switch-sm input { opacity: 0; width: 0; height: 0; }
+  .slider-sm {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc; transition: 0.3s; border-radius: 24px;
+  }
+  .slider-sm:before {
+    position: absolute; content: ""; height: 18px; width: 18px;
+    left: 3px; bottom: 3px; background-color: white; transition: 0.3s; border-radius: 50%;
+  }
+  input:checked + .slider-sm { background-color: var(--sms-primary); }
+  input:checked + .slider-sm:before { transform: translateX(20px); }
 
-  /* Multi-select mejorado (chips + buscador) */
-  .multi-select-container {
-    position: relative;
-    width: 100%;
-  }
+  /* Multi-select */
+  .multi-select-container { position: relative; width: 100%; }
   .multi-select-trigger {
-    border: 1.5px solid var(--sms-border);
-    border-radius: 10px;
-    padding: 6px 10px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    background: #fff;
-    min-height: 40px;
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 4px;
+    border: 1.5px solid var(--sms-border); border-radius: 10px;
+    padding: 6px 10px; font-size: 0.9rem; cursor: pointer; background: #fff;
+    min-height: 40px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
     transition: var(--sms-transition);
   }
   .multi-select-trigger:hover { border-color: var(--sms-primary); }
   .multi-select-trigger:focus-within { border-color: var(--sms-primary); box-shadow: 0 0 0 4px rgba(52,82,225,0.12); }
-
   .multi-select-chip {
-    background: var(--sms-primary-light);
-    color: var(--sms-primary-dark);
-    border: 1px solid #C7D2FE;
-    padding: 2px 8px;
-    border-radius: 50px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+    background: var(--sms-primary-light); color: var(--sms-primary-dark);
+    border: 1px solid #C7D2FE; padding: 2px 8px; border-radius: 50px;
+    font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;
   }
-  .multi-select-chip .remove-chip {
-    cursor: pointer;
-    font-size: 0.9rem;
-    color: var(--sms-primary);
-    line-height: 1;
-  }
+  .multi-select-chip .remove-chip { cursor: pointer; font-size: 0.9rem; color: var(--sms-primary); line-height: 1; }
   .multi-select-chip .remove-chip:hover { color: var(--sms-danger); }
   .multi-select-placeholder { color: #94a3b8; font-size: 0.85rem; }
-
   .multi-select-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: #fff;
-    border: 1px solid var(--sms-border);
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-    z-index: 100;
-    max-height: 260px;
-    display: none;
-    margin-top: 4px;
-    overflow: hidden;
-    flex-direction: column;
+    position: absolute; top: 100%; left: 0; right: 0; background: #fff;
+    border: 1px solid var(--sms-border); border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1); z-index: 100; max-height: 260px;
+    display: none; margin-top: 4px; overflow: hidden; flex-direction: column;
   }
   .multi-select-dropdown.open { display: flex; }
-
-  .multi-select-search {
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--sms-border);
-    flex-shrink: 0;
-  }
+  .multi-select-search { padding: 8px 12px; border-bottom: 1px solid var(--sms-border); flex-shrink: 0; }
   .multi-select-search input {
-    width: 100%;
-    border: 1px solid var(--sms-border);
-    border-radius: 6px;
-    padding: 6px 10px;
-    font-size: 0.82rem;
-    outline: none;
-    transition: border 0.2s;
+    width: 100%; border: 1px solid var(--sms-border); border-radius: 6px;
+    padding: 6px 10px; font-size: 0.82rem; outline: none; transition: border 0.2s;
   }
-  .multi-select-search input:focus {
-    border-color: var(--sms-primary);
-    box-shadow: 0 0 0 3px rgba(52,82,225,0.15);
-  }
-
-  .multi-select-options {
-    flex: 1;
-    overflow-y: auto;
-    padding: 4px 0;
-  }
+  .multi-select-search input:focus { border-color: var(--sms-primary); box-shadow: 0 0 0 3px rgba(52,82,225,0.15); }
+  .multi-select-options { flex: 1; overflow-y: auto; padding: 4px 0; }
   .multi-select-options label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    cursor: pointer;
-    font-size: 0.82rem;
-    font-weight: 500;
-    transition: background 0.15s;
+    display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+    cursor: pointer; font-size: 0.82rem; font-weight: 500; transition: background 0.15s;
   }
   .multi-select-options label:hover { background: #f1f5f9; }
   .multi-select-options input[type="checkbox"] { accent-color: var(--sms-primary); }
-
-  .multi-select-actions {
-    display: flex;
-    gap: 8px;
-    padding: 8px 12px;
-    border-top: 1px solid var(--sms-border);
-    flex-shrink: 0;
-  }
+  .multi-select-actions { display: flex; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--sms-border); flex-shrink: 0; }
   .multi-select-actions button {
-    flex: 1;
-    font-size: 0.72rem;
-    padding: 5px 10px;
-    border-radius: 6px;
-    border: 1px solid var(--sms-border);
-    background: #fff;
-    cursor: pointer;
-    font-weight: 600;
+    flex: 1; font-size: 0.72rem; padding: 5px 10px; border-radius: 6px;
+    border: 1px solid var(--sms-border); background: #fff; cursor: pointer; font-weight: 600;
   }
-  .multi-select-actions .btn-aplicar {
-    background: var(--sms-primary);
-    color: #fff;
-    border-color: var(--sms-primary);
+  .multi-select-actions .btn-aplicar { background: var(--sms-primary); color: #fff; border-color: var(--sms-primary); }
+
+  @media (max-width: 768px) {
+    .sms-card-body { padding: 16px; }
+    .sms-schedule-row { flex-direction: column; align-items: stretch; }
   }
 </style>
 {% endblock %}
@@ -571,14 +328,13 @@
       <!-- PANEL ENVIAR -->
       <div class="sms-tab-panel active" id="panel-send">
 
-        <!-- SECCIÓN CONSTRUCTOR DE MENSAJE (SQLite) con MULTI-SELECT + CATEGORÍA -->
+        <!-- CONSTRUCTOR DE MENSAJE -->
         <div class="sms-auto-section">
           <div class="section-title">
             <i class="fas fa-puzzle-piece"></i> Constructor de Mensaje
             <span class="badge" style="background:#E2E4EE;color:var(--sms-muted);font-size:0.7rem;">Opcional</span>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
-            <!-- Operador (multi-select) -->
             <div style="flex:1;min-width:150px;">
               <label style="font-size:0.72rem;font-weight:600;color:var(--sms-muted);">Operador(es)</label>
               <div class="multi-select-container" id="msOperadorContainer">
@@ -588,21 +344,18 @@
                 <div class="multi-select-dropdown" id="msOperadorDropdown"></div>
               </div>
             </div>
-            <!-- Categoría (dropdown) -->
             <div style="flex:1;min-width:130px;">
               <label style="font-size:0.72rem;font-weight:600;color:var(--sms-muted);">Categoría</label>
               <select id="maFiltroCategoria" class="form-control form-control-sm">
                 <option value="">-- Categoría --</option>
               </select>
             </div>
-            <!-- Tipo (dropdown) -->
             <div style="flex:1;min-width:130px;">
               <label style="font-size:0.72rem;font-weight:600;color:var(--sms-muted);">Tipo</label>
               <select id="maFiltroIntensidad" class="form-control form-control-sm">
                 <option value="">Tipo</option>
               </select>
             </div>
-            <!-- Mensaje (dropdown) -->
             <div style="flex:2;min-width:200px;">
               <label style="font-size:0.72rem;font-weight:600;color:var(--sms-muted);">Mensaje</label>
               <select id="maMensajeSelect" class="form-control form-control-sm">
@@ -613,7 +366,6 @@
           <div style="margin-top:6px;font-size:0.7rem;color:var(--sms-muted);">
             <i class="fas fa-info-circle"></i> 
             Selecciona combinación de Operador(es), Categoría y/o Tipo para cargar una plantilla.
-            Todos los campos son opcionales.
           </div>
         </div>
 
@@ -652,7 +404,6 @@
           </div>
         </div>
 
-        <!-- ID MENSAJE OCULTO -->
         <input type="hidden" id="idMensajeHidden" value="">
 
         <!-- FLAG DUPLICADOS -->
@@ -666,7 +417,7 @@
           </span>
         </div>
 
-        <!-- PROGRAMAR -->
+        <!-- PROGRAMAR SIMPLE -->
         <div class="sms-schedule-row">
           <div class="form-group">
             <label for="fechaProgramada"><i class="far fa-calendar-alt"></i> Programar para</label>
@@ -675,10 +426,53 @@
           <button id="scheduleBtn" class="btn-schedule"><i class="fas fa-clock"></i> Programar envío</button>
         </div>
 
+        <!-- 🆕 PROGRAMACIÓN RECURRENTE -->
+        <div class="sms-auto-section" style="margin-bottom:16px;">
+          <div class="section-title">
+            <i class="fas fa-sync-alt"></i> Programación Recurrente
+            <label class="switch-sm" style="margin-left:auto;">
+              <input type="checkbox" id="esRecurrente">
+              <span class="slider-sm"></span>
+            </label>
+          </div>
+          
+          <div id="recurrenciaOpciones" style="display:none;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+              <div class="sms-field" style="margin-bottom:0;">
+                <label style="font-size:0.72rem;">Frecuencia</label>
+                <select id="frecuenciaTipo" class="form-control form-control-sm">
+                  <option value="diario">Diario</option>
+                  <option value="semanal">Semanal</option>
+                  <option value="mensual">Mensual</option>
+                </select>
+              </div>
+              <div class="sms-field" style="margin-bottom:0;">
+                <label style="font-size:0.72rem;">⏰ Hora de envío</label>
+                <input type="time" id="horaRecurrente" class="form-control form-control-sm" value="07:00">
+              </div>
+            </div>
+            
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+              <div class="sms-field" style="margin-bottom:0;">
+                <label style="font-size:0.72rem;">📅 Fecha límite (opcional)</label>
+                <input type="date" id="fechaLimite" class="form-control form-control-sm">
+              </div>
+              <div class="sms-field" style="margin-bottom:0;">
+                <label style="font-size:0.72rem;">🔢 Máx. repeticiones (opcional)</label>
+                <input type="number" id="repeticionesMax" class="form-control form-control-sm" placeholder="Sin límite" min="1" max="999">
+              </div>
+            </div>
+            <div style="font-size:0.7rem;color:var(--sms-muted);margin-top:8px;">
+              <i class="fas fa-info-circle"></i> Define al menos un límite (fecha o repeticiones).
+            </div>
+          </div>
+        </div>
+
         <!-- BOTONES -->
         <div class="sms-actions">
           <button id="previewBtn" class="btn btn-outline-primary"><i class="fas fa-eye"></i> Probar consulta</button>
           <button id="sendBtn" class="btn btn-success" disabled><i class="fas fa-paper-plane"></i> Enviar SMS</button>
+          <button id="scheduleRecurrentBtn" class="btn btn-primary" style="display:none;"><i class="fas fa-sync-alt"></i> Programar recurrente</button>
           <button id="clearBtn" class="btn btn-outline-secondary"><i class="fas fa-undo"></i> Limpiar</button>
         </div>
 
@@ -774,12 +568,21 @@
   const previewBtn = document.getElementById('previewBtn');
   const sendBtn = document.getElementById('sendBtn');
   const scheduleBtn = document.getElementById('scheduleBtn');
+  const scheduleRecurrentBtn = document.getElementById('scheduleRecurrentBtn');
   const clearBtn = document.getElementById('clearBtn');
   const resultEl = document.getElementById('smsResult');
   const phoneBubble = document.getElementById('phoneBubble');
   const phoneMetaCount = document.getElementById('phoneMetaCount');
   const charCounter = document.getElementById('charCounter');
   const rowCount = document.getElementById('rowCount');
+
+  // 🆕 Recurrencia
+  const esRecurrenteEl = document.getElementById('esRecurrente');
+  const recurrenciaOpciones = document.getElementById('recurrenciaOpciones');
+  const frecuenciaTipoEl = document.getElementById('frecuenciaTipo');
+  const horaRecurrenteEl = document.getElementById('horaRecurrente');
+  const fechaLimiteEl = document.getElementById('fechaLimite');
+  const repeticionesMaxEl = document.getElementById('repeticionesMax');
 
   const statTotal = document.getElementById('statTotal');
   const statValidos = document.getElementById('statValidos');
@@ -806,7 +609,22 @@
     return el.innerHTML;
   }
 
+  // 🆕 Toggle recurrencia
+  esRecurrenteEl.addEventListener('change', function() {
+    if (this.checked) {
+      recurrenciaOpciones.style.display = 'block';
+      scheduleBtn.style.display = 'none';
+      scheduleRecurrentBtn.style.display = 'inline-flex';
+    } else {
+      recurrenciaOpciones.style.display = 'none';
+      scheduleBtn.style.display = 'inline-flex';
+      scheduleRecurrentBtn.style.display = 'none';
+    }
+  });
+
+  // 🆕 getPayload UNIFICADO
   function getPayload() {
+    const esRecurrente = esRecurrenteEl.checked;
     return {
       query: queryEl.value.trim(),
       plantilla: plantillaEl.value.trim(),
@@ -814,7 +632,12 @@
       usuario: usuarioEl.value.trim(),
       confirmar_reenvio: confirmarReenvioEl.checked,
       fecha_programada: fechaProgramadaEl.value || null,
-      id_mensaje: document.getElementById('idMensajeHidden').value || null
+      id_mensaje: document.getElementById('idMensajeHidden').value || null,
+      es_recurrente: esRecurrente,
+      frecuencia_tipo: esRecurrente ? frecuenciaTipoEl.value : null,
+      hora_envio: esRecurrente ? horaRecurrenteEl.value : null,
+      fecha_limite: esRecurrente ? fechaLimiteEl.value : null,
+      repeticiones_max: esRecurrente ? parseInt(repeticionesMaxEl.value) || null : null
     };
   }
 
@@ -848,11 +671,7 @@
     const icon = iconMap[type] || iconMap.info;
     const toast = document.createElement('div');
     toast.className = `sms-toast ${type}`;
-    toast.innerHTML = `
-      <span class="icon"><i class="fas ${icon}"></i></span>
-      <div class="content">${message}</div>
-      <button class="close-btn" onclick="this.parentElement.remove()">&times;</button>
-    `;
+    toast.innerHTML = `<span class="icon"><i class="fas ${icon}"></i></span><div class="content">${message}</div><button class="close-btn" onclick="this.parentElement.remove()">&times;</button>`;
     area.appendChild(toast);
     setTimeout(() => { if (toast.parentElement) toast.remove(); }, duration);
   }
@@ -896,7 +715,7 @@
     return data;
   }
 
-  // ========== MULTI-SELECT PARA OPERADORES ==========
+  // ========== MULTI-SELECT ==========
   function initMultiSelect(containerId, triggerId, dropdownId, onChange) {
     const trigger = document.getElementById(triggerId);
     const dropdown = document.getElementById(dropdownId);
@@ -934,62 +753,38 @@
     function filtrarOpciones(texto) {
       const container = dropdown.querySelector('.multi-select-options');
       if (!container) return;
-      const labels = container.querySelectorAll('label');
       const filtro = texto.toLowerCase().trim();
-      labels.forEach(label => {
-        const txt = label.textContent.trim().toLowerCase();
-        label.style.display = txt.includes(filtro) ? '' : 'none';
+      container.querySelectorAll('label').forEach(label => {
+        label.style.display = label.textContent.trim().toLowerCase().includes(filtro) ? '' : 'none';
       });
     }
 
     function construirDropdown(opciones) {
-      let html = `
-        <div class="multi-select-search">
-          <input type="text" placeholder="Buscar operador..." class="multi-select-filter">
-        </div>
-        <div class="multi-select-options">
-      `;
-      opciones.forEach(op => {
-        html += `<label><input type="checkbox" value="${escapeHtml(op)}"> ${escapeHtml(op)}</label>`;
-      });
-      html += `</div>
-        <div class="multi-select-actions">
-          <button class="btn-todos">Todos</button>
-          <button class="btn-ninguno">Ninguno</button>
-          <button class="btn-aplicar">Aplicar</button>
-        </div>
-      `;
+      let html = `<div class="multi-select-search"><input type="text" placeholder="Buscar operador..." class="multi-select-filter"></div><div class="multi-select-options">`;
+      opciones.forEach(op => { html += `<label><input type="checkbox" value="${escapeHtml(op)}"> ${escapeHtml(op)}</label>`; });
+      html += `</div><div class="multi-select-actions"><button class="btn-todos">Todos</button><button class="btn-ninguno">Ninguno</button><button class="btn-aplicar">Aplicar</button></div>`;
       dropdown.innerHTML = html;
 
-      const filterInput = dropdown.querySelector('.multi-select-filter');
-      if (filterInput) {
-        filterInput.addEventListener('input', (e) => filtrarOpciones(e.target.value));
-      }
+      dropdown.querySelector('.multi-select-filter')?.addEventListener('input', (e) => filtrarOpciones(e.target.value));
 
       dropdown.querySelector('.btn-todos').addEventListener('click', (e) => {
         e.stopPropagation();
-        const opcionesActuales = [...dropdown.querySelectorAll('.multi-select-options label')]
-          .filter(label => label.style.display !== 'none')
-          .map(label => label.querySelector('input[type="checkbox"]').value);
-        selected = opcionesActuales;
-        actualizarTrigger();
-        sincronizarCheckboxes();
+        selected = [...dropdown.querySelectorAll('.multi-select-options label')].filter(l => l.style.display !== 'none').map(l => l.querySelector('input').value);
+        actualizarTrigger(); sincronizarCheckboxes();
         if (onChange) onChange(selected);
         dropdown.classList.remove('open');
       });
 
       dropdown.querySelector('.btn-ninguno').addEventListener('click', (e) => {
         e.stopPropagation();
-        selected = [];
-        actualizarTrigger();
-        sincronizarCheckboxes();
+        selected = []; actualizarTrigger(); sincronizarCheckboxes();
         if (onChange) onChange(selected);
         dropdown.classList.remove('open');
       });
 
       dropdown.querySelector('.btn-aplicar').addEventListener('click', (e) => {
         e.stopPropagation();
-        selected = [...dropdown.querySelectorAll('.multi-select-options input[type="checkbox"]:checked')].map(cb => cb.value);
+        selected = [...dropdown.querySelectorAll('.multi-select-options input:checked')].map(cb => cb.value);
         actualizarTrigger();
         if (onChange) onChange(selected);
         dropdown.classList.remove('open');
@@ -997,14 +792,11 @@
 
       dropdown.querySelectorAll('.multi-select-options label').forEach(label => {
         label.addEventListener('click', (e) => e.stopPropagation());
-        const cb = label.querySelector('input[type="checkbox"]');
-        if (cb) {
-          cb.addEventListener('change', () => {
-            selected = [...dropdown.querySelectorAll('.multi-select-options input[type="checkbox"]:checked')].map(c => c.value);
-            actualizarTrigger();
-            if (onChange) onChange(selected);
-          });
-        }
+        label.querySelector('input')?.addEventListener('change', () => {
+          selected = [...dropdown.querySelectorAll('.multi-select-options input:checked')].map(c => c.value);
+          actualizarTrigger();
+          if (onChange) onChange(selected);
+        });
       });
 
       sincronizarCheckboxes();
@@ -1013,10 +805,7 @@
     trigger.addEventListener('click', (e) => {
       e.stopPropagation();
       dropdown.classList.toggle('open');
-      if (dropdown.classList.contains('open')) {
-        const filter = dropdown.querySelector('.multi-select-filter');
-        if (filter) setTimeout(() => filter.focus(), 50);
-      }
+      if (dropdown.classList.contains('open')) setTimeout(() => dropdown.querySelector('.multi-select-filter')?.focus(), 50);
     });
     document.addEventListener('click', () => dropdown.classList.remove('open'));
 
@@ -1024,400 +813,120 @@
       setOpciones: construirDropdown,
       getSelected: () => selected,
       setSelected: (valores) => { selected = [...valores]; actualizarTrigger(); sincronizarCheckboxes(); },
-      limpiar: () => { selected = []; actualizarTrigger(); sincronizarCheckboxes(); },
-      _selected: selected
+      limpiar: () => { selected = []; actualizarTrigger(); sincronizarCheckboxes(); }
     };
   }
 
-  // ========== FILTROS FLEXIBLES CON CATEGORÍA ==========
-  // ========== FUNCIÓN cargarTiposPorOperador (DEFINIR PRIMERO) ==========
-async function cargarTiposPorOperador(operadoresSeleccionados) {
-    console.log('🔍 cargarTiposPorOperador llamado con:', operadoresSeleccionados);
-    
+  // ========== FILTROS ==========
+  async function cargarTiposPorOperador(operadoresSeleccionados) {
     const selTipo = document.getElementById('maFiltroIntensidad');
     const selMensaje = document.getElementById('maMensajeSelect');
-    
-    if (!selTipo) {
-        console.error('❌ No se encontró el elemento maFiltroIntensidad');
-        return;
-    }
-    
-    selTipo.innerHTML = '<option value="">Cargando tipos...</option>';
+    selTipo.innerHTML = '<option value="">Cargando...</option>';
     selMensaje.innerHTML = '<option value="">-- Selecciona mensaje --</option>';
-
-    const primerOperador = operadoresSeleccionados && operadoresSeleccionados.length > 0 ? operadoresSeleccionados[0] : null;
-    if (!primerOperador) {
-        console.log('⚠️ No hay operador seleccionado');
-        selTipo.innerHTML = '<option value="">Tipo</option>';
-        return;
-    }
-
+    const primerOperador = operadoresSeleccionados?.[0];
+    if (!primerOperador) { selTipo.innerHTML = '<option value="">Tipo</option>'; return; }
     try {
-        const url = `/api/sms/tipos-por-operador?operador=${encodeURIComponent(primerOperador)}`;
-        console.log(`📡 Llamando a: ${url}`);
-        
-        const resp = await fetch(url);
-        const data = await resp.json();
-        console.log('📦 Respuesta de tipos:', data);
-        
-        if (data.success) {
-            const items = data.items || [];
-            console.log(`✅ Tipos encontrados: ${items.length}`, items);
-            
-            if (items.length === 0) {
-                selTipo.innerHTML = '<option value="">No hay tipos</option>';
-                showToast(`⚠️ No hay tipos para ${primerOperador}`, 'warning', 3000);
-            } else {
-                selTipo.innerHTML = '<option value="">Tipo</option>' +
-                    items.map(t => `<option value="${t}">${t}</option>`).join('');
-                showToast(`✅ ${items.length} tipos cargados para ${primerOperador}`, 'success', 2000);
-                
-                // Auto-seleccionar el primer tipo si solo hay uno
-                if (items.length === 1) {
-                    selTipo.value = items[0];
-                    // Disparar evento change para cargar mensajes
-                    selTipo.dispatchEvent(new Event('change'));
-                }
-            }
-        } else {
-            console.error('❌ Error en respuesta:', data);
-            selTipo.innerHTML = '<option value="">Error cargando tipos</option>';
-            showToast(`❌ Error: ${data.message || 'Error desconocido'}`, 'danger', 3000);
-        }
-    } catch (e) {
-        console.error('❌ Error cargando tipos por operador:', e);
-        selTipo.innerHTML = '<option value="">Error de red</option>';
-        showToast(`❌ Error de red: ${e.message}`, 'danger', 3000);
-    }
-}
-
-// ========== FILTROS FLEXIBLES CON CATEGORÍA ==========
-
-// 1. Cargar operadores y categorías al inicio
-async function cargarDatosIniciales() {
-    console.log('🚀 cargarDatosIniciales iniciado');
-    try {
-        // Cargar operadores
-        const respOps = await fetch('/api/sms/operadores');
-        const dataOps = await respOps.json();
-        console.log('📦 Operadores recibidos:', dataOps);
-        
-        if (dataOps.success) {
-            const opciones = dataOps.items;
-            console.log(`✅ ${opciones.length} operadores cargados:`, opciones);
-            
-            // Modificar el callback del multi-select de operadores
-            if (!msOperador) {
-                console.log('🆕 Creando multi-select de operadores');
-                msOperador = initMultiSelect(
-                    'msOperadorContainer',
-                    'msOperadorTrigger',
-                    'msOperadorDropdown',
-                    (selected) => {
-                        console.log('🔄 Operador seleccionado:', selected);
-                        // Al cambiar operador:
-                        // 1. Recargar categorías
-                        cargarCategorias(selected);
-                        
-                        // 2. Cargar tipos automáticamente si hay operador seleccionado
-                        const categoria = document.getElementById('maFiltroCategoria').value;
-                        console.log(`📌 Categoría actual: "${categoria}"`);
-                        
-                        if (selected.length > 0) {
-                            console.log(`✅ Hay ${selected.length} operador(es) seleccionado(s)`);
-                            // Si hay categoría seleccionada, cargar tipos con operador+categoría
-                            if (categoria) {
-                                console.log(`🔍 Cargando tipos con categoría: ${categoria}`);
-                                cargarTipos(selected, categoria);
-                            } else {
-                                // Si no hay categoría, cargar tipos SOLO por operador
-                                console.log(`🔍 Cargando tipos SOLO por operador: ${selected[0]}`);
-                                cargarTiposPorOperador(selected);
-                            }
-                        } else {
-                            console.log('⚠️ No hay operador seleccionado, limpiando tipos');
-                            const selTipo = document.getElementById('maFiltroIntensidad');
-                            if (selTipo) selTipo.innerHTML = '<option value="">Tipo</option>';
-                            const selMensaje = document.getElementById('maMensajeSelect');
-                            if (selMensaje) selMensaje.innerHTML = '<option value="">-- Selecciona mensaje --</option>';
-                        }
-                    }
-                );
-                console.log('✅ Multi-select creado');
-            }
-            msOperador.setOpciones(opciones);
-            console.log('✅ Opciones de operador asignadas');
-        }
-
-        // Cargar todas las categorías (sin filtro)
-        console.log('📂 Cargando categorías...');
-        await cargarCategorias([]);
-        console.log('✅ cargarDatosIniciales completado');
-        
-        // Mostrar toast de éxito
-        showToast('📋 Datos cargados correctamente', 'success', 2000);
-        
-    } catch (e) {
-        console.error('❌ Error cargando datos iniciales:', e);
-        showToast(`❌ Error al cargar datos: ${e.message}`, 'danger', 5000);
-    }
-}
-
-// 2. Cargar categorías según operadores seleccionados (o todas si no hay)
-  async function cargarCategorias(operadoresSeleccionados) {
-      console.log('📂 cargarCategorias llamado con:', operadoresSeleccionados);
-      const selCategoria = document.getElementById('maFiltroCategoria');
-      selCategoria.innerHTML = '<option value="">-- Cargando categorías --</option>';
-      const categoriaActual = selCategoria.value;
-
-      try {
-          let url = '/api/sms/categorias';
-          const primerOperador = operadoresSeleccionados && operadoresSeleccionados.length > 0 ? operadoresSeleccionados[0] : null;
-          if (primerOperador) {
-              url = `/api/sms/categorias-por-operador?operador=${encodeURIComponent(primerOperador)}`;
-          }
-          console.log(`📡 Llamando a: ${url}`);
-          
-          const resp = await fetch(url);
-          const data = await resp.json();
-          console.log('📦 Categorías recibidas:', data);
-          
-          if (data.success) {
-              const items = data.items || [];
-              console.log(` ${items.length} categorías encontradas:`, items);
-              
-              selCategoria.innerHTML = '<option value="">-- Categoría --</option>' +
-                  items.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-              
-              if (categoriaActual && items.includes(categoriaActual)) {
-                  selCategoria.value = categoriaActual;
-                  console.log(` Restaurando categoría: ${categoriaActual}`);
-              }
-              
-              // Después de cargar categorías, si hay categoría seleccionada, cargar tipos
-              if (selCategoria.value) {
-                  console.log(`🔍 Cargando tipos para categoría: ${selCategoria.value}`);
-                  cargarTipos(operadoresSeleccionados, selCategoria.value);
-              } else {
-                  console.log(' No hay categoría seleccionada, limpiando tipos y mensajes');
-                  document.getElementById('maFiltroIntensidad').innerHTML = '<option value="">Tipo</option>';
-                  document.getElementById('maMensajeSelect').innerHTML = '<option value="">-- Selecciona mensaje --</option>';
-              }
-          }
-      } catch (e) {
-          console.error('❌ Error cargando categorías:', e);
-          selCategoria.innerHTML = '<option value="">-- Error --</option>';
+      const resp = await fetch(`/api/sms/tipos-por-operador?operador=${encodeURIComponent(primerOperador)}`);
+      const data = await resp.json();
+      if (data.success && data.items?.length > 0) {
+        selTipo.innerHTML = '<option value="">Tipo</option>' + data.items.map(t => `<option value="${t}">${t}</option>`).join('');
+      } else {
+        selTipo.innerHTML = '<option value="">No hay tipos</option>';
       }
+    } catch (e) { selTipo.innerHTML = '<option value="">Error</option>'; }
   }
-  // 1. Cargar operadores y categorías al inicio
+
   async function cargarDatosIniciales() {
     try {
-      // Cargar operadores
       const respOps = await fetch('/api/sms/operadores');
       const dataOps = await respOps.json();
       if (dataOps.success) {
-        const opciones = dataOps.items;
-        // Modificar el callback del multi-select de operadores
-          if (!msOperador) {
-              msOperador = initMultiSelect(
-                  'msOperadorContainer',
-                  'msOperadorTrigger',
-                  'msOperadorDropdown',
-                  (selected) => {
-                      // Al cambiar operador:
-                      // 1. Recargar categorías
-                      cargarCategorias(selected);
-                      
-                      // 2. 🔥 NUEVO: Cargar tipos automáticamente si hay operador seleccionado
-                      const categoria = document.getElementById('maFiltroCategoria').value;
-                      if (selected.length > 0) {
-                          // Si hay categoría seleccionada, cargar tipos con operador+categoría
-                          if (categoria) {
-                              cargarTipos(selected, categoria);
-                          } else {
-                              // Si no hay categoría, cargar tipos SOLO por operador
-                              cargarTiposPorOperador(selected);
-                          }
-                      }
-                  }
-              );
-          }
-        msOperador.setOpciones(opciones);
+        if (!msOperador) {
+          msOperador = initMultiSelect('msOperadorContainer', 'msOperadorTrigger', 'msOperadorDropdown', (selected) => {
+            cargarCategorias(selected);
+            const categoria = document.getElementById('maFiltroCategoria').value;
+            if (selected.length > 0) {
+              categoria ? cargarTipos(selected, categoria) : cargarTiposPorOperador(selected);
+            }
+          });
+        }
+        msOperador.setOpciones(dataOps.items);
       }
-
-      // Cargar todas las categorías (sin filtro)
       await cargarCategorias([]);
-    } catch (e) {
-      console.error('Error cargando datos iniciales:', e);
-    }
+    } catch (e) { console.error('Error cargando datos iniciales:', e); }
   }
 
-  // 2. Cargar categorías según operadores seleccionados (o todas si no hay)
   async function cargarCategorias(operadoresSeleccionados) {
     const selCategoria = document.getElementById('maFiltroCategoria');
-    selCategoria.innerHTML = '<option value="">-- Categoría --</option>';
-    // Guardar la categoría actual para intentar mantenerla
     const categoriaActual = selCategoria.value;
-
+    selCategoria.innerHTML = '<option value="">-- Categoría --</option>';
     try {
       let url = '/api/sms/categorias';
-      // Si hay operadores seleccionados, podemos filtrar categorías (usando el primer operador)
-      // Usamos el nuevo endpoint /api/sms/categorias-por-operador?operador=X
-      const primerOperador = operadoresSeleccionados && operadoresSeleccionados.length > 0 ? operadoresSeleccionados[0] : null;
-      if (primerOperador) {
-        url = `/api/sms/categorias-por-operador?operador=${encodeURIComponent(primerOperador)}`;
-      }
+      const primerOperador = operadoresSeleccionados?.[0];
+      if (primerOperador) url = `/api/sms/categorias-por-operador?operador=${encodeURIComponent(primerOperador)}`;
       const resp = await fetch(url);
       const data = await resp.json();
       if (data.success) {
         const items = data.items || [];
-        selCategoria.innerHTML = '<option value="">-- Categoría --</option>' +
-          items.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-        // Intentar restaurar la categoría seleccionada si aún existe
-        if (categoriaActual && items.includes(categoriaActual)) {
-          selCategoria.value = categoriaActual;
-        }
-        // Después de cargar categorías, si hay categoría seleccionada, cargar tipos
-        if (selCategoria.value) {
-          cargarTipos(operadoresSeleccionados, selCategoria.value);
-        } else {
-          // Limpiar tipos y mensajes
-          document.getElementById('maFiltroIntensidad').innerHTML = '<option value="">Tipo</option>';
-          document.getElementById('maMensajeSelect').innerHTML = '<option value="">-- Selecciona mensaje --</option>';
-        }
+        selCategoria.innerHTML = '<option value="">-- Categoría --</option>' + items.map(c => `<option value="${c}">${c}</option>`).join('');
+        if (categoriaActual && items.includes(categoriaActual)) selCategoria.value = categoriaActual;
+        if (selCategoria.value) cargarTipos(operadoresSeleccionados, selCategoria.value);
       }
-    } catch (e) {
-      console.error('Error cargando categorías:', e);
-    }
+    } catch (e) { console.error('Error cargando categorías:', e); }
   }
 
-  // 3. Cargar tipos según operador y categoría (usando /api/sms/tipos)
   async function cargarTipos(operadoresSeleccionados, categoria) {
-      const selTipo = document.getElementById('maFiltroIntensidad');
-      const selMensaje = document.getElementById('maMensajeSelect');
-      selTipo.innerHTML = '<option value="">Tipo</option>';
-      selMensaje.innerHTML = '<option value="">-- Selecciona mensaje --</option>';
-
-      const primerOperador = operadoresSeleccionados && operadoresSeleccionados.length > 0 ? operadoresSeleccionados[0] : null;
-      try {
-          let url = '/api/sms/tipos?';
-          const params = new URLSearchParams();
-          if (primerOperador) params.append('operador', primerOperador);
-          if (categoria) params.append('categoria', categoria);
-          url += params.toString();
-
-          const resp = await fetch(url);
-          const data = await resp.json();
-          if (data.success) {
-              const items = data.items || [];
-              selTipo.innerHTML = '<option value="">Tipo</option>' +
-                  items.map(t => `<option value="${t}">${t}</option>`).join('');
-          }
-      } catch (e) {
-          console.error('Error cargando tipos:', e);
-      }
+    const selTipo = document.getElementById('maFiltroIntensidad');
+    selTipo.innerHTML = '<option value="">Tipo</option>';
+    const primerOperador = operadoresSeleccionados?.[0];
+    try {
+      const params = new URLSearchParams();
+      if (primerOperador) params.append('operador', primerOperador);
+      if (categoria) params.append('categoria', categoria);
+      const resp = await fetch(`/api/sms/tipos?${params}`);
+      const data = await resp.json();
+      if (data.success) selTipo.innerHTML = '<option value="">Tipo</option>' + (data.items || []).map(t => `<option value="${t}">${t}</option>`).join('');
+    } catch (e) { console.error('Error cargando tipos:', e); }
   }
 
-  // 4. Cargar mensajes según operador, categoría, tipo
-  // 4. Cargar mensajes según operador, categoría, tipo
   async function cargarMensajes(operadoresSeleccionados, categoria, tipo) {
-      const selMensaje = document.getElementById('maMensajeSelect');
-      selMensaje.innerHTML = '<option value="">Cargando mensajes...</option>';
-
-      const primerOperador = operadoresSeleccionados && operadoresSeleccionados.length > 0 ? operadoresSeleccionados[0] : null;
-      
-      console.log(`📡 cargarMensajes: operador=${primerOperador}, categoria=${categoria}, tipo=${tipo}`);
-      
-      try {
-          let url = '/api/sms/mensajes-operacion?';
-          const params = new URLSearchParams();
-          
-          // Siempre incluir tipo si está presente
-          if (tipo) params.append('tipo', tipo);
-          
-          // Incluir operador si hay
-          if (primerOperador) params.append('operador', primerOperador);
-          
-          // Incluir categoría si hay
-          if (categoria) params.append('categoria', categoria);
-          
-          url += params.toString();
-          console.log(`📡 Llamando a: ${url}`);
-
-          const resp = await fetch(url);
-          const data = await resp.json();
-          console.log('📦 Respuesta mensajes:', data);
-          
-          if (data.success) {
-              const items = data.items || [];
-              console.log(`✅ ${items.length} mensajes encontrados`);
-              
-              if (items.length === 0) {
-                  selMensaje.innerHTML = '<option value="">-- Sin mensajes --</option>';
-                  showToast('⚠️ No hay mensajes para esta combinación', 'warning', 2000);
-              } else {
-                  selMensaje.innerHTML = '<option value="">-- Selecciona mensaje --</option>' +
-                      items.map((m, i) => {
-                          const preview = (m.mensaje || '').substring(0, 50);
-                          return `<option value="${m.id}" data-mensaje="${escapeHtml(m.mensaje || '')}">${i+1}: ${escapeHtml(preview)}...</option>`;
-                      }).join('');
-                  
-                  // Auto-seleccionar el primer mensaje si solo hay uno
-                  if (items.length === 1) {
-                      selMensaje.value = items[0].id;
-                      // Disparar evento para cargar plantilla
-                      selMensaje.dispatchEvent(new Event('change'));
-                  }
-                  
-                  showToast(`✅ ${items.length} mensajes cargados`, 'success', 1500);
-              }
-          } else {
-              console.error('❌ Error en respuesta:', data);
-              selMensaje.innerHTML = '<option value="">-- Error --</option>';
-              showToast(`❌ ${data.message || 'Error cargando mensajes'}`, 'danger', 3000);
-          }
-      } catch (e) {
-          console.error('❌ Error cargando mensajes:', e);
-          selMensaje.innerHTML = '<option value="">-- Error de red --</option>';
-          showToast(`❌ Error: ${e.message}`, 'danger', 3000);
+    const selMensaje = document.getElementById('maMensajeSelect');
+    selMensaje.innerHTML = '<option value="">Cargando...</option>';
+    const primerOperador = operadoresSeleccionados?.[0];
+    try {
+      const params = new URLSearchParams();
+      if (tipo) params.append('tipo', tipo);
+      if (primerOperador) params.append('operador', primerOperador);
+      if (categoria) params.append('categoria', categoria);
+      const resp = await fetch(`/api/sms/mensajes-operacion?${params}`);
+      const data = await resp.json();
+      if (data.success) {
+        const items = data.items || [];
+        selMensaje.innerHTML = items.length === 0 ? '<option value="">-- Sin mensajes --</option>' :
+          '<option value="">-- Selecciona mensaje --</option>' + items.map((m, i) => `<option value="${m.id}" data-mensaje="${escapeHtml(m.mensaje || '')}">${i+1}: ${escapeHtml((m.mensaje||'').substring(0,50))}...</option>`).join('');
+        if (items.length === 1) { selMensaje.value = items[0].id; selMensaje.dispatchEvent(new Event('change')); }
       }
+    } catch (e) { selMensaje.innerHTML = '<option value="">-- Error --</option>'; }
   }
 
-  // 5. Eventos de cambios en los filtros
-
-  // Cambio de categoría
   document.getElementById('maFiltroCategoria').addEventListener('change', function() {
     const categoria = this.value;
     const operadores = msOperador ? msOperador.getSelected() : [];
-    if (categoria) {
-      cargarTipos(operadores, categoria);
-    } else {
-      // Si se quita categoría, limpiar tipos y mensajes
+    if (categoria) cargarTipos(operadores, categoria);
+    else {
       document.getElementById('maFiltroIntensidad').innerHTML = '<option value="">Tipo</option>';
       document.getElementById('maMensajeSelect').innerHTML = '<option value="">-- Selecciona mensaje --</option>';
     }
   });
 
-  // Cambio de tipo
-  // Cambio de tipo - AHORA CARGA MENSAJES CON O SIN CATEGORÍA
   document.getElementById('maFiltroIntensidad').addEventListener('change', function() {
-      const tipo = this.value;
-      const categoria = document.getElementById('maFiltroCategoria').value;
-      const operadores = msOperador ? msOperador.getSelected() : [];
-      
-      console.log(`🔄 Cambio de tipo: "${tipo}", Categoría: "${categoria}", Operadores:`, operadores);
-      
-      // Si hay tipo seleccionado, cargar mensajes
-      if (tipo) {
-          // Siempre cargar mensajes si hay tipo, independientemente de la categoría
-          cargarMensajes(operadores, categoria, tipo);
-      } else {
-          // Si se quita el tipo, limpiar mensajes
-          document.getElementById('maMensajeSelect').innerHTML = '<option value="">-- Selecciona mensaje --</option>';
-      }
+    const tipo = this.value;
+    const categoria = document.getElementById('maFiltroCategoria').value;
+    const operadores = msOperador ? msOperador.getSelected() : [];
+    if (tipo) cargarMensajes(operadores, categoria, tipo);
+    else document.getElementById('maMensajeSelect').innerHTML = '<option value="">-- Selecciona mensaje --</option>';
   });
 
-  // Al seleccionar mensaje, cargar plantilla
   document.getElementById('maMensajeSelect').addEventListener('change', function() {
     const mensaje = this.options[this.selectedIndex]?.getAttribute('data-mensaje');
     if (mensaje) {
@@ -1428,32 +937,23 @@ async function cargarDatosIniciales() {
     }
   });
 
-  // Iniciar carga de datos
   cargarDatosIniciales();
 
   // ========== PROBAR CONSULTA ==========
   previewBtn.addEventListener('click', async () => {
     const payload = getPayload();
     if (!payload.query) { showToast('⚠️ Escribe una consulta SQL', 'warning'); queryEl.focus(); return; }
-    if (!payload.plantilla) { showToast('⚠️ Escribe una plantilla de mensaje', 'warning'); plantillaEl.focus(); return; }
+    if (!payload.plantilla) { showToast('⚠️ Escribe una plantilla', 'warning'); plantillaEl.focus(); return; }
 
     try {
       setLoading(previewBtn, true);
-      showToast('🔍 Validando consulta en BigQuery...', 'info', 3000);
-
+      showToast('🔍 Validando consulta...', 'info', 3000);
       const validacionData = await callAPI('/api/sms/validar', payload);
-      console.log('🛡️ Validación completa:', validacionData);
-
       previewData = validacionData;
       totalAEnviar = validacionData.a_enviar || 0;
 
-      if (validacionData.mensaje_detectado) {
-        plantillaEl.value = validacionData.mensaje_detectado;
-        actualizarMockup();
-      }
-      if (validacionData.id_mensaje_detectado) {
-        document.getElementById('idMensajeHidden').value = validacionData.id_mensaje_detectado;
-      }
+      if (validacionData.mensaje_detectado) { plantillaEl.value = validacionData.mensaje_detectado; actualizarMockup(); }
+      if (validacionData.id_mensaje_detectado) document.getElementById('idMensajeHidden').value = validacionData.id_mensaje_detectado;
 
       document.getElementById('validationDetail').style.display = 'block';
       document.getElementById('valTotalConsulta').textContent = validacionData.total_consulta || 0;
@@ -1471,56 +971,36 @@ async function cargarDatosIniciales() {
       statAEnviar.textContent = validacionData.a_enviar || 0;
       rowCount.textContent = `${validacionData.total_consulta || 0} filas`;
 
-      if (validacionData.preview && validacionData.preview.length > 0) {
+      if (validacionData.preview?.length > 0) {
         document.getElementById('previewDetail').style.display = 'block';
-        let previewHtml = '';
-        validacionData.preview.forEach((item) => {
-          previewHtml += `
-            <div class="sms-preview-item">
-              <div class="phone"><i class="fas fa-phone"></i> ${escapeHtml(item.telefono)}</div>
-              <div class="meta">${item.longitud} caracteres</div>
-              <div class="msg">${escapeHtml(item.mensaje)}</div>
-            </div>
-          `;
-        });
-        document.getElementById('previewMessages').innerHTML = previewHtml;
-        if (validacionData.preview[0]) {
-          phoneBubble.textContent = validacionData.preview[0].mensaje;
-          phoneBubble.classList.remove('is-placeholder');
-        }
+        document.getElementById('previewMessages').innerHTML = validacionData.preview.map(item => `
+          <div class="sms-preview-item">
+            <div class="phone"><i class="fas fa-phone"></i> ${escapeHtml(item.telefono)}</div>
+            <div class="meta">${item.longitud} caracteres</div>
+            <div class="msg">${escapeHtml(item.mensaje)}</div>
+          </div>`).join('');
+        phoneBubble.textContent = validacionData.preview[0].mensaje;
+        phoneBubble.classList.remove('is-placeholder');
       }
 
       if (validacionData.duplicados > 0 && !payload.confirmar_reenvio) {
         document.getElementById('duplicateFlag').className = 'sms-flag warning';
-        document.getElementById('duplicateFlag').querySelector('span').innerHTML = `
-          <strong>⚠️ ${validacionData.duplicados} clientes ya recibieron SMS hoy</strong>
-          <span style="display:block;font-size:0.78rem;color:#721C24;margin-top:2px;">
-            <i class="fas fa-info-circle"></i> Marca la casilla para reenviar.
-          </span>`;
+        document.getElementById('duplicateFlag').querySelector('span').innerHTML = `<strong>⚠️ ${validacionData.duplicados} clientes ya recibieron SMS hoy</strong><span style="display:block;font-size:0.78rem;color:#721C24;margin-top:2px;"><i class="fas fa-info-circle"></i> Marca la casilla para reenviar.</span>`;
         sendBtn.disabled = true;
         confirmarReenvioEl.checked = false;
       } else {
         document.getElementById('duplicateFlag').className = 'sms-flag success';
-        document.getElementById('duplicateFlag').querySelector('span').innerHTML = `
-          <strong>✅ Validación completada</strong>
-          <span style="display:block;font-size:0.78rem;color:#155724;margin-top:2px;">
-            <i class="fas fa-check-circle"></i> ${validacionData.a_enviar || 0} números listos.
-          </span>`;
+        document.getElementById('duplicateFlag').querySelector('span').innerHTML = `<strong>✅ Validación completada</strong><span style="display:block;font-size:0.78rem;color:#155724;margin-top:2px;"><i class="fas fa-check-circle"></i> ${validacionData.a_enviar || 0} números listos.</span>`;
         sendBtn.disabled = (validacionData.a_enviar === 0);
       }
 
-      showToast(validacionData.a_enviar === 0 ? '⚠️ Sin destinatarios' : `✅ ${validacionData.a_enviar} listos`, 
-        validacionData.a_enviar === 0 ? 'warning' : 'success', 3000);
-
+      showToast(validacionData.a_enviar === 0 ? '⚠️ Sin destinatarios' : `✅ ${validacionData.a_enviar} listos`, validacionData.a_enviar === 0 ? 'warning' : 'success', 3000);
     } catch (error) {
-      console.error('❌ Error:', error);
       showToast(`❌ ${escapeHtml(error.message)}`, 'danger');
       sendBtn.disabled = true;
       document.getElementById('validationDetail').style.display = 'none';
       document.getElementById('previewDetail').style.display = 'none';
-    } finally {
-      setLoading(previewBtn, false);
-    }
+    } finally { setLoading(previewBtn, false); }
   });
 
   // ========== ENVIAR SMS ==========
@@ -1528,109 +1008,113 @@ async function cargarDatosIniciales() {
     if (!previewData) { showToast('⚠️ Primero prueba la consulta', 'warning'); return; }
     if (totalAEnviar === 0) { showToast('⚠️ No hay destinatarios', 'warning'); return; }
     if (!confirm(`📤 ¿Enviar SMS a ${totalAEnviar} destinatarios?`)) return;
-
     try {
       setLoading(sendBtn, true);
-      showToast('📤 Enviando...', 'info', 5000);
       const data = await callAPI('/api/sms/enviar', getPayload());
-
-      let msgHtml = `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div><strong>✅ Enviados:</strong> ${data.enviados || 0}</div>
-          <div><strong>❌ Fallidos:</strong> ${data.fallidos || 0}</div>
-          <div><strong>📦 Bulk ID:</strong> <code>${data.bulk_id || data.bulk_ids?.[0] || 'N/A'}</code></div>
-          <div><strong>📅 Fecha:</strong> ${new Date().toLocaleString()}</div>
-        </div>`;
-      showResult(msgHtml);
+      showResult(`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div><strong>✅ Enviados:</strong> ${data.enviados || 0}</div><div><strong>❌ Fallidos:</strong> ${data.fallidos || 0}</div><div><strong>📦 Bulk ID:</strong> <code>${data.bulk_id || 'N/A'}</code></div></div>`);
       showToast(data.enviados > 0 ? `✅ ${data.enviados} SMS enviados` : '❌ Error', data.enviados > 0 ? 'success' : 'danger');
       if (data.enviados > 0) clearResult();
-    } catch (error) {
-      showToast(`❌ ${escapeHtml(error.message)}`, 'danger');
-      showResult(`<div class="alert alert-danger mb-0">${escapeHtml(error.message)}</div>`);
-    } finally {
-      setLoading(sendBtn, false);
-    }
+    } catch (error) { showToast(`❌ ${escapeHtml(error.message)}`, 'danger'); }
+    finally { setLoading(sendBtn, false); }
   });
 
-  // ========== PROGRAMAR ==========
+  // ========== PROGRAMAR SIMPLE ==========
   scheduleBtn.addEventListener('click', async () => {
     const fecha = fechaProgramadaEl.value;
     if (!fecha) { showToast('⚠️ Selecciona fecha', 'warning'); return; }
     if (new Date(fecha) <= new Date()) { showToast('⚠️ Fecha futura requerida', 'warning'); return; }
     if (!queryEl.value.trim() || !plantillaEl.value.trim()) { showToast('⚠️ Completa consulta y plantilla', 'warning'); return; }
-
     try {
       setLoading(scheduleBtn, true);
-      const data = await callAPI('/api/sms/programar', getPayload());
+      const payload = getPayload();
+      payload.fecha_programada = fecha;
+      const data = await callAPI('/api/sms/programar', payload);
       showToast(`✅ Programado (ID: ${data.id})`, 'success', 5000);
       showResult(`<div class="alert alert-success mb-0"><i class="fas fa-check-circle"></i> <strong>Programado</strong><br>ID: <code>${data.id}</code><br>Fecha: ${new Date(data.fecha_programada).toLocaleString()}<br>Destinatarios: ${data.total_destinatarios || '—'}</div>`);
       fechaProgramadaEl.value = '';
-    } catch (error) {
-      showToast(`❌ ${escapeHtml(error.message)}`, 'danger');
-    } finally {
-      setLoading(scheduleBtn, false);
-    }
+    } catch (error) { showToast(`❌ ${escapeHtml(error.message)}`, 'danger'); }
+    finally { setLoading(scheduleBtn, false); }
+  });
+
+  // 🆕 ========== PROGRAMAR RECURRENTE ==========
+  scheduleRecurrentBtn.addEventListener('click', async () => {
+    const frecuencia = frecuenciaTipoEl.value;
+    const hora = horaRecurrenteEl.value;
+    
+    if (!queryEl.value.trim() || !plantillaEl.value.trim()) { showToast('⚠️ Completa consulta y plantilla', 'warning'); return; }
+    if (!hora) { showToast('⚠️ Selecciona una hora', 'warning'); return; }
+
+    const fechaLimite = fechaLimiteEl.value;
+    const repMax = parseInt(repeticionesMaxEl.value) || null;
+    
+    if (!fechaLimite && !repMax) { showToast('⚠️ Define una fecha límite o máximo de repeticiones', 'warning'); return; }
+
+    const ahora = new Date();
+    const [horas, minutos] = hora.split(':');
+    let primeraFecha = new Date();
+    primeraFecha.setHours(parseInt(horas), parseInt(minutos), 0, 0);
+    if (primeraFecha <= ahora) primeraFecha.setDate(primeraFecha.getDate() + 1);
+
+    const mensaje = `¿Programar envío recurrente?\n• Inicio: ${primeraFecha.toLocaleString()}\n• Frecuencia: ${frecuencia}\n• Hora: ${hora}\n${fechaLimite ? '• Hasta: ' + fechaLimite + '\n' : ''}${repMax ? '• Máx: ' + repMax + ' repeticiones' : ''}`;
+    if (!confirm(mensaje)) return;
+
+    try {
+      setLoading(scheduleRecurrentBtn, true);
+      const payload = getPayload();
+      payload.fecha_programada = primeraFecha.toISOString();
+      const data = await callAPI('/api/sms/programar', payload);
+      
+      showToast(`✅ Programación recurrente creada (ID: ${data.id})`, 'success', 5000);
+      showResult(`<div class="alert alert-success mb-0"><i class="fas fa-check-circle"></i> <strong>Programación recurrente</strong><br>ID: <code>${data.id}</code><br>Inicio: ${primeraFecha.toLocaleString()}<br>Frecuencia: ${frecuencia} · ${hora}</div>`);
+      
+      esRecurrenteEl.checked = false;
+      recurrenciaOpciones.style.display = 'none';
+      scheduleRecurrentBtn.style.display = 'none';
+      scheduleBtn.style.display = 'inline-flex';
+    } catch (error) { showToast(`❌ ${escapeHtml(error.message)}`, 'danger'); }
+    finally { setLoading(scheduleRecurrentBtn, false); }
   });
 
   // ========== LIMPIAR ==========
   clearBtn.addEventListener('click', () => {
     queryEl.value = ''; plantillaEl.value = ''; campanaEl.value = ''; usuarioEl.value = '';
     confirmarReenvioEl.checked = false; fechaProgramadaEl.value = '';
+    esRecurrenteEl.checked = false; recurrenciaOpciones.style.display = 'none';
+    scheduleRecurrentBtn.style.display = 'none'; scheduleBtn.style.display = 'inline-flex';
     document.getElementById('idMensajeHidden').value = '';
     if (msOperador) msOperador.limpiar();
     document.getElementById('maFiltroCategoria').innerHTML = '<option value="">-- Categoría --</option>';
     document.getElementById('maFiltroIntensidad').innerHTML = '<option value="">Tipo</option>';
     document.getElementById('maMensajeSelect').innerHTML = '<option value="">-- Selecciona mensaje --</option>';
-    phoneBubble.textContent = 'Escribe tu plantilla...';
-    phoneBubble.classList.add('is-placeholder');
-    phoneMetaCount.textContent = '0 caracteres';
-    charCounter.textContent = '0 caracteres · 1 segmento';
-    rowCount.textContent = '0 filas';
-    document.getElementById('duplicateFlag').className = 'sms-flag';
+    phoneBubble.textContent = 'Escribe tu plantilla...'; phoneBubble.classList.add('is-placeholder');
+    phoneMetaCount.textContent = '0 caracteres'; charCounter.textContent = '0 caracteres · 1 segmento';
+    rowCount.textContent = '0 filas'; document.getElementById('duplicateFlag').className = 'sms-flag';
     showToast('🧹 Limpiado', 'info', 2000);
   });
 
   // ========== TABS ==========
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      tabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      Object.keys(panels).forEach(key => panels[key].classList.toggle('active', key === tab.dataset.tab));
-      if (tab.dataset.tab === 'history') loadHistory();
-      if (tab.dataset.tab === 'scheduled') loadScheduled();
-    });
-  });
+  tabs.forEach(tab => tab.addEventListener('click', () => {
+    tabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    Object.keys(panels).forEach(key => panels[key].classList.toggle('active', key === tab.dataset.tab));
+    if (tab.dataset.tab === 'history') loadHistory();
+    if (tab.dataset.tab === 'scheduled') loadScheduled();
+  }));
 
   // ========== HISTORIAL ==========
-  // 3b. Cargar tipos SOLO por operador (sin categoría)
-  
   async function loadHistory() {
     const container = document.getElementById('histResult');
     container.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
     try {
       const resp = await fetch('/api/sms/historial');
       const data = await resp.json();
-      if (!data.items || !data.items.length) {
-        container.innerHTML = '<div class="text-center text-muted py-4">Sin registros</div>';
-        return;
-      }
-      let html = '<table class="table table-hover table-sm"><thead><tr><th>Fecha</th><th>Teléfono</th><th>Mensaje</th><th>Campaña</th><th>Estado</th></tr></thead><tbody>';
-      data.items.slice(0, 50).forEach(row => {
-        html += `<tr>
-          <td>${row.fecha_envio ? new Date(row.fecha_envio).toLocaleString() : '—'}</td>
-          <td>${escapeHtml(row.telefono||'')}</td>
-          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml((row.mensaje||'').substring(0,50))}</td>
-          <td>${escapeHtml(row.campana||'—')}</td>
-          <td><span class="badge badge-${row.resultado==='enviado'?'success':'danger'}">${row.resultado||'?'}</span></td>
-        </tr>`;
-      });
-      html += '</tbody></table>';
-      container.innerHTML = html;
-    } catch (e) {
-      container.innerHTML = `<div class="alert alert-danger">${escapeHtml(e.message)}</div>`;
-    }
+      if (!data.items?.length) { container.innerHTML = '<div class="text-center text-muted py-4">Sin registros</div>'; return; }
+      container.innerHTML = '<table class="table table-hover table-sm"><thead><tr><th>Fecha</th><th>Teléfono</th><th>Mensaje</th><th>Campaña</th><th>Estado</th></tr></thead><tbody>' +
+        data.items.slice(0, 50).map(row => `<tr><td>${row.fecha_envio ? new Date(row.fecha_envio).toLocaleString() : '—'}</td><td>${escapeHtml(row.telefono||'')}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml((row.mensaje||'').substring(0,50))}</td><td>${escapeHtml(row.campana||'—')}</td><td><span class="badge badge-${row.resultado==='enviado'?'success':'danger'}">${row.resultado||'?'}</span></td></tr>`).join('') + '</tbody></table>';
+    } catch (e) { container.innerHTML = `<div class="alert alert-danger">${escapeHtml(e.message)}</div>`; }
   }
 
+  // ========== PROGRAMACIONES ==========
   // ========== PROGRAMACIONES ==========
   async function loadScheduled() {
     const container = document.getElementById('scheduledResult');
@@ -1638,31 +1122,50 @@ async function cargarDatosIniciales() {
     try {
       const resp = await fetch('/api/sms/programaciones');
       const data = await resp.json();
-      if (!data.items || !data.items.length) {
-        container.innerHTML = '<div class="text-center text-muted py-4">Sin programaciones</div>';
-        return;
-      }
-      let html = '<table class="table table-hover table-sm"><thead><tr><th>ID</th><th>Fecha</th><th>Estado</th><th></th></tr></thead><tbody>';
+      if (!data.items?.length) { container.innerHTML = '<div class="text-center text-muted py-4">Sin programaciones</div>'; return; }
+      
+      let html = '<table class="table table-hover table-sm"><thead><tr><th>ID</th><th>Fecha</th><th>Tipo</th><th>Estado</th><th></th></tr></thead><tbody>';
+      
       data.items.forEach(row => {
+        const esRecurrente = row.es_recurrente;
+        const frecuencia = row.frecuencia_tipo || '';
+        const reps = row.repeticiones_realizadas || 0;
+        const repsMax = row.repeticiones_max || '-';
+        
+        let tipoBadge = '';
+        if (esRecurrente) {
+          tipoBadge = `<span class="badge badge-info" title="${frecuencia} · ${reps}/${repsMax} reps">🔄 ${frecuencia}</span>`;
+        } else {
+          tipoBadge = '<span class="badge badge-secondary">Simple</span>';
+        }
+        
+        let estadoClass = '';
+        if (row.estado === 'pendiente') estadoClass = 'warning';
+        else if (row.estado === 'enviado') estadoClass = 'success';
+        else if (row.estado === 'completado') estadoClass = 'info';
+        else if (row.estado === 'fallido') estadoClass = 'danger';
+        else estadoClass = 'secondary';
+        
         html += `<tr>
-          <td><code>${escapeHtml(row.id||'')}</code></td>
+          <td><code>${escapeHtml((row.id||'').substring(0,8))}</code></td>
           <td>${row.fecha_programada ? new Date(row.fecha_programada).toLocaleString() : '—'}</td>
-          <td><span class="badge badge-${row.estado==='pendiente'?'warning':row.estado==='enviado'?'success':'danger'}">${row.estado}</span></td>
-          <td>${row.estado==='pendiente' ? `<button class="btn btn-sm btn-outline-danger cancelar-btn" data-id="${row.id}"><i class="fas fa-times"></i></button>` : ''}</td>
+          <td>${tipoBadge}</td>
+          <td><span class="badge badge-${estadoClass}">${row.estado || '?'}</span></td>
+          <td>${row.estado === 'pendiente' ? `<button class="btn btn-sm btn-outline-danger cancelar-btn" data-id="${row.id}"><i class="fas fa-times"></i></button>` : ''}</td>
         </tr>`;
       });
+      
       html += '</tbody></table>';
       container.innerHTML = html;
+      
       container.querySelectorAll('.cancelar-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
-          if (!confirm('¿Cancelar?')) return;
+          if (!confirm('¿Cancelar programación?')) return;
           await fetch(`/api/sms/cancelar/${btn.dataset.id}`, {method:'POST'});
           loadScheduled();
         });
       });
-    } catch (e) {
-      container.innerHTML = `<div class="alert alert-danger">${escapeHtml(e.message)}</div>`;
-    }
+    } catch (e) { container.innerHTML = `<div class="alert alert-danger">${escapeHtml(e.message)}</div>`; }
   }
 
   document.getElementById('histFiltrarBtn').addEventListener('click', loadHistory);
@@ -1670,7 +1173,6 @@ async function cargarDatosIniciales() {
   actualizarMockup();
   loadHistory();
   loadScheduled();
-
   setTimeout(() => showToast('💬 Listo · Usa "Probar consulta"', 'info', 4000), 500);
 
 })();

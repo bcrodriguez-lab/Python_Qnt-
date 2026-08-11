@@ -1,178 +1,488 @@
 {% extends "layouts/adminlte.html" %}
 {% set is_edit = campaign is not none %}
-{% block title %}{{ "Editar" if is_edit else "Nueva" }} campaña automática{% endblock %}
-{% block page_title %}{{ "Editar" if is_edit else "Nueva" }} campaña automática{% endblock %}
-{% block breadcrumb %}
-<li class="breadcrumb-item"><a href="/auto-campaigns">Campañas automáticas</a></li>
-<li class="breadcrumb-item active">{{ "Editar" if is_edit else "Nueva" }}</li>
+
+{% block title %}{{ "Editar" if is_edit else "Nueva" }} campaña Wolkvox{% endblock %}
+
+{% block page_title %}
+  <div class="d-flex align-items-center gap-3">
+    <div style="font-size:2rem; color: var(--primary);">
+      <i class="fas fa-phone-volume"></i>
+    </div>
+    <div>
+      <h1 class="m-0" style="font-weight:700;">{{ "Editar" if is_edit else "Nueva" }} campaña Wolkvox</h1>
+      <small style="color: var(--text-secondary);">BigQuery → Wolkvox · Carga automática de registros</small>
+    </div>
+  </div>
 {% endblock %}
+
+{% block breadcrumb %}
+<li><a href="/auto-campaigns">Campañas</a></li>
+<li class="active">{{ "Editar" if is_edit else "Nueva" }}</li>
+{% endblock %}
+
 {% block extra_css %}
 <style>
-.sql-editor { min-height: 220px; font-family: Consolas, monospace; font-size: .92rem; }
-.json-editor { min-height: 120px; font-family: Consolas, monospace; font-size: .92rem; }
+  .form-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .form-section-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 4px;
+  }
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+    display: block;
+  }
+  .form-group .form-text {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+  .form-control {
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    background: #fff;
+    transition: var(--transition);
+    width: 100%;
+  }
+  .form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(11,80,218,0.12);
+    outline: none;
+  }
+  textarea.form-control {
+    resize: vertical;
+    min-height: 100px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.85rem;
+    background: #FBFBFE;
+  }
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding-top: 8px;
+  }
+  
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  
+  .result-box {
+    background: #FBFBFE;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    margin-top: 16px;
+    display: none;
+  }
+  .result-box.visible { display: block; }
+  
+  .table-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-top: 20px;
+  }
+  .table-card .card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .table-card .card-header h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .table-card .card-body { padding: 0; }
+  
+  .spinner-sm {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  
+  .badge-success { background: #28a745; color: white; padding: 4px 8px; border-radius: 4px; }
+  .badge-danger { background: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; }
 </style>
 {% endblock %}
 
 {% block content %}
-<form id="autoCampaignForm" data-id="{{ campaign.id if is_edit else '' }}" data-tipos-con-flujo='{{ tipos_campana_con_flujo|tojson|safe }}'>
-    <div class="card mb-3">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label>Nombre</label>
-                    <input class="form-control" name="name" value="{{ campaign.name if is_edit else '' }}" required>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label>Campaign ID Wolkvox</label>
-                    <input class="form-control" name="wolkvox_campaign_id" value="{{ campaign.wolkvox_campaign_id if is_edit else '' }}" required>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label>Servidor</label>
-                    <select class="form-control" name="server_name" required>
-                        <option value="">(Seleccionar servidor)</option>
-                        {% for server in servers %}
-                            <option value="{{ server.name }}" {% if is_edit and campaign.server_name == server.name %}selected{% endif %}>{{ server.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label>Operación</label>
-                    <select class="form-control" name="operation" required>
-                        <option value="">(Seleccionar operación)</option>
-                        {% for op in operaciones %}
-                            <option value="{{ op }}" {% if is_edit and campaign.operation == op %}selected{% endif %}>{{ op }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label>Tipo</label>
-                    <select class="form-control" name="type" required>
-                        <option value="">(Seleccionar tipo)</option>
-                        {% for tipo in tipos %}
-                            <option value="{{ tipo }}" {% if is_edit and campaign.type == tipo %}selected{% endif %}>{{ tipo }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label>Tipo de campaña</label>
-                    <select class="form-control" name="campaign_type" required>
-                        <option value="">(Seleccionar tipo de campaña)</option>
-                        {% for tipo_campana in tipos_campana %}
-                            <option value="{{ tipo_campana }}" {% if is_edit and campaign.campaign_type == tipo_campana %}selected{% endif %}>{{ tipo_campana }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-4 mb-3" id="autoFlujoProcesoGroup" style="display: none;">
-                    <label>Flujo de proceso (campaign_id)</label>
-                    <select class="form-control" name="flujo_proceso_id" id="autoCampaignFlujoProceso">
-                        <option value="">(Seleccionar flujo)</option>
-                    </select>
-                    <small class="form-text text-muted" id="autoFlujoProcesoHint">
-                        Solo Llamada y WhatsApp. Elija el servidor primero; los flujos se filtran por servidor.
-                    </small>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label>Fecha de inicio</label>
-                    <input class="form-control" type="datetime-local" name="start_date" value="{{ campaign.start_date.replace(' ', 'T') if is_edit and campaign.start_date else '' }}">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label>Usuario</label>
-                    <select class="form-control" name="user_name" required>
-                        <option value="">(Seleccionar usuario)</option>
-                        {% for usuario in usuarios %}
-                            <option value="{{ usuario }}" {% if is_edit and campaign.user_name == usuario %}selected{% endif %}>{{ usuario }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-            <div class="mb-3">
-                <label>Descripción</label>
-                <textarea class="form-control" name="description" rows="2" placeholder="Descripción breve de la campaña">{{ campaign.description if is_edit else '' }}</textarea>
-            </div>
-            <div class="mb-3">
-                <label>Endpoint add_record</label>
-                <input class="form-control" name="wolkvox_add_record_endpoint" value="{{ campaign.wolkvox_add_record_endpoint if is_edit else '{{servidor}}/api/v2/campaign.php?api=add_record&type_campaign=predictive&campaign_id={{campaign_id}}&campaign_status=1' }}" required>
-            </div>
-            <div class="mb-3">
-                <label>Endpoint borrado de registros</label>
-                <input class="form-control" name="wolkvox_delete_records_endpoint" value="{{ campaign.wolkvox_delete_records_endpoint if is_edit else '' }}" placeholder="{{servidor}}/api/v2/campaign.php?api=clear_campaign&type_campaign=1&campaign_id={{campaign_id}}">
-                <small class="form-text text-muted">Si se deja vacío, el botón de borrado elimina solo logs locales.</small>
-            </div>
-            <div class="mb-3">
-                <label>Consulta SQL BigQuery</label>
-                <textarea class="form-control sql-editor" name="bigquery_query" required>{{ campaign.bigquery_query if is_edit else 'SELECT strategy, nombre_completo FROM `proyecto.dataset.tabla`' }}</textarea>
-            </div>
-            <div class="mb-3" id="fieldMappingGroup" style="display:none;">
-                <label>Mapeo de campos (oculto por defecto)</label>
-                <textarea class="form-control json-editor" name="field_mapping">{{ campaign.field_mapping|tojson(indent=2) if is_edit else '{\n  "customer_name": "customer_name",\n  "customer_last_name": "customer_last_name",\n  "id_type": "id_type",\n  "customer_id": "customer_id",\n  "age": "age",\n  "gender": "gender",\n  "country": "country",\n  "state": "state",\n  "city": "city",\n  "zone": "zone",\n  "address": "address",\n  "opt1": "opt1",\n  "opt2": "opt2",\n  "opt3": "opt3",\n  "opt4": "opt4",\n  "opt5": "opt5",\n  "opt6": "opt6",\n  "opt7": "opt7",\n  "opt8": "opt8",\n  "opt9": "opt9",\n  "opt10": "opt10",\n  "opt11": "opt11",\n  "opt12": "opt12",\n  "tel1": "tel1",\n  "tel2": "tel2",\n  "tel3": "tel3",\n  "tel4": "tel4",\n  "tel5": "tel5",\n  "tel6": "tel6",\n  "tel7": "tel7",\n  "tel8": "tel8",\n  "tel9": "tel9",\n  "tel10": "tel10",\n  "tel_extra": "tel_extra",\n  "email": "email",\n  "recall_date": "recall_date",\n  "recall_telephone": "recall_telephone"\n}' }}</textarea>
-                <small class="form-text text-muted">El mapeo se aplica por defecto al crear la campaña.</small>
-            </div>
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label>Tipo de programación</label>
-                    <select class="form-control" name="schedule_type" id="scheduleType">
-                        {% for option in ["manual", "one_time", "recurring"] %}
-                            <option value="{{ option }}" {% if is_edit and campaign.schedule_type == option %}selected{% endif %}>{{ option }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-5 mb-3">
-                    <label>Valor de programación</label>
-                    <input class="form-control" name="schedule_value" id="scheduleValue" value="{{ campaign.schedule_value|tojson if is_edit and campaign.schedule_value is mapping else (campaign.schedule_value if is_edit and campaign.schedule_value else '') }}" placeholder="2026-06-01 10:00:00 o {&quot;interval_hours&quot;:24}">
-                </div>
-                <div class="col-md-3 mb-3 d-flex align-items-end">
-                    <div class="custom-control custom-switch">
-                        <input type="checkbox" class="custom-control-input" id="statusSwitch" name="status" {% if not is_edit or campaign.status %}checked{% endif %}>
-                        <label class="custom-control-label" for="statusSwitch">Activa</label>
-                    </div>
-                </div>
-            </div>
-            <button class="btn btn-primary" type="submit"><i class="fas fa-save mr-1"></i>Guardar</button>
-            <a class="btn btn-outline-secondary" href="/auto-campaigns">Volver</a>
-            {% if is_edit %}
-                <button class="btn btn-success" type="button" data-action="run" data-id="{{ campaign.id }}"><i class="fas fa-play mr-1"></i>Ejecutar</button>
-                <button class="btn btn-warning" type="button" data-action="stop" data-id="{{ campaign.id }}"><i class="fas fa-stop mr-1"></i>Detener</button>
-            {% endif %}
+
+<form id="wolkvoxForm" data-id="{{ campaign.id if is_edit else '' }}">
+    
+    <!-- SECCIÓN 1: Datos básicos -->
+    <div class="form-section">
+        <div class="form-section-title">
+            <i class="fas fa-info-circle"></i> Datos de la campaña
         </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label>Nombre <span class="text-danger">*</span></label>
+                <input class="form-control" name="name" value="{{ campaign.name if is_edit else '' }}" placeholder="Ej: Cobro Agosto 2026" required>
+            </div>
+            <div class="form-group">
+                <label>Campaign ID Wolkvox <span class="text-danger">*</span></label>
+                <input class="form-control" name="wolkvox_campaign_id" value="{{ campaign.wolkvox_campaign_id if is_edit else '' }}" placeholder="Ej: 20213" required>
+            </div>
+            <div class="form-group">
+                <label>Servidor <span class="text-danger">*</span></label>
+                <select class="form-control" name="server_name" required>
+                    <option value="">Seleccionar servidor</option>
+                    {% for server in servers %}
+                        <option value="{{ server.name }}" {% if is_edit and campaign.server_name == server.name %}selected{% endif %}>{{ server.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Tipo de campaña <span class="text-danger">*</span></label>
+                <select class="form-control" name="campaign_type" required>
+                    <option value="predictive" {% if is_edit and campaign.campaign_type == 'predictive' %}selected{% endif %}>Predictivo</option>
+                    <option value="preview" {% if is_edit and campaign.campaign_type == 'preview' %}selected{% endif %}>Vista previa (Preview)</option>
+                </select>
+            </div>
+            
+        </div>
+    </div>
+    <div class="alert alert-info">
+                <strong>📊 Resumen de carga:</strong><br>
+                Total consulta: {{ records_fetched }}<br>
+                Enviados a Wolkvox: {{ records_sent }}<br>
+                🚫 Bloqueados por lista negra: {{ records_blocked }}
+            </div>
+    <!-- SECCIÓN 2: BigQuery -->
+    <div class="form-section">
+        <div class="form-section-title">
+            <i class="fas fa-database"></i> Consulta SQL BigQuery
+        </div>
+        
+        <div class="form-group">
+            <label>Consulta SQL <span class="text-danger">*</span></label>
+            <textarea class="form-control" name="bigquery_query" required placeholder="SELECT telefono, nombre_completo, monto FROM `proyecto.dataset.tabla` LIMIT 100">{{ campaign.bigquery_query if is_edit else '' }}</textarea>
+            <div class="form-text">La consulta debe incluir al menos una columna de teléfono. Todos los campos se enviarán automáticamente a Wolkvox.</div>
+        </div>
+        
+        <!-- 🔥 SOLO VALIDACIÓN DE CONSULTA (sin mapeo) -->
+        <div style="margin-top:16px;">
+            <button type="button" class="btn btn-outline-primary" id="btnValidate">
+                <i class="fas fa-check-circle"></i> Validar consulta
+            </button>
+            <span id="validateStatus" style="margin-left:12px;font-size:0.82rem;color:var(--text-secondary);"></span>
+        </div>
+        
+        <div id="columnsInfo" style="display:none; margin-top:12px; padding:12px; background:#F0F7FF; border-radius:var(--radius-sm);">
+            <small><i class="fas fa-table"></i> Columnas detectadas: <span id="detectedColumns"></span></small>
+        </div>
+    </div>
+    
+    <!-- BOTONES -->
+    <div class="form-actions">
+        <button class="btn btn-primary" type="submit"><i class="fas fa-save"></i> Guardar campaña</button>
+        <a class="btn btn-outline-secondary" href="/auto-campaigns">Volver</a>
+        {% if is_edit %}
+        <div class="action-buttons" style="margin-left:auto;">
+            <button class="btn btn-warning" type="button" id="btnClear">
+                <i class="fas fa-broom"></i> Limpiar campaña
+            </button>
+            <button class="btn btn-success" type="button" id="btnLoad">
+                <i class="fas fa-upload"></i> Cargar registros
+            </button>
+            <button class="btn btn-primary" type="button" id="btnStart">
+                <i class="fas fa-play"></i> Iniciar
+            </button>
+            <button class="btn btn-danger" type="button" id="btnStop">
+                <i class="fas fa-stop"></i> Detener
+            </button>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="result-box" id="resultBox">
+        <div id="resultContent"></div>
     </div>
 </form>
 
 {% if is_edit %}
-<div class="card">
-    <div class="card-header"><h3 class="card-title">Ejecuciones</h3></div>
+<div class="table-card">
+    <div class="card-header">
+        <h3><i class="fas fa-history"></i> Historial de cargas</h3>
+    </div>
     <div class="card-body table-responsive">
         <table class="table table-sm">
-            <thead><tr><th>ID</th><th>Inicio</th><th>Fin</th><th>Obtenidos</th><th>Enviados</th><th>Fallidos</th><th>Error</th><th></th></tr></thead>
-            <tbody>
-            {% for log in logs %}
+            <thead>
                 <tr>
-                    <td>{{ log.id }}</td>
-                    <td>{{ log.start_time }}</td>
-                    <td>{{ log.end_time }}</td>
-                    <td>{{ log.records_fetched }}</td>
-                    <td>{{ log.records_sent }}</td>
-                    <td>{{ log.records_failed }}</td>
-                    <td>{{ log.error_message }}</td>
-                    <td><a class="btn btn-xs btn-outline-info" href="/auto-campaigns/{{ campaign.id }}/report?execution_id={{ log.id }}">Informe</a></td>
+                    <th>ID</th>
+                    <th>Fecha</th>
+                    <th>Registros</th>
+                    <th>Estado</th>
+                    <th>Error</th>
                 </tr>
-            {% else %}
-                <tr><td colspan="8" class="text-center text-muted">Sin ejecuciones registradas.</td></tr>
-            {% endfor %}
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td><code>{{ log.id }}</code></td>
+                    <td>{{ log.start_time }}</td>
+                    <td><span class="badge badge-success">{{ log.records_sent }}</span></td>
+                    <td><span class="badge {{ 'badge-success' if log.records_failed == 0 else 'badge-danger' }}">{{ 'Éxito' if log.records_failed == 0 else 'Error' }}</span></td>
+                    <td>{{ log.error_message or '—' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-center text-muted py-4">Sin cargas registradas.</td></tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
 {% endif %}
 
-<div class="alert mt-3 d-none" id="autoCampaignMessage"></div>
 {% endblock %}
-
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/auto_campaigns.js') }}"></script>
+<script>
+(function() {
+  'use strict';
+  
+  const form = document.getElementById('wolkvoxForm');
+  const campaignId = form.dataset.id;
+  const resultBox = document.getElementById('resultBox');
+  const resultContent = document.getElementById('resultContent');
+  
+  let bqColumns = [];
+  
+  function showResult(success, message, extraData) {
+    resultBox.className = 'result-box visible';
+    resultBox.style.background = success ? '#E7F8F1' : '#FCEAEA';
+    resultBox.style.borderColor = success ? '#C3E6CB' : '#F5C6CB';
+    
+    let html = message;
+    
+    // 🔥 NUEVO: Mostrar estadísticas de lista negra si existen
+    if (extraData && extraData.records_blocked !== undefined) {
+      html += `
+        <div style="margin-top:12px;padding:12px;background:#FFF3CD;border-radius:8px;border:1px solid #FFC107;">
+          <strong>📊 Estadísticas de validación:</strong><br>
+          <span style="color:#28a745;">✅ Registros válidos: ${extraData.records_sent || 0}</span><br>
+          <span style="color:#dc3545;">🚫 Bloqueados por lista negra: ${extraData.records_blocked || 0}</span><br>
+          <span style="color:#6c757d;">📋 Total consulta: ${extraData.records_fetched || 0}</span>
+        </div>
+      `;
+      
+      // 🔥 Mostrar detalle de los bloqueados (si hay)
+      if (extraData.blocked_details && extraData.blocked_details.length > 0) {
+        html += `
+          <div style="margin-top:10px;padding:10px;background:#F8D7DA;border-radius:8px;border:1px solid #F5C6CB;max-height:200px;overflow-y:auto;">
+            <strong>🚫 Teléfonos bloqueados (${extraData.blocked_details.length}):</strong>
+            <ul style="margin:5px 0 0 20px;font-size:0.85rem;">
+              ${extraData.blocked_details.map(item => 
+                `<li>${item.telefono || item.row?.tel1 || 'N/A'} - ${item.motivo || 'Lista negra'}</li>`
+              ).join('')}
+            </ul>
+          </div>
+        `;
+      }
+    }
+    
+    resultContent.innerHTML = html;
+    
+    // Auto-cerrar después de 10 segundos si es éxito
+    if (success) {
+      setTimeout(() => { resultBox.className = 'result-box'; }, 10000);
+    }
+  }
+  
+  function setLoading(btn, loading) {
+    if (loading) {
+      btn._orig = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-sm"></span> Procesando...';
+    } else {
+      btn.disabled = false;
+      if (btn._orig) btn.innerHTML = btn._orig;
+    }
+  }
+  
+  // ========== VALIDAR CONSULTA ==========
+  document.getElementById('btnValidate').addEventListener('click', async () => {
+    const query = form.querySelector('[name="bigquery_query"]').value.trim();
+    if (!query) {
+      showResult(false, '⚠️ Escribe una consulta SQL primero.');
+      return;
+    }
+    
+    const statusEl = document.getElementById('validateStatus');
+    statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validando...';
+    statusEl.style.color = 'var(--text-secondary)';
+    
+    try {
+      const resp = await fetch('/auto-campaigns/validate-query-fields', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({query: query})
+      });
+      const data = await resp.json();
+      
+      if (data.success) {
+        bqColumns = data.detected_columns || [];
+        statusEl.innerHTML = '✅ ' + bqColumns.length + ' columnas detectadas: ' + bqColumns.join(', ');
+        statusEl.style.color = 'var(--success)';
+        
+        document.getElementById('columnsInfo').style.display = 'block';
+        document.getElementById('detectedColumns').textContent = bqColumns.join(', ');
+      } else {
+        statusEl.innerHTML = '❌ ' + data.message;
+        statusEl.style.color = 'var(--danger)';
+        document.getElementById('columnsInfo').style.display = 'none';
+      }
+    } catch(e) {
+      statusEl.innerHTML = '❌ Error: ' + e.message;
+      statusEl.style.color = 'var(--danger)';
+    }
+  });
+  
+  // ========== LIMPIAR CAMPAÑA ==========
+  document.getElementById('btnClear')?.addEventListener('click', async () => {
+    if (!confirm('¿Limpiar todos los registros de la campaña en Wolkvox?')) return;
+    try {
+      setLoading(document.getElementById('btnClear'), true);
+      const resp = await fetch('/auto-campaigns/' + campaignId + '/clear-wkv', {method: 'POST'});
+      const data = await resp.json();
+      showResult(data.success, data.message || 'Campaña limpiada');
+    } catch(e) {
+      showResult(false, 'Error: ' + e.message);
+    } finally {
+      setLoading(document.getElementById('btnClear'), false);
+    }
+  });
+  
+  // ========== CARGAR REGISTROS ==========
+  document.getElementById('btnLoad')?.addEventListener('click', async () => {
+    if (!confirm('¿Cargar registros a la campaña Wolkvox?')) return;
+    
+    try {
+      setLoading(document.getElementById('btnLoad'), true);
+      const resp = await fetch('/auto-campaigns/' + campaignId + '/load-wkv', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({})
+      });
+      const data = await resp.json();
+      
+      // 🔥 NUEVO: Mostrar estadísticas completas
+      if (data.success) {
+        let message = `✅ ${data.records_sent || 0} registros cargados exitosamente a Wolkvox.`;
+        if (data.records_blocked > 0) {
+          message += ` 🚫 ${data.records_blocked} teléfonos bloqueados por lista negra.`;
+        }
+        showResult(true, message, data);
+      } else {
+        showResult(false, '❌ Error: ' + data.message, data);
+      }
+    } catch(e) {
+      showResult(false, 'Error: ' + e.message);
+    } finally {
+      setLoading(document.getElementById('btnLoad'), false);
+    }
+  });
+  
+  // ========== INICIAR CAMPAÑA ==========
+  document.getElementById('btnStart')?.addEventListener('click', async () => {
+    if (!confirm('¿Iniciar la campaña en Wolkvox?')) return;
+    try {
+      setLoading(document.getElementById('btnStart'), true);
+      const resp = await fetch('/auto-campaigns/' + campaignId + '/start-wkv', {method: 'POST'});
+      const data = await resp.json();
+      showResult(data.success, data.message || 'Campaña iniciada');
+    } catch(e) {
+      showResult(false, 'Error: ' + e.message);
+    } finally {
+      setLoading(document.getElementById('btnStart'), false);
+    }
+  });
+  
+  // ========== DETENER CAMPAÑA ==========
+  document.getElementById('btnStop')?.addEventListener('click', async () => {
+    if (!confirm('¿Detener la campaña en Wolkvox?')) return;
+    try {
+      setLoading(document.getElementById('btnStop'), true);
+      const resp = await fetch('/auto-campaigns/' + campaignId + '/stop-wkv', {method: 'POST'});
+      const data = await resp.json();
+      showResult(data.success, data.message || 'Campaña detenida');
+    } catch(e) {
+      showResult(false, 'Error: ' + e.message);
+    } finally {
+      setLoading(document.getElementById('btnStop'), false);
+    }
+  });
+  
+  // ========== GUARDAR FORMULARIO ==========
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData);
+    
+    data.operation = 'default';
+    data.type = 'predictivo';
+    data.user_name = 'admin';
+    data.schedule_type = 'manual';
+    data.status = 'true';
+    
+    const url = campaignId ? '/auto-campaigns/' + campaignId : '/auto-campaigns';
+    const method = campaignId ? 'PUT' : 'POST';
+    
+    try {
+      const resp = await fetch(url, {
+        method: method,
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+      });
+      const result = await resp.json();
+      if (result.success) {
+        const newId = result.campaign?.id || result.id || campaignId;
+        window.location.href = '/auto-campaigns/' + newId;
+      } else {
+        showResult(false, result.message || 'Error al guardar');
+      }
+    } catch(e) {
+      showResult(false, 'Error: ' + e.message);
+    }
+  });
+  
+})();
+</script>
 {% endblock %}
