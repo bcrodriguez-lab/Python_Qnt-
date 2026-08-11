@@ -180,3 +180,44 @@ class CampaignLog(db.Model):
     timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     level = db.Column(db.String(20), nullable=False)  # e.g., 'INFO', 'WARNING', 'ERROR'
     message = db.Column(db.Text, nullable=False)
+
+
+class SmsLog(db.Model):
+    """Resumen local de cada ejecución SMS para la pantalla de historial."""
+    __tablename__ = "sms_log"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    campana = db.Column(db.String(255), nullable=False, default="")
+    usuario = db.Column(db.String(255), nullable=False, default="")
+    query_sql = db.Column(db.Text, nullable=False, default="")
+    plantilla = db.Column(db.Text, nullable=False, default="")
+    total_preparados = db.Column(db.Integer, nullable=False, default=0)
+    total_enviados = db.Column(db.Integer, nullable=False, default=0)
+    total_fallidos = db.Column(db.Integer, nullable=False, default=0)
+    estado = db.Column(db.String(20), nullable=False, default="enviado")
+    fecha_creacion = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    fecha_envio = db.Column(db.DateTime, nullable=True)
+
+class MensajeOperacion(db.Model):
+    __tablename__ = 'Mensajes_'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    Operador = db.Column(db.String(100), nullable=False)
+    Mensaje = db.Column(db.Text, nullable=False)
+    Tipo = db.Column(db.String(50))
+    Estado = db.Column(db.Integer, default=1)
+    fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+    Categoria = db.Column(db.String(100)) 
+    Operadores = db.Column(db.Text)
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'operador': self.Operador,
+            'mensaje': self.Mensaje,
+            'tipo': self.Tipo,
+            'estado': self.Estado,
+            'fecha_creacion': self.fecha_creacion.isoformat() if self.fecha_creacion else None,
+            'operadores': self.Operadores,
+            'categoria': self.Categoria,
+
+        }

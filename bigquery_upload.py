@@ -2,244 +2,320 @@
 # -*- coding: utf-8 -*-
 
 """
-Módulo para procesar archivos XLSX descargados y subirlos a BigQuery.
-Busca archivos tanto en la raíz de la fecha (CDR) como en la subcarpeta 'campanas' (AMD).
+Módulo para subir datos a BigQuery desde archivos JSON (CDR y AMD)
 """
 
 import os
-import logging
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-from typing import List, Dict, Optional
-from google.oauth2 import service_account
-from google.auth import default
-from google.cloud import bigquery
 import json
-import re
+import pandas as pd
+import logging
+from datetime import datetime
+from google.cloud import bigquery
+from google.oauth2 import service_account
 
-# Configurar logging
 logger = logging.getLogger(__name__)
 
 # ========== CONFIGURACIÓN ==========
 PROJECT_ID = "capable-arbor-209819"
-DATASET_ID = "Temporal"
-TABLE_NAME = "Temporal_Robot_Campañas"
-FULL_TABLE = f"{PROJECT_ID}.{DATASET_ID}.{TABLE_NAME}"
-
-# Ruta al archivo de credenciales
 BASE_DIR_CRED = os.path.dirname(os.path.abspath(__file__))
 CREDENTIALS_PATH = os.path.join(BASE_DIR_CRED, "config", "google_key.json")
 
-def cargar_config():
-    try:
-        with open('config.json', 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except:
-        return {}
+# Tablas de destino
+TABLE_CONSOLIDADO = f"{PROJECT_ID}.Temporal.Embudo_Consolidado"
+TABLE_CONSOLIDADO_AMD = f"{PROJECT_ID}.Temporal.Embudo_Consolidado_AMD"
 
-CONFIG = cargar_config()
-BASE_DIR = CONFIG.get('base_dir', r"G:\Unidades compartidas\Analitica\Embudo de Conversión\Proyecto Robot Omnicanal\Producción")
+# ========== CREDENCIALES ==========
 
 def obtener_credenciales():
+    """Obtiene las credenciales para BigQuery."""
     if os.path.exists(CREDENTIALS_PATH):
         try:
-            credentials = service_account.Credentials.from_service_account_file(CREDENTIALS_PATH)
-            project = "QNTAnalytics"  # <--- Forzar el proyecto correcto
-            logger.info(f"✅ Usando proyecto: {project}")
-            return credentials, project
+            credentials = service_account.Credentials.from_service_account_file(
+                CREDENTIALS_PATH,
+                scopes=["https://www.googleapis.com/auth/cloud-platform"]
+            )
+            logger.info(f"✅ Credenciales cargadas desde: {CREDENTIALS_PATH}")
+            return credentials
         except Exception as e:
             logger.warning(f"⚠️ Error cargando credenciales: {e}")
+    
+    try:
+        from google.auth import default
+        credentials, _ = default()
+        logger.info("✅ Credenciales desde default (gcloud)")
+        return credentials
+    except Exception as e:
+        logger.error(f"❌ No se pudieron obtener credenciales: {e}")
+        return None
 
-def leer_archivos_desde_ruta(ruta: str):
-    """Lee todos los archivos XLSX de una ruta específica (sin subcarpetas)"""
-    if not os.path.exists(ruta):
-        return None
+def get_bq_client():
+    """Obtiene un cliente de BigQuery."""
+    credentials = obtener_credenciales()
+    if credentials:
+        return bigquery.Client(project=PROJECT_ID, credentials=credentials)
+    return None
+
+# ========== FUNCIONES DE SUBIDA ==========
+
+def subir_json_a_bigquery(data_json: dict, servidor: str, fecha: str, tipo_reporte: str = "CDR") -> bool:
+    """
+    Sube datos JSON a BigQuery.
     
-    files = [f for f in os.listdir(ruta) if f.lower().endswith((".xlsx", ".xls")) and os.path.isfile(os.path.join(ruta, f))]
-    if not files:
-        return None
+    Args:
+        data_json: Datos en formato JSON (con 'data' o lista)
+        servidor: Nombre del servidor
+        fecha: Fecha en formato YYYY-MM-DD
+        tipo_reporte: "CDR" o "AMD"
     
-    logger.info(f"📄 Encontrados {len(files)} archivos en: {os.path.basename(ruta)}")
-    
-    lista_bases = []
-    for archivo in files:
-        ruta_archivo = os.path.join(ruta, archivo)
+    Returns:
+        bool: True si la subida fue exitosa
+    """
+    try:
+        # Extraer datos
+        if isinstance(data_json, dict) and 'data' in data_json:
+            rows = data_json['data']
+        elif isinstance(data_json, list):
+            rows = data_json
+        else:
+            logger.warning(f"⚠️ Formato de datos no reconocido para {servidor}")
+            return False
+        
+        if not rows:
+            logger.warning(f"⚠️ No hay datos para {servidor} - {fecha}")
+            return False
+        
+        # Convertir a DataFrame
+        df = pd.DataFrame(rows)
+        
+        # Agregar columnas de metadatos
+        df['servidor'] = servidor
+        df['fecha_descarga'] = fecha
+        df['tipo_reporte'] = tipo_reporte
+        df['fecha_procesamiento'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Determinar tabla destino
+        if tipo_reporte.upper() == "AMD":
+            table_id = TABLE_CONSOLIDADO_AMD
+        else:
+            table_id = TABLE_CONSOLIDADO
+        
+        # Subir a BigQuery
+        client = get_bq_client()
+        if not client:
+            logger.error("❌ No se pudo obtener cliente de BigQuery")
+            return False
+        
+        # Eliminar registros anteriores para este servidor y fecha
+        query_delete = f"""
+            DELETE FROM `{table_id}`
+            WHERE servidor = '{servidor}'
+              AND fecha_descarga = '{fecha}'
+              AND tipo_reporte = '{tipo_reporte}'
+        """
         try:
-            df = pd.read_excel(ruta_archivo, engine='openpyxl')
-            lista_bases.append(df)
+            job = client.query(query_delete)
+            job.result()
+            logger.info(f"   🗑️ Eliminados registros anteriores de {servidor} en {table_id}")
         except Exception as e:
-            logger.error(f"❌ Error leyendo {archivo}: {e}")
-    
-    if not lista_bases:
-        return None
-    
-    df_final = pd.concat(lista_bases, ignore_index=True)
-    return df_final
-
-def procesar_y_subir_a_bigquery(fecha: str = None) -> bool:
-    """
-    Procesa los archivos XLSX de una fecha y los sube a BigQuery.
-    Busca en:
-    1. Raíz de la fecha (archivos CDR: servidor_fecha.xlsx)
-    2. Subcarpeta 'campanas' (archivos AMD: servidor_campaign_all_fecha.xlsx)
-    """
-    try:
-        if fecha is None:
-            fecha = datetime.now().strftime("%Y-%m-%d")
+            logger.warning(f"   ⚠️ No se pudieron eliminar registros anteriores: {e}")
         
-        mes = fecha[:7]
-        ruta_raiz = os.path.join(BASE_DIR, mes, fecha)
-        ruta_campanas = os.path.join(BASE_DIR, mes, fecha, "campanas")
-        
-        logger.info(f"📥 Procesando archivos para {fecha}")
-        logger.info(f"📁 Buscando en raíz: {ruta_raiz}")
-        logger.info(f"📁 Buscando en campanas: {ruta_campanas}")
-        
-        credentials, project = obtener_credenciales()
-        
-        # 1. Leer archivos de la RAIZ (CDR)
-        df_final = leer_archivos_desde_ruta(ruta_raiz)
-        
-        # 2. Si no hay en raíz, intentar desde campanas (AMD)
-        if df_final is None or len(df_final) == 0:
-            logger.info(f"📁 No hay archivos en raíz, buscando en campanas...")
-            df_final = leer_archivos_desde_ruta(ruta_campanas)
-        
-        if df_final is None or len(df_final) == 0:
-            logger.warning(f"⚠️ No se encontraron archivos para {fecha}")
-            return False
-        
-        logger.info(f"✅ {len(df_final)} registros procesados")
-        
-        # 3. Crear DataFrame para BigQuery
-        df_resultado = crear_dataframe_bigquery(df_final, fecha)
-        
-        # 4. Subir a BigQuery
-        if df_resultado is not None and len(df_resultado) > 0:
-            resultado = subir_a_bigquery(df_resultado, credentials)
-            if resultado:
-                logger.info(f"✅ Datos subidos a {FULL_TABLE} para {fecha}")
-                return True
-            else:
-                logger.warning(f"⚠️ No se pudieron subir datos")
-                return False
-        else:
-            logger.warning(f"⚠️ No hay datos para subir")
-            return False
-            
-    except Exception as e:
-        logger.error(f"❌ Error: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-def crear_dataframe_bigquery(df_final: pd.DataFrame, fecha: str):
-    """Crea un DataFrame con el formato esperado para BigQuery."""
-    try:
-        df_resultado = pd.DataFrame()
-        df_resultado['Fecha_dia'] = fecha
-        df_resultado['Fecha_Procesamiento'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        df_resultado['Fecha_Reporte'] = fecha
-        
-        # Buscar columnas importantes
-        columnas_importantes = [
-            'CUSTOMER_ID', 'customer_id', 'ID_CLIENTE', 'id_cliente',
-            'CAMPAIGN_ID', 'campaign_id', 'DATE', 'date',
-            'Hora', 'hora', 'RESULT', 'result', 'TELEPHONE', 'telephone'
-        ]
-        
-        for col in columnas_importantes:
-            if col in df_final.columns:
-                df_resultado[col] = df_final[col].astype(str)
-            else:
-                found = False
-                for col_final in df_final.columns:
-                    if col_final.lower() == col.lower():
-                        df_resultado[col] = df_final[col_final].astype(str)
-                        found = True
-                        break
-                if not found:
-                    df_resultado[col] = ''
-        
-        # Columna servidor
-        if 'servidor' in df_final.columns:
-            df_resultado['servidor'] = df_final['servidor'].astype(str)
-        else:
-            df_resultado['servidor'] = 'desconocido'
-        
-        # Métricas
-        df_resultado['Cantidad_Llamados'] = len(df_final)
-        df_resultado['Cantidad_Robot'] = 0
-        df_resultado['Cantidad_Humano'] = 0
-        df_resultado['Cantidad_Venta'] = 0
-        
-        if 'RESULT' in df_final.columns:
-            df_resultado['Cantidad_Robot'] = (df_final['RESULT'].str.lower() == 'machine').sum()
-            df_resultado['Cantidad_Humano'] = (df_final['RESULT'].str.lower() == 'human').sum()
-        
-        logger.info(f"✅ DataFrame creado con {len(df_resultado)} registros")
-        return df_resultado
-        
-    except Exception as e:
-        logger.error(f"❌ Error creando DataFrame: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
-
-def subir_a_bigquery(df: pd.DataFrame, credentials) -> bool:
-    """Sube el DataFrame a BigQuery."""
-    try:
-        client = bigquery.Client(project=PROJECT_ID, credentials=credentials)
-        
+        # Configurar job de carga
         job_config = bigquery.LoadJobConfig(
             write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
-            create_disposition=bigquery.CreateDisposition.CREATE_IF_NEEDED,
             autodetect=True,
         )
         
-        load_job = client.load_table_from_dataframe(df, FULL_TABLE, job_config=job_config)
-        load_job.result()
+        # Subir datos
+        logger.info(f"   📤 Subiendo {len(df):,} registros a {table_id}...")
+        job = client.load_table_from_dataframe(df, table_id, job_config=job_config)
+        job.result()
         
-        logger.info(f"✅ {len(df)} registros subidos a {FULL_TABLE}")
+        logger.info(f"   ✅ Subida exitosa: {len(df):,} registros a {table_id}")
         return True
         
     except Exception as e:
         logger.error(f"❌ Error subiendo a BigQuery: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
-def procesar_rango_fechas(fecha_inicio: str, fecha_fin: str) -> dict:
-    """Procesa un rango de fechas."""
-    resultados = {'total': 0, 'exitosos': 0, 'fallidos': 0, 'fechas': []}
+def subir_cdr_a_bigquery(df: pd.DataFrame, servidor: str, fecha: str) -> bool:
+    """
+    Sube un DataFrame de CDR a BigQuery.
     
-    fecha_actual = datetime.strptime(fecha_inicio, "%Y-%m-%d")
-    fecha_fin_dt = datetime.strptime(fecha_fin, "%Y-%m-%d")
+    Args:
+        df: DataFrame con los datos
+        servidor: Nombre del servidor
+        fecha: Fecha en formato YYYY-MM-DD
     
-    while fecha_actual <= fecha_fin_dt:
-        fecha_str = fecha_actual.strftime("%Y-%m-%d")
-        logger.info(f"\n📅 Procesando: {fecha_str}")
+    Returns:
+        bool: True si la subida fue exitosa
+    """
+    try:
+        if df.empty:
+            logger.warning(f"⚠️ DataFrame vacío para {servidor}")
+            return False
         
+        # Agregar columnas de metadatos
+        df['servidor'] = servidor
+        df['fecha_descarga'] = fecha
+        df['tipo_reporte'] = 'CDR'
+        df['fecha_procesamiento'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        client = get_bq_client()
+        if not client:
+            logger.error("❌ No se pudo obtener cliente de BigQuery")
+            return False
+        
+        # Eliminar registros anteriores
+        query_delete = f"""
+            DELETE FROM `{TABLE_CONSOLIDADO}`
+            WHERE servidor = '{servidor}'
+              AND fecha_descarga = '{fecha}'
+              AND tipo_reporte = 'CDR'
+        """
         try:
-            resultado = procesar_y_subir_a_bigquery(fecha_str)
-            if resultado:
-                resultados['exitosos'] += 1
-                resultados['fechas'].append({'fecha': fecha_str, 'estado': 'exitoso'})
-            else:
-                resultados['fallidos'] += 1
-                resultados['fechas'].append({'fecha': fecha_str, 'estado': 'fallido'})
+            job = client.query(query_delete)
+            job.result()
         except Exception as e:
-            logger.error(f"❌ Error: {e}")
-            resultados['fallidos'] += 1
-            resultados['fechas'].append({'fecha': fecha_str, 'estado': 'error'})
+            logger.warning(f"   ⚠️ No se pudieron eliminar registros anteriores: {e}")
         
-        resultados['total'] += 1
-        fecha_actual += timedelta(days=1)
+        # Subir datos
+        job_config = bigquery.LoadJobConfig(
+            write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
+            autodetect=True,
+        )
+        
+        logger.info(f"   📤 Subiendo {len(df):,} registros CDR a {TABLE_CONSOLIDADO}...")
+        job = client.load_table_from_dataframe(df, TABLE_CONSOLIDADO, job_config=job_config)
+        job.result()
+        
+        logger.info(f"   ✅ CDR subido: {len(df):,} registros")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Error subiendo CDR a BigQuery: {e}")
+        return False
+
+def subir_amd_a_bigquery(df: pd.DataFrame, servidor: str, fecha: str) -> bool:
+    """
+    Sube un DataFrame de AMD a BigQuery.
     
-    return resultados
+    Args:
+        df: DataFrame con los datos
+        servidor: Nombre del servidor
+        fecha: Fecha en formato YYYY-MM-DD
+    
+    Returns:
+        bool: True si la subida fue exitosa
+    """
+    try:
+        if df.empty:
+            logger.warning(f"⚠️ DataFrame vacío para {servidor}")
+            return False
+        
+        # Agregar columnas de metadatos
+        df['servidor'] = servidor
+        df['fecha_descarga'] = fecha
+        df['tipo_reporte'] = 'AMD'
+        df['fecha_procesamiento'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        client = get_bq_client()
+        if not client:
+            logger.error("❌ No se pudo obtener cliente de BigQuery")
+            return False
+        
+        # Eliminar registros anteriores
+        query_delete = f"""
+            DELETE FROM `{TABLE_CONSOLIDADO_AMD}`
+            WHERE servidor = '{servidor}'
+              AND fecha_descarga = '{fecha}'
+              AND tipo_reporte = 'AMD'
+        """
+        try:
+            job = client.query(query_delete)
+            job.result()
+        except Exception as e:
+            logger.warning(f"   ⚠️ No se pudieron eliminar registros anteriores: {e}")
+        
+        # Subir datos
+        job_config = bigquery.LoadJobConfig(
+            write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
+            autodetect=True,
+        )
+        
+        logger.info(f"   📤 Subiendo {len(df):,} registros AMD a {TABLE_CONSOLIDADO_AMD}...")
+        job = client.load_table_from_dataframe(df, TABLE_CONSOLIDADO_AMD, job_config=job_config)
+        job.result()
+        
+        logger.info(f"   ✅ AMD subido: {len(df):,} registros")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Error subiendo AMD a BigQuery: {e}")
+        return False
+
+# ========== FUNCIONES DE VERIFICACIÓN ==========
+
+def verificar_tablas() -> dict:
+    """
+    Verifica que las tablas existan en BigQuery.
+    
+    Returns:
+        dict: Estado de cada tabla
+    """
+    client = get_bq_client()
+    if not client:
+        return {'error': 'No se pudo obtener cliente'}
+    
+    resultado = {}
+    for table_id in [TABLE_CONSOLIDADO, TABLE_CONSOLIDADO_AMD]:
+        try:
+            client.get_table(table_id)
+            resultado[table_id] = '✅ Existe'
+        except Exception:
+            resultado[table_id] = '❌ No existe'
+    
+    return resultado
+
+def crear_tablas_si_no_existen():
+    """
+    Crea las tablas necesarias si no existen.
+    """
+    client = get_bq_client()
+    if not client:
+        logger.error("❌ No se pudo obtener cliente de BigQuery")
+        return False
+    
+    # Schema para Embudo_Consolidado
+    schema_consolidado = [
+        bigquery.SchemaField("servidor", "STRING"),
+        bigquery.SchemaField("fecha_descarga", "STRING"),
+        bigquery.SchemaField("tipo_reporte", "STRING"),
+        bigquery.SchemaField("fecha_procesamiento", "STRING"),
+    ]
+    
+    for table_id in [TABLE_CONSOLIDADO, TABLE_CONSOLIDADO_AMD]:
+        try:
+            client.get_table(table_id)
+            logger.info(f"✅ Tabla {table_id} ya existe")
+        except Exception:
+            # Crear tabla
+            table = bigquery.Table(table_id, schema=schema_consolidado)
+            table = client.create_table(table)
+            logger.info(f"✅ Tabla {table_id} creada")
+    
+    return True
+
+# ========== EJECUCIÓN DIRECTA ==========
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    fecha_prueba = datetime.now().strftime("%Y-%m-%d")
-    print(f"🧪 Probando subida a BigQuery para {fecha_prueba}")
-    print("="*50)
-    procesar_y_subir_a_bigquery(fecha_prueba)
+    
+    # Verificar conexión
+    client = get_bq_client()
+    if client:
+        logger.info("✅ Conexión a BigQuery exitosa")
+        logger.info(f"📋 Tablas: {verificar_tablas()}")
+    else:
+        logger.error("❌ No se pudo conectar a BigQuery")

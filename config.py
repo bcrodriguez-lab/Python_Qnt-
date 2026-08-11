@@ -19,7 +19,7 @@ import os
 MODO_DESCARGA = "rango"  # Cambiar según necesidad
 
 # === CONFIGURACIÓN PARA MODO "rango" ===
-FECHA_INICIO_RANGO = "2026-06-11"  # Fecha inicio (YYYY-MM-DD)
+FECHA_INICIO_RANGO = "2026-07-30"  # Fecha inicio (YYYY-MM-DD)
 FECHA_FIN_RANGO = datetime.now().strftime("%Y-%m-%d")  # Siempre hasta hoy
 
 # === CONFIGURACIÓN PARA MODO "fecha_especifica" ===
@@ -32,7 +32,7 @@ DESCARGAR_AMD = True   # Reportes de campañas (download_campaign_detail.py)
 
 # === HORARIOS DE EJECUCIÓN ===
 HORARIOS_EJECUCION = [
-    "08:00", "11:11","11:34", "12:00", "14:00", "16:00", "18:00"
+    "18:00"
 ]
 
 # ============================================================

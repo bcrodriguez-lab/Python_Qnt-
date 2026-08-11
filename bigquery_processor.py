@@ -60,7 +60,9 @@ SCHEMA_POSITIVOS = {
     "Fecha_dia":                    "STRING",
     "DATE":                         "DATETIME",
     "Rango_Horario":                "STRING",
-    "Hora":                         "INT64",
+    "Hora":                         "INT64", 
+    "agent_id":                     "STRING",
+
     "Dia_Semana":                   "STRING",
     "Numero_Dia_Semana":            "INT64",
     "TELEPHONE":                    "INT64",
@@ -247,6 +249,7 @@ def leer_cdr_excel(fecha: str) -> pd.DataFrame:
         'TELEPHONE': 'TELEPHONE',
         'COD_ACT': 'COD_ACT',
         'CONN_ID': 'CONN_ID',
+        'AGENT_ID': 'agent_id',
     }
     for old, new in mapeo.items():
         if old in df_cdr.columns:
@@ -918,7 +921,7 @@ def _convertir_tipos_bq(df: pd.DataFrame) -> pd.DataFrame:
     # STRING
     for col in ["Operado_Por__c", "CONN_ID", "Contacto__c", "COD_ACT",
                 "Grupo_Operador", "campaign_id", "campaign_name", "Nombre_Campana",
-                "Fecha_dia", "servidor", "Ultimo_Contacto", "Entidad_principal", "localizado_historico","Rango_Horario", "Dia_Semana", ]:
+                "Fecha_dia", "servidor", "Ultimo_Contacto", "Entidad_principal", "localizado_historico","agent_id","Rango_Horario", "Dia_Semana", ]:
         if col in df.columns:
             df[col] = df[col].astype(str).replace({'nan': None, 'None': None, '': None})
 
@@ -955,7 +958,7 @@ def subir_a_embudo_consolidado(df_cdr: pd.DataFrame, fecha: str, client) -> bool
     df_subir = df_cdr.copy()
 
     # 🔥 ELIMINAR COLUMNAS QUE NO EXISTEN EN LA TABLA
-    columnas_a_eliminar = ['AGENT_ID', 'AGENT_NAME', 'COMMENT', 'COST', 
+    columnas_a_eliminar = ['AGENT_NAME', 'COMMENT', 'COST', 
                            'DESCRIPTION_COD_ACT', 'DESCRIPTION_COD_ACT_2', 
                            'DESTINY', 'SKILL_NAME', 'SKILL_ID', 'TIME_MIN', 'TIME_SEG',
                            'TYPE_INTERACTION', 'HANG_UP', 'COD_ACT_2']
