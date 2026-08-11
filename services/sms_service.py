@@ -101,6 +101,9 @@ def limpiar_numero(value: Any) -> Optional[str]:
     # Convertir a string y eliminar todo lo que no sea dígito
     num = re.sub(r"\D", "", str(value))
     
+    if not num:
+        return None
+    
     # Caso 1: Ya está en formato 57 + 10 dígitos (ej: 573001234567)
     if num.startswith("57") and len(num) == 12:
         return num
@@ -109,14 +112,17 @@ def limpiar_numero(value: Any) -> Optional[str]:
     if len(num) == 10 and num.startswith("3"):
         return "57" + num
     
-    # Caso 3: Número con código de país diferente o formato no reconocido
-    if len(num) >= 10:
-        logger.debug(f"Número con formato no estándar: {num}")
-        if not num.startswith("+"):
-            num = "+" + num if len(num) > 10 else num
+    # Caso 3: Solo dígitos sin código de país - asumir Colombia
+    if len(num) == 10:
+        return "57" + num
     
+    # Caso 4: Ya tiene código de país diferente
+    if len(num) > 10:
+        return num
+    
+    # Caso 5: Muy corto, inválido
+    logger.debug(f"Número inválido (muy corto): {num}")
     return None
-
 
 # ==================================================
 # 🧠 MANEJO DE VARIABLES
@@ -236,7 +242,7 @@ def preparar_sms(rows: List[Dict], plantilla: str) -> Tuple[List[Dict], Dict]:
         if not phone:
             invalid_numbers += 1
             continue
-        
+            print(f"📱 Fila: {row.get(phone_column)} -> Limpiado: '{phone}'")
         # Eliminar duplicados dentro del mismo lote
         if phone in seen:
             continue
@@ -313,9 +319,10 @@ def enviar_sms_desde_filas(
     
     # Preparar mensajes
     prepared, details = preparar_sms(rows, plantilla)
-    if not prepared:
-        raise SmsServiceError("No hay números válidos para enviar.")
-    
+    print(f"🔍 DEBUG - Preparados: {len(prepared)} mensajes")
+    print(f"🔍 DEBUG - Details: {details}")
+    for i, item in enumerate(prepared):
+        print(f"🔍 DEBUG - Preparado {i}: phone={item['phone']}")
     # Aplicar validaciones (lista negra, duplicados)
     if client:
         phones = [item["phone"] for item in prepared]
@@ -334,7 +341,14 @@ def enviar_sms_desde_filas(
         })
         
         prepared = allowed
-    
+    # En enviar_sms_desde_filas, después de verificar duplicados
+    print(f"🔍 DEBUG - Blocked: {blocked}")
+    print(f"🔍 DEBUG - Duplicates: {duplicates}")
+    print(f"🔍 DEBUG - Allow resend: {allow_resend}")
+    print(f"🔍 DEBUG - Allowed antes del filtro: {[item['phone'] for item in allowed]}")
+
+    print(f"🔍 DEBUG - Aplicando filtro de duplicados...")
+    print(f"🔍 DEBUG - Allowed después del filtro: {[item['phone'] for item in allowed]}")
     if not prepared:
         raise SmsServiceError("No hay destinatarios válidos después de aplicar las validaciones.")
     
@@ -550,6 +564,16 @@ def guardar_programacion(
     scheduled_at: str = "",
     allow_resend: bool = False,
     total_dest: int = 0,
+    # 🆕 Campos de recurrencia
+    es_recurrente: bool = False,
+    frecuencia_tipo: str = None,
+    frecuencia_valor: int = None,
+    frecuencia_unidad: str = None,
+    franja_horaria: str = None,
+    hora_inicio: str = None,
+    hora_fin: str = None,
+    fecha_limite: str = None,
+    repeticiones_max: int = None,
 ) -> str:
     """Guarda una programación en BigQuery vía INSERT."""
     from google.cloud import bigquery
@@ -557,19 +581,27 @@ def guardar_programacion(
     schedule_id = str(uuid4())
     now = datetime.now(timezone.utc).isoformat()
 
+    # 🆕 INSERT con los nuevos campos
     insert_sql = """
     INSERT INTO `capable-arbor-209819.Temporal.ProgramacionSMS`
     (id, fecha_programada, consulta_sql, plantilla, campana, usuario, 
      total_destinatarios, confirmar_reenvio, estado,
+     es_recurrente, frecuencia_tipo, frecuencia_valor, frecuencia_unidad,
+     franja_horaria, hora_inicio, hora_fin, fecha_limite, repeticiones_max,
+     repeticiones_realizadas,
      fecha_creacion, fecha_actualizacion)
     VALUES (
         @id, @fecha_prog, @consulta, @plantilla_param, @campana, @usuario,
-        @total_dest, @conf_reenvio, @estado, @now, @now
+        @total_dest, @conf_reenvio, @estado,
+        @es_recurrente, @frecuencia_tipo, @frecuencia_valor, @frecuencia_unidad,
+        @franja_horaria, @hora_inicio, @hora_fin, @fecha_limite, @repeticiones_max,
+        @repeticiones_realizadas,
+        @now, @now
     )
     """
     
+    # 🆕 Parámetros completos
     job_config = bigquery.QueryJobConfig(query_parameters=[
-        # 👇 Los nombres DEBEN coincidir con @param en el INSERT
         bigquery.ScalarQueryParameter("id", "STRING", schedule_id),
         bigquery.ScalarQueryParameter("fecha_prog", "TIMESTAMP", scheduled_at),
         bigquery.ScalarQueryParameter("consulta", "STRING", query),
@@ -579,17 +611,29 @@ def guardar_programacion(
         bigquery.ScalarQueryParameter("total_dest", "INT64", total_dest),
         bigquery.ScalarQueryParameter("conf_reenvio", "BOOL", allow_resend),
         bigquery.ScalarQueryParameter("estado", "STRING", "pendiente"),
+        # 🆕
+        bigquery.ScalarQueryParameter("es_recurrente", "BOOL", es_recurrente),
+        bigquery.ScalarQueryParameter("frecuencia_tipo", "STRING", frecuencia_tipo),
+        bigquery.ScalarQueryParameter("frecuencia_valor", "INT64", frecuencia_valor),
+        bigquery.ScalarQueryParameter("frecuencia_unidad", "STRING", frecuencia_unidad),
+        bigquery.ScalarQueryParameter("franja_horaria", "STRING", franja_horaria),
+        bigquery.ScalarQueryParameter("hora_inicio", "STRING", hora_inicio),
+        bigquery.ScalarQueryParameter("hora_fin", "STRING", hora_fin),
+
+        bigquery.ScalarQueryParameter("fecha_limite", "STRING", fecha_limite if fecha_limite else None),
+
+        bigquery.ScalarQueryParameter("repeticiones_max", "INT64", repeticiones_max),
+        bigquery.ScalarQueryParameter("repeticiones_realizadas", "INT64", 0),
         bigquery.ScalarQueryParameter("now", "TIMESTAMP", now),
     ])
 
     try:
         client.query(insert_sql, job_config=job_config).result()
-        logger.info(f"✅ Programación guardada: {schedule_id}")
+        logger.info(f"✅ Programación guardada: {schedule_id} (recurrente={es_recurrente})")
     except Exception as e:
         raise SmsServiceError(f"No se pudo guardar la programación: {e}")
 
     return schedule_id
-
 def verificar_lista_negra(client, phones: List[str]) -> Set[str]:
     """Verifica qué números están en la lista negra."""
     if not phones:
@@ -601,23 +645,22 @@ def verificar_lista_negra(client, phones: List[str]) -> Set[str]:
     try:
         from google.cloud import bigquery
         
-        # Normalizar a AMBOS formatos para la consulta
-        normalized_query = set()
+        # Normalizar a 10 dígitos para comparar con la tabla
+        phones_10 = set()
         for p in phones:
             cleaned = limpiar_numero(p)
             if not cleaned:
                 continue
-            # Agregar formato 12 dígitos (573001234567)
-            normalized_query.add(cleaned)
-            # Agregar formato 10 dígitos (3001234567)
+            # Convertir a formato 10 dígitos (sin 57)
             if cleaned.startswith("57") and len(cleaned) == 12:
-                normalized_query.add(cleaned[2:])
+                phones_10.add(cleaned[2:])
+            elif len(cleaned) == 10:
+                phones_10.add(cleaned)
         
-        normalized_list = list(normalized_query)
-        if not normalized_list:
+        if not phones_10:
             return set()
         
-        # Consultar la tabla (tiene formato 10 dígitos)
+        # Consultar la tabla
         query = f"""
             SELECT DISTINCT Telefono AS telefono
             FROM `{BLACKLIST_TABLE}`
@@ -625,38 +668,44 @@ def verificar_lista_negra(client, phones: List[str]) -> Set[str]:
         """
         job_config = bigquery.QueryJobConfig(
             query_parameters=[
-                bigquery.ArrayQueryParameter("telefonos", "STRING", normalized_list)
+                bigquery.ArrayQueryParameter("telefonos", "STRING", list(phones_10))
             ]
         )
         
         rows = client.query(query, job_config=job_config).result()
-        blocked_10 = {row.telefono for row in rows}
+        blocked_10 = {str(row.telefono).strip() for row in rows}
         
-        # Convertir bloqueados a ambos formatos para comparar
-        blocked_all = set(blocked_10)
-        for b in blocked_10:
-            if len(str(b)) == 10 and str(b).startswith("3"):
-                blocked_all.add("57" + str(b))
+        logger.info(f"📋 Lista negra encontrados: {blocked_10}")
         
-        # Encontrar teléfonos originales que están bloqueados
+        # Encontrar qué teléfonos originales están bloqueados
         result = set()
         for p in phones:
             cleaned = limpiar_numero(p)
             if not cleaned:
                 continue
-            # ¿Está en la lista negra en cualquier formato?
-            if cleaned in blocked_all or cleaned[2:] in blocked_all if cleaned.startswith("57") else False:
+            
+            # Convertir a 10 dígitos para comparar
+            if cleaned.startswith("57") and len(cleaned) == 12:
+                phone_10 = cleaned[2:]
+            else:
+                phone_10 = cleaned
+            
+            if phone_10 in blocked_10:
                 result.add(p)
         
         if result:
             logger.info(f"🚫 {len(result)} números en lista negra: {sorted(result)}")
+        else:
+            logger.info(f"✅ Ningún número en lista negra")
         
         return result
     
     except SmsServiceError:
         raise
     except Exception as e:
+        logger.error(f"Error al validar lista negra: {e}")
         raise SmsServiceError(f"Error al validar lista negra: {e}")
+
 
 def verificar_duplicados(client, phones: List[str]) -> Set[str]:
     """Verifica qué números ya recibieron SMS hoy."""
