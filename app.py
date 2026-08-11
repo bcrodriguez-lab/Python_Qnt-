@@ -896,15 +896,17 @@ def _sms_client():
         raise SmsServiceError("No se pudo inicializar BigQuery.")
     return bq_client
 
-
 def execute_sms_schedule(schedule_id: str):
-    """Job de APScheduler que ejecuta una programación persistida en BigQuery."""
+    """Job de APScheduler que ejecuta una programación y reprograma si es recurrente."""
     try:
         from google.cloud import bigquery
+        from datetime import timedelta
+        
         client = bq_client or get_bigquery_client()
         if client is None:
             raise SmsServiceError("No se pudo conectar a BigQuery")
 
+        # 1. Obtener la programación
         query = f"""
             SELECT * FROM `{PROJECT_ID}.Temporal.ProgramacionSMS`
             WHERE id = '{schedule_id}' AND estado = 'pendiente'
@@ -918,6 +920,7 @@ def execute_sms_schedule(schedule_id: str):
         scheduled = df.iloc[0].to_dict()
         infobip_config = (CONFIG or load_config()).get("infobip", {})
 
+        # 2. Ejecutar el envío
         fetched = fetch_sms_query_rows(client, scheduled['consulta_sql'])
         if not fetched.get("success"):
             raise SmsServiceError(fetched.get("message", "Error en consulta"))
@@ -929,14 +932,114 @@ def execute_sms_schedule(schedule_id: str):
             client=client,
             usuario=scheduled.get('usuario', 'sistema'),
             query_sql=scheduled['consulta_sql'],
-            allow_resend=bool(scheduled.get('confirmar_duplicados', False))
+            allow_resend=bool(scheduled.get('confirmar_reenvio', False))
         )
 
-        client.query(f"""
-            UPDATE `{PROJECT_ID}.Temporal.ProgramacionSMS`
-            SET estado = 'enviado', fecha_ejecucion = CURRENT_TIMESTAMP(), fecha_actualizacion = CURRENT_TIMESTAMP()
-            WHERE id = '{schedule_id}'
-        """).result()
+        # 3. Verificar si es recurrente
+        es_recurrente = bool(scheduled.get('es_recurrente', False))
+        ahora = datetime.now(timezone.utc)
+        
+        if es_recurrente:
+            # Datos de recurrencia
+            repeticiones_realizadas = int(scheduled.get('repeticiones_realizadas', 0) or 0) + 1
+            repeticiones_max = scheduled.get('repeticiones_max')
+            fecha_limite = scheduled.get('fecha_limite')
+            hora_inicio = scheduled.get('hora_inicio') or '08:00'
+            frecuencia_tipo = scheduled.get('frecuencia_tipo') or 'diario'
+            frecuencia_valor = int(scheduled.get('frecuencia_valor', 1) or 1)
+            
+            logger.info(f"🔄 Recurrencia: {frecuencia_tipo}, rep {repeticiones_realizadas}/{repeticiones_max or '∞'}, hora {hora_inicio}")
+            
+            # Verificar límites
+            limite_alcanzado = False
+            
+            if repeticiones_max and repeticiones_realizadas >= int(repeticiones_max):
+                limite_alcanzado = True
+                logger.info(f"🛑 Límite de repeticiones: {repeticiones_realizadas}/{repeticiones_max}")
+            
+            if not limite_alcanzado and fecha_limite:
+                try:
+                    fecha_lim = datetime.fromisoformat(str(fecha_limite))
+                    if fecha_lim.tzinfo is None:
+                        fecha_lim = fecha_lim.replace(tzinfo=timezone.utc)
+                    # Comparar con la PRÓXIMA fecha, no con ahora
+                    if ahora.date() >= fecha_lim.date():
+                        limite_alcanzado = True
+                        logger.info(f"🛑 Fecha límite alcanzada: {fecha_limite}")
+                except:
+                    pass
+            
+            if limite_alcanzado:
+                # Marcar como completado
+                client.query(f"""
+                    UPDATE `{PROJECT_ID}.Temporal.ProgramacionSMS`
+                    SET estado = 'completado',
+                        repeticiones_realizadas = {repeticiones_realizadas},
+                        fecha_ejecucion = CURRENT_TIMESTAMP(),
+                        fecha_actualizacion = CURRENT_TIMESTAMP()
+                    WHERE id = '{schedule_id}'
+                """).result()
+                logger.info(f"✅ Recurrencia COMPLETADA: {schedule_id}")
+            else:
+                # Calcular próxima fecha desde AHORA
+                hora, minuto = hora_inicio.split(':')
+                
+                if frecuencia_tipo == 'diario':
+                    proxima_fecha = ahora + timedelta(days=1)
+                    # Saltar domingo
+                    if proxima_fecha.weekday() == 6:
+                        proxima_fecha += timedelta(days=1)
+                elif frecuencia_tipo == 'semanal':
+                    proxima_fecha = ahora + timedelta(days=7)
+                elif frecuencia_tipo == 'mensual':
+                    proxima_fecha = ahora + timedelta(days=30)
+                else:
+                    proxima_fecha = ahora + timedelta(days=frecuencia_valor)
+                
+                # Ajustar a la hora exacta
+                proxima_fecha = proxima_fecha.replace(
+                    hour=int(hora), 
+                    minute=int(minuto), 
+                    second=0, 
+                    microsecond=0
+                )
+                
+                # Si ya pasó esa hora hoy, avanzar al siguiente día
+                if proxima_fecha <= ahora:
+                    proxima_fecha += timedelta(days=1)
+                    if frecuencia_tipo == 'diario' and proxima_fecha.weekday() == 6:
+                        proxima_fecha += timedelta(days=1)
+                
+                # Actualizar BigQuery
+                client.query(f"""
+                    UPDATE `{PROJECT_ID}.Temporal.ProgramacionSMS`
+                    SET fecha_programada = '{proxima_fecha.strftime('%Y-%m-%d %H:%M:%S')}',
+                        repeticiones_realizadas = {repeticiones_realizadas},
+                        fecha_ejecucion = CURRENT_TIMESTAMP(),
+                        fecha_actualizacion = CURRENT_TIMESTAMP()
+                    WHERE id = '{schedule_id}'
+                """).result()
+                
+                # Crear nuevo job
+                scheduler.add_job(
+                    execute_sms_schedule,
+                    trigger="date",
+                    run_date=proxima_fecha,
+                    args=[schedule_id],
+                    id=f"sms_programado_{schedule_id}",
+                    replace_existing=True
+                )
+                
+                logger.info(f"🔄 Reprogramado: {schedule_id} → {proxima_fecha.strftime('%Y-%m-%d %H:%M')}")
+        else:
+            # Simple: marcar como enviado
+            client.query(f"""
+                UPDATE `{PROJECT_ID}.Temporal.ProgramacionSMS`
+                SET estado = 'enviado',
+                    fecha_ejecucion = CURRENT_TIMESTAMP(),
+                    fecha_actualizacion = CURRENT_TIMESTAMP()
+                WHERE id = '{schedule_id}'
+            """).result()
 
         log_gui_action("SMS programado ejecutado", programacion=schedule_id)
 
@@ -957,6 +1060,8 @@ def execute_sms_schedule(schedule_id: str):
 
 @app.route("/api/sms/programar", methods=["POST"])
 def sms_schedule():
+    from datetime import timezone
+    
     data = request.get_json(silent=True) or {}
     query = (data.get("query") or "").strip()
     plantilla = (data.get("plantilla") or "").strip()
@@ -964,14 +1069,57 @@ def sms_schedule():
     campaign = (data.get("campana") or "").strip()
     usuario = (data.get("usuario") or "").strip()
     allow_resend = bool(data.get("confirmar_reenvio", False))
+    
+    # 🆕 Campos de recurrencia
+    es_recurrente = bool(data.get("es_recurrente", False))
+    frecuencia_tipo = data.get("frecuencia_tipo") if es_recurrente else None
+    franja_horaria = data.get("franja_horaria") if es_recurrente else None
+    fecha_limite = data.get("fecha_limite") if es_recurrente else None
+
+    repeticiones_max = data.get("repeticiones_max") if es_recurrente else None
+    
+    # 🆕 Determinar horas según franja
+    hora_inicio = None
+    hora_fin = None
+    frecuencia_valor = None
+    frecuencia_unidad = None
+    
+    if es_recurrente:
+        if franja_horaria == 'mañana':
+            hora_inicio, hora_fin = '07:00', '12:00'
+        elif franja_horaria == 'tarde':
+            hora_inicio, hora_fin = '15:00', '18:00'
+        elif franja_horaria == 'noche':
+            hora_inicio, hora_fin = '18:00', '21:00'
+        
+        if frecuencia_tipo == 'diario':
+            frecuencia_valor = 1
+            frecuencia_unidad = 'dias'
+        elif frecuencia_tipo == 'semanal':
+            frecuencia_valor = 7
+            frecuencia_unidad = 'dias'
+        elif frecuencia_tipo == 'mensual':
+            frecuencia_valor = 30
+            frecuencia_unidad = 'dias'
 
     if not query or not plantilla or not when:
         return jsonify({"success": False, "message": "Consulta, plantilla y fecha programada son obligatorias."}), 400
 
     try:
         run_date = datetime.fromisoformat(when)
-        if run_date <= datetime.now():
+        
+        # Convertir AMBAS a UTC para comparar
+        ahora_utc = datetime.now(timezone.utc)
+        if run_date.tzinfo is None:
+            run_date = run_date.replace(tzinfo=timezone.utc)
+        
+        if run_date <= ahora_utc:
             raise SmsServiceError("La fecha programada debe ser futura.")
+
+        # Validar recurrencia
+        if es_recurrente:
+            if not fecha_limite and not repeticiones_max:
+                raise SmsServiceError("Define una fecha límite o máximo de repeticiones para la recurrencia.")
 
         rows, error_response = _get_sms_rows(query)
         if error_response:
@@ -981,6 +1129,7 @@ def sms_schedule():
         if not mensajes_validos:
             raise SmsServiceError("La programación no tiene destinatarios válidos.")
 
+        # 🆕 Guardar con todos los campos
         schedule_id = guardar_programacion(
             bq_client,
             query=query,
@@ -988,8 +1137,20 @@ def sms_schedule():
             campaign=campaign,
             usuario=usuario,
             scheduled_at=run_date.isoformat(),
-            allow_resend=allow_resend
+            allow_resend=allow_resend,
+            total_dest=len(mensajes_validos),
+            # Recurrencia
+            es_recurrente=es_recurrente,
+            frecuencia_tipo=frecuencia_tipo,
+            frecuencia_valor=frecuencia_valor,
+            frecuencia_unidad=frecuencia_unidad,
+            franja_horaria=franja_horaria,
+            hora_inicio=hora_inicio,
+            hora_fin=hora_fin,
+            fecha_limite=fecha_limite,
+            repeticiones_max=repeticiones_max,
         )
+        
         scheduler.add_job(
             execute_sms_schedule,
             trigger="date",
@@ -999,26 +1160,34 @@ def sms_schedule():
             replace_existing=True
         )
 
-        log_gui_action("SMS programado", programacion=schedule_id, fecha=run_date.isoformat())
-        return jsonify({
+        tipo = "recurrente" if es_recurrente else "simple"
+        log_gui_action(f"SMS programado ({tipo})", programacion=schedule_id, fecha=run_date.isoformat())
+        
+        response = {
             "success": True,
             "id": schedule_id,
             "fecha_programada": run_date.isoformat(),
             "total_destinatarios": len(mensajes_validos),
-            "message": "Envío SMS programado correctamente."
-        })
+            "es_recurrente": es_recurrente,
+            "message": f"Envío SMS programado correctamente ({tipo})."
+        }
+        
+        if es_recurrente:
+            response.update({
+                "frecuencia_tipo": frecuencia_tipo,
+                "franja_horaria": franja_horaria,
+                "fecha_limite": fecha_limite,
+                "repeticiones_max": repeticiones_max,
+            })
+        
+        return jsonify(response)
 
     except (ValueError, SmsServiceError) as exc:
         log_task(f"[SMS] Programación rechazada: {exc}", level="WARNING")
         return jsonify({"success": False, "message": str(exc)}), 400
-
     except Exception as exc:
         logger.exception("Error programando SMS")
-        log_task(f"[SMS] Error programando: {exc}", level="ERROR")
-        return jsonify({"success": False, "message": "No se pudo guardar la programación."}), 500
-
-
-
+        return jsonify({"success": False, "message": f"Error: {str(exc)}"}), 500
 
 @app.route("/api/sms/historial")
 def sms_history():
@@ -1320,6 +1489,64 @@ def auto_campaigns_new():
     return render_template("auto_campaigns/form.html", **_auto_campaign_form_context())
 
 
+@app.route("/auto-campaigns", methods=["POST"])
+def create_auto_campaign():
+    """
+    Crear una nueva campaña automática
+    """
+    from database import AutoCampaign, db
+    from flask import request, jsonify
+    
+    data = request.get_json()
+    
+    # Validar campos obligatorios
+    required = ['name', 'wolkvox_campaign_id', 'server_name', 'bigquery_query']
+    for field in required:
+        if not data.get(field):
+            return jsonify({"success": False, "message": f"Falta el campo: {field}"}), 400
+    
+    # 🔥 Generar endpoint automáticamente si no viene
+    if not data.get('wolkvox_add_record_endpoint'):
+        server_name = data.get('server_name', 'wv0016')
+        campaign_id = data.get('wolkvox_campaign_id')
+        campaign_type = data.get('campaign_type', 'predictive')
+        
+        # Mapeo de servidores
+        server_mapping = {
+            "operacion-interna": "wv0016",
+            "qnt_digital": "wv0016",
+            "qnt_juridico_blaster": "wv0016",
+            "qnt_cobro_blaster": "wv0016",
+            "Qnt_RBK_blaster": "wv0016",
+            "Qnt_recaudo_blaster": "wv0016",
+        }
+        
+        server_code = server_mapping.get(server_name, "wv0016")
+        data['wolkvox_add_record_endpoint'] = f"https://{server_code}.wolkvox.com/api/v2/campaign.php?api=add_record&type_campaign={campaign_type}&campaign_id={campaign_id}&campaign_status=1"
+    
+    # Crear campaña
+    campaign = AutoCampaign(
+        name=data['name'],
+        wolkvox_campaign_id=data['wolkvox_campaign_id'],
+        server_name=data['server_name'],
+        bigquery_query=data['bigquery_query'],
+        campaign_type=data.get('campaign_type', 'predictive'),
+        wolkvox_add_record_endpoint=data['wolkvox_add_record_endpoint'],
+        field_mapping=data.get('field_mapping', {}),
+        status=data.get('status', True) if isinstance(data.get('status'), bool) else True,
+    )
+    
+    db.session.add(campaign)
+    db.session.commit()
+    
+    return jsonify({
+        "success": True,
+        "campaign": {
+            "id": campaign.id,
+            "name": campaign.name
+        }
+    })
+
 
 @app.route("/auto-campaigns/test-count", methods=["POST"])
 def auto_campaigns_test_count():
@@ -1371,6 +1598,7 @@ def auto_campaigns_test_count():
 
     log_gui_action("Preconteo campaña automática", total=result.get("total"), campaign_id=campaign_id)
     return jsonify(result)
+
 @app.route("/api/sms/mensaje-por-operacion", methods=["GET"])
 def sms_mensaje_por_operacion():
     """Busca un mensaje por operador, campaña e intensidad."""
@@ -1445,7 +1673,7 @@ def auto_campaigns_validate_query_fields():
             "detected_columns": raw_columns,
             "column_mapping": mapped_columns,
             "field_aliases": describe_field_aliases(),
-            "sample_row": dict(rows[0].items()) if rows else None,
+            "sample_row": rows[0] if rows else None,
         }
         
         if not success:
