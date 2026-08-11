@@ -3478,11 +3478,35 @@ def auto_campaigns_clear_wkv(campaign_id):
         logger.exception("Error limpiando campaña Wolkvox")
         return jsonify({"success": False, "message": str(e)}), 500
 
+def get_blacklist_phones():
+   
+    try:
+        query = """
+            SELECT DISTINCT Telefono AS telefono
+            FROM `capable-arbor-209819.Tablas_Reporteria.Telefonos_Tutela`
+            WHERE Telefono IS NOT NULL
+              AND Telefono != ''
+        """
+        df = bq_client.query(query).to_dataframe()
+        
+        # Limpiar teléfonos: eliminar caracteres no numéricos y prefijo 57
+        blacklist = set()
+        for telefono in df['telefono'].astype(str):
+            limpio = re.sub(r'[^0-9]', '', telefono)
+            if limpio.startswith('57'):
+                limpio = limpio[2:]
+            blacklist.add(limpio)
+        
+        print(f"📋 Lista negra cargada: {len(blacklist)} teléfonos")
+        return blacklist
+    except Exception as e:
+        print(f"❌ Error cargando lista negra: {e}")
+        return set()
 
 @app.route("/auto-campaigns/<int:campaign_id>/load-wkv", methods=["POST"])
 def auto_campaigns_load_wkv(campaign_id):
     """
-    Carga registros a Wolkvox - CON FORMATO DE TELÉFONO CORRECTO
+    Carga registros a Wolkvox - CON VALIDACIÓN DE LISTA NEGRA
     """
     print("🚀 LOAD-WKV INICIADO - Campaign:", campaign_id)
     
@@ -3548,11 +3572,59 @@ def auto_campaigns_load_wkv(campaign_id):
         if not rows:
             raise ValueError("La consulta no retornó registros.")
         
-        # 7. 🔥 PREPARAR DATOS CON TELÉFONO FORMATEADO
-        print("🔍 Paso 2: Preparando datos para Wolkvox...")
+        # 7. 🔥 CARGAR LISTA NEGRA
+        print("🔍 Paso 2: Cargando lista negra...")
+        blacklist = get_blacklist_phones()
+        print(f"📋 {len(blacklist)} teléfonos en lista negra")
+        
+        # 8. 🔥 FILTRAR REGISTROS
+        print("🔍 Paso 3: Filtrando registros...")
+        
+        registros_validos = []
+        registros_bloqueados = []
+        
+        for row in rows:
+            # Obtener teléfono y limpiar
+            telefono_raw = str(row.get('tel1', '')).strip()
+            telefono_limpio = re.sub(r'[^0-9]', '', telefono_raw)
+            if telefono_limpio.startswith('57'):
+                telefono_limpio = telefono_limpio[2:]
+            
+            # Verificar si está en lista negra
+            if telefono_limpio in blacklist:
+                registros_bloqueados.append({
+                    'row': row,
+                    'telefono': telefono_limpio,
+                    'motivo': 'Lista negra (Telefonos_Tutela)'
+                })
+                print(f"🚫 Teléfono bloqueado: {telefono_limpio}")
+            else:
+                registros_validos.append(row)
+        
+        print(f"✅ Registros válidos: {len(registros_validos)}")
+        print(f"🚫 Registros bloqueados: {len(registros_bloqueados)}")
+        
+        if not registros_validos:
+            raise ValueError("Todos los registros fueron bloqueados por lista negra.")
+        
+        # 9. 🔥 PREPARAR DATOS SOLO CON REGISTROS VÁLIDOS
+        print("🔍 Paso 4: Preparando datos para Wolkvox...")
         
         records = []
-        for idx, row in enumerate(rows):
+        for idx, row in enumerate(registros_validos):
+            # ===== FUNCIÓN DE FORMATEO DE TELÉFONO =====
+            def formatear_telefono(telefono):
+                telefono = re.sub(r'[^0-9]', '', str(telefono))
+                if not telefono:
+                    return "91570000000000"
+                if telefono.startswith('57'):
+                    telefono = telefono[2:]
+                if telefono.startswith('+57'):
+                    telefono = telefono[3:]
+                if telefono.startswith('9157'):
+                    return telefono
+                return f"9157{telefono}"
+            
             # ===== CUSTOMER ID =====
             customer_id = str(row.get('customer_id', '')).strip()
             if not customer_id or customer_id == 'nan' or customer_id == 'None':
@@ -3560,31 +3632,9 @@ def auto_campaigns_load_wkv(campaign_id):
                 if not customer_id or customer_id == 'nan' or customer_id == 'None':
                     customer_id = f"CLI-{idx}"
             
-            # ===== TELÉFONO FORMATEADO CORRECTAMENTE =====
-            telefono = str(row.get('tel1', '')).strip()
-            
-            # Eliminar caracteres no numéricos
-            telefono = re.sub(r'[^0-9]', '', telefono)
-            
-            # Si tiene prefijo 57, eliminarlo
-            if telefono.startswith('57'):
-                telefono = telefono[2:]
-            
-            # Si tiene prefijo +57, eliminarlo
-            if telefono.startswith('+57'):
-                telefono = telefono[3:]
-            
-            # 🔥 Agregar prefijo 9 si no lo tiene (para celulares colombianos)
-            if telefono and not telefono.startswith('9'):
-                # Si es un número de 10 dígitos (celular colombiano)
-                if len(telefono) == 10:
-                    telefono = '9157' + telefono
-                    print(f"📞 Teléfono formateado: {telefono}")
-            
-            # Si el teléfono está vacío o es inválido
-            if not telefono or len(telefono) < 7:
-                telefono = "0000000000"
-                print(f"⚠️ Teléfono inválido, usando placeholder: {telefono}")
+            # ===== TELÉFONO FORMATEADO =====
+            telefono_raw = str(row.get('tel1', '')).strip()
+            telefono_formateado = formatear_telefono(telefono_raw)
             
             # ===== NOMBRE =====
             nombre = str(row.get('customer_name', '')).strip()
@@ -3610,7 +3660,7 @@ def auto_campaigns_load_wkv(campaign_id):
                 "customer_id": customer_id,
                 
                 # Teléfono formateado
-                "tel1": telefono,
+                "tel1": telefono_formateado,
                 "tel2": "",
                 "tel3": "",
                 "tel4": "",
@@ -3625,7 +3675,7 @@ def auto_campaigns_load_wkv(campaign_id):
                 # Email
                 "email": email,
                 
-                # Campos demográficos (opcionales)
+                # Campos demográficos
                 "age": "",
                 "gender": "",
                 "country": "",
@@ -3657,20 +3707,19 @@ def auto_campaigns_load_wkv(campaign_id):
         
         print(f"🔍 Registros preparados: {len(records)}")
         
-        # Mostrar muestra del primer registro
+        # Mostrar muestra
         if records:
             print("📋 Muestra del primer registro:")
             print(json.dumps(records[0], indent=2, ensure_ascii=False))
         
-        # 8. 🔥 ENVIAR A WOLKVOX
-        print("🔍 Paso 3: Enviando a Wolkvox...")
+        # 10. 🔥 ENVIAR A WOLKVOX
+        print("🔍 Paso 5: Enviando a Wolkvox...")
         
         headers = {
             "wolkvox-token": token,
             "Content-Type": "application/json"
         }
         
-        # Enviar en lotes de 100
         batch_size = 100
         total_enviados = 0
         errores = []
@@ -3717,7 +3766,7 @@ def auto_campaigns_load_wkv(campaign_id):
                     "error": str(e)
                 })
         
-        # 9. Resultado final
+        # 11. 🔥 RESULTADO CON ESTADÍSTICAS DE LISTA NEGRA
         if len(errores) == 0:
             log.records_sent = total_enviados
             log.end_time = datetime.now(timezone.utc)
@@ -3727,7 +3776,9 @@ def auto_campaigns_load_wkv(campaign_id):
                 "success": True,
                 "records_sent": total_enviados,
                 "records_fetched": log.records_fetched,
-                "message": f"{total_enviados} registros cargados exitosamente."
+                "records_blocked": len(registros_bloqueados),  # 🔥 NUEVO
+                "blocked_details": registros_bloqueados[:10],  # 🔥 NUEVO (primeros 10)
+                "message": f"{total_enviados} registros cargados. {len(registros_bloqueados)} bloqueados por lista negra."
             })
         else:
             log.records_sent = total_enviados
@@ -3740,7 +3791,8 @@ def auto_campaigns_load_wkv(campaign_id):
                 "success": False,
                 "records_sent": total_enviados,
                 "records_fetched": log.records_fetched,
-                "message": f"{total_enviados} de {len(records)} registros cargados.",
+                "records_blocked": len(registros_bloqueados),
+                "message": f"{total_enviados} de {len(records)} registros cargados. {len(registros_bloqueados)} bloqueados.",
                 "errors": errores
             }), 207
             
@@ -3840,7 +3892,6 @@ def get_server_url(server_name):
         return jsonify({"success": False, "message": "Servidor no encontrado"}), 404
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
-
 
 
 

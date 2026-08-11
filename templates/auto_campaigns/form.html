@@ -177,9 +177,15 @@
                     <option value="preview" {% if is_edit and campaign.campaign_type == 'preview' %}selected{% endif %}>Vista previa (Preview)</option>
                 </select>
             </div>
+            
         </div>
     </div>
-    
+    <div class="alert alert-info">
+                <strong>📊 Resumen de carga:</strong><br>
+                Total consulta: {{ records_fetched }}<br>
+                Enviados a Wolkvox: {{ records_sent }}<br>
+                🚫 Bloqueados por lista negra: {{ records_blocked }}
+            </div>
     <!-- SECCIÓN 2: BigQuery -->
     <div class="form-section">
         <div class="form-section-title">
@@ -267,7 +273,6 @@
 {% endif %}
 
 {% endblock %}
-
 {% block extra_js %}
 <script>
 (function() {
@@ -280,12 +285,45 @@
   
   let bqColumns = [];
   
-  function showResult(success, message) {
+  function showResult(success, message, extraData) {
     resultBox.className = 'result-box visible';
     resultBox.style.background = success ? '#E7F8F1' : '#FCEAEA';
     resultBox.style.borderColor = success ? '#C3E6CB' : '#F5C6CB';
-    resultContent.innerHTML = message;
-    setTimeout(() => { resultBox.className = 'result-box'; }, 8000);
+    
+    let html = message;
+    
+    // 🔥 NUEVO: Mostrar estadísticas de lista negra si existen
+    if (extraData && extraData.records_blocked !== undefined) {
+      html += `
+        <div style="margin-top:12px;padding:12px;background:#FFF3CD;border-radius:8px;border:1px solid #FFC107;">
+          <strong>📊 Estadísticas de validación:</strong><br>
+          <span style="color:#28a745;">✅ Registros válidos: ${extraData.records_sent || 0}</span><br>
+          <span style="color:#dc3545;">🚫 Bloqueados por lista negra: ${extraData.records_blocked || 0}</span><br>
+          <span style="color:#6c757d;">📋 Total consulta: ${extraData.records_fetched || 0}</span>
+        </div>
+      `;
+      
+      // 🔥 Mostrar detalle de los bloqueados (si hay)
+      if (extraData.blocked_details && extraData.blocked_details.length > 0) {
+        html += `
+          <div style="margin-top:10px;padding:10px;background:#F8D7DA;border-radius:8px;border:1px solid #F5C6CB;max-height:200px;overflow-y:auto;">
+            <strong>🚫 Teléfonos bloqueados (${extraData.blocked_details.length}):</strong>
+            <ul style="margin:5px 0 0 20px;font-size:0.85rem;">
+              ${extraData.blocked_details.map(item => 
+                `<li>${item.telefono || item.row?.tel1 || 'N/A'} - ${item.motivo || 'Lista negra'}</li>`
+              ).join('')}
+            </ul>
+          </div>
+        `;
+      }
+    }
+    
+    resultContent.innerHTML = html;
+    
+    // Auto-cerrar después de 10 segundos si es éxito
+    if (success) {
+      setTimeout(() => { resultBox.className = 'result-box'; }, 10000);
+    }
   }
   
   function setLoading(btn, loading) {
@@ -361,14 +399,19 @@
       const resp = await fetch('/auto-campaigns/' + campaignId + '/load-wkv', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({})  // 🔥 ENVÍO VACÍO - EL MAPEO ES AUTOMÁTICO
+        body: JSON.stringify({})
       });
       const data = await resp.json();
       
+      // 🔥 NUEVO: Mostrar estadísticas completas
       if (data.success) {
-        showResult(true, '✅ ' + (data.records_sent || 0) + ' registros cargados exitosamente a Wolkvox.');
+        let message = `✅ ${data.records_sent || 0} registros cargados exitosamente a Wolkvox.`;
+        if (data.records_blocked > 0) {
+          message += ` 🚫 ${data.records_blocked} teléfonos bloqueados por lista negra.`;
+        }
+        showResult(true, message, data);
       } else {
-        showResult(false, '❌ Error: ' + data.message);
+        showResult(false, '❌ Error: ' + data.message, data);
       }
     } catch(e) {
       showResult(false, 'Error: ' + e.message);
