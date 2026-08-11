@@ -1409,65 +1409,6 @@ def sms_validar():
         logger.exception("Error en validación SMS")
         return jsonify({"success": False, "message": str(exc)}), 500
 
-
-@app.route("/auto-campaigns", methods=["POST"])
-def create_auto_campaign():
-    """
-    Crear una nueva campaña automática
-    """
-    from database import AutoCampaign, db
-    from flask import request, jsonify
-    
-    data = request.get_json()
-    
-    # Validar campos obligatorios
-    required = ['name', 'wolkvox_campaign_id', 'server_name', 'bigquery_query']
-    for field in required:
-        if not data.get(field):
-            return jsonify({"success": False, "message": f"Falta el campo: {field}"}), 400
-    
-    # 🔥 Generar endpoint automáticamente si no viene
-    if not data.get('wolkvox_add_record_endpoint'):
-        server_name = data.get('server_name', 'wv0016')
-        campaign_id = data.get('wolkvox_campaign_id')
-        campaign_type = data.get('campaign_type', 'predictive')
-        
-        # Mapeo de servidores
-        server_mapping = {
-            "operacion-interna": "wv0016",
-            "qnt_digital": "wv0016",
-            "qnt_juridico_blaster": "wv0016",
-            "qnt_cobro_blaster": "wv0016",
-            "Qnt_RBK_blaster": "wv0016",
-            "Qnt_recaudo_blaster": "wv0016",
-        }
-        
-        server_code = server_mapping.get(server_name, "wv0016")
-        data['wolkvox_add_record_endpoint'] = f"https://{server_code}.wolkvox.com/api/v2/campaign.php?api=add_record&type_campaign={campaign_type}&campaign_id={campaign_id}&campaign_status=1"
-    
-    # Crear campaña
-    campaign = AutoCampaign(
-        name=data['name'],
-        wolkvox_campaign_id=data['wolkvox_campaign_id'],
-        server_name=data['server_name'],
-        bigquery_query=data['bigquery_query'],
-        campaign_type=data.get('campaign_type', 'predictive'),
-        wolkvox_add_record_endpoint=data['wolkvox_add_record_endpoint'],
-        field_mapping=data.get('field_mapping', {}),
-        status=data.get('status', True) if isinstance(data.get('status'), bool) else True,
-    )
-    
-    db.session.add(campaign)
-    db.session.commit()
-    
-    return jsonify({
-        "success": True,
-        "campaign": {
-            "id": campaign.id,
-            "name": campaign.name
-        }
-    })
-
 def _auto_campaign_form_context(campaign=None, logs=None):
     servers_result = load_servers()
     servers = servers_result.get("servers", []) if servers_result.get("success") else []
@@ -1667,13 +1608,21 @@ def auto_campaigns_validate_query_fields():
             mapped = map_column_name(col)
             mapped_columns[col] = mapped or "NO_MAPEADO"
         
+        # 🔥 CORREGIDO: Convertir Row a dict para JSON
+        sample_row = None
+        if rows:
+            try:
+                sample_row = dict(rows[0].items())
+            except:
+                sample_row = {k: str(v) for k, v in rows[0].items()}
+        
         response = {
             "success": success,
             "message": error_msg or "Consulta válida.",
             "detected_columns": raw_columns,
             "column_mapping": mapped_columns,
             "field_aliases": describe_field_aliases(),
-            "sample_row": rows[0] if rows else None,
+            "sample_row": sample_row,  # <-- AHORA ES SERIALIZABLE
         }
         
         if not success:
@@ -1686,7 +1635,6 @@ def auto_campaigns_validate_query_fields():
         error_msg = f"Error validando consulta: {str(exc)}"
         logger.error(error_msg)
         return jsonify({"success": False, "message": error_msg}), 500
-
 
 @app.route("/auto-campaigns/<int:campaign_id>", methods=["GET"])
 def auto_campaigns_detail(campaign_id):
