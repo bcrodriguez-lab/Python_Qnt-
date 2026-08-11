@@ -1240,11 +1240,64 @@ def sms_validar():
         logger.exception("Error en validación SMS")
         return jsonify({"success": False, "message": str(exc)}), 500
 
-@app.route("/auto-campaigns", methods=["GET"])
-def auto_campaigns_index():
-    campaigns = list_auto_campaigns()
-    return render_template("auto_campaigns/index.html", campaigns=campaigns)
 
+@app.route("/auto-campaigns", methods=["POST"])
+def create_auto_campaign():
+    """
+    Crear una nueva campaña automática
+    """
+    from database import AutoCampaign, db
+    from flask import request, jsonify
+    
+    data = request.get_json()
+    
+    # Validar campos obligatorios
+    required = ['name', 'wolkvox_campaign_id', 'server_name', 'bigquery_query']
+    for field in required:
+        if not data.get(field):
+            return jsonify({"success": False, "message": f"Falta el campo: {field}"}), 400
+    
+    # 🔥 Generar endpoint automáticamente si no viene
+    if not data.get('wolkvox_add_record_endpoint'):
+        server_name = data.get('server_name', 'wv0016')
+        campaign_id = data.get('wolkvox_campaign_id')
+        campaign_type = data.get('campaign_type', 'predictive')
+        
+        # Mapeo de servidores
+        server_mapping = {
+            "operacion-interna": "wv0016",
+            "qnt_digital": "wv0016",
+            "qnt_juridico_blaster": "wv0016",
+            "qnt_cobro_blaster": "wv0016",
+            "Qnt_RBK_blaster": "wv0016",
+            "Qnt_recaudo_blaster": "wv0016",
+        }
+        
+        server_code = server_mapping.get(server_name, "wv0016")
+        data['wolkvox_add_record_endpoint'] = f"https://{server_code}.wolkvox.com/api/v2/campaign.php?api=add_record&type_campaign={campaign_type}&campaign_id={campaign_id}&campaign_status=1"
+    
+    # Crear campaña
+    campaign = AutoCampaign(
+        name=data['name'],
+        wolkvox_campaign_id=data['wolkvox_campaign_id'],
+        server_name=data['server_name'],
+        bigquery_query=data['bigquery_query'],
+        campaign_type=data.get('campaign_type', 'predictive'),
+        wolkvox_add_record_endpoint=data['wolkvox_add_record_endpoint'],
+        field_mapping=data.get('field_mapping', {}),
+        status=data.get('status', True) if isinstance(data.get('status'), bool) else True,
+    )
+    
+    db.session.add(campaign)
+    db.session.commit()
+    
+    return jsonify({
+        "success": True,
+        "campaign": {
+            "id": campaign.id,
+            "name": campaign.name
+        }
+    })
 
 def _auto_campaign_form_context(campaign=None, logs=None):
     servers_result = load_servers()
@@ -1266,15 +1319,6 @@ def _auto_campaign_form_context(campaign=None, logs=None):
 def auto_campaigns_new():
     return render_template("auto_campaigns/form.html", **_auto_campaign_form_context())
 
-
-@app.route("/auto-campaigns", methods=["POST"])
-def auto_campaigns_create():
-    data = request.get_json(silent=True) or request.form.to_dict()
-    result = create_auto_campaign(data)
-    if not result.get("success"):
-        return jsonify(result), 400
-    log_gui_action("Crear campaña automática", id=result.get("campaign", {}).get("id"))
-    return jsonify(result)
 
 
 @app.route("/auto-campaigns/test-count", methods=["POST"])
@@ -1401,7 +1445,7 @@ def auto_campaigns_validate_query_fields():
             "detected_columns": raw_columns,
             "column_mapping": mapped_columns,
             "field_aliases": describe_field_aliases(),
-            "sample_row": rows[0] if rows else None,
+            "sample_row": dict(rows[0].items()) if rows else None,
         }
         
         if not success:
@@ -3403,6 +3447,403 @@ def email_cancelar_programacion(schedule_id):
     except Exception as exc:
         logger.exception("Error cancelando programación Email")
         return jsonify({"success": False, "message": str(exc)}), 500
+
+
+# ========== NUEVOS ENDPOINTS SIMPLIFICADOS WOLKVOX ==========
+
+@app.route("/auto-campaigns/<int:campaign_id>/clear-wkv", methods=["POST"])
+def auto_campaigns_clear_wkv(campaign_id):
+    """Limpia los registros de una campaña en Wolkvox."""
+    from database import AutoCampaign
+    from auto_campaign_executor import _clean_wolkvox_campaign, _get_token
+    
+    campaign = AutoCampaign.query.get(campaign_id)
+    if not campaign:
+        return jsonify({"success": False, "message": "Campaña no encontrada."}), 404
+    
+    try:
+        token = _get_token(campaign)
+        if not token:
+            return jsonify({"success": False, "message": "No se encontró token Wolkvox."}), 400
+        
+        result = _clean_wolkvox_campaign(campaign, token)
+        
+        if result.get("success"):
+            log_gui_action("Limpiar campaña Wolkvox", id=campaign_id, campaign_name=campaign.name)
+        else:
+            log_gui_action("Limpiar campaña Wolkvox falló", id=campaign_id, mensaje=result.get("message"))
+        
+        return jsonify(result)
+    except Exception as e:
+        logger.exception("Error limpiando campaña Wolkvox")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@app.route("/auto-campaigns/<int:campaign_id>/load-wkv", methods=["POST"])
+def auto_campaigns_load_wkv(campaign_id):
+    """
+    Carga registros a Wolkvox - CON FORMATO DE TELÉFONO CORRECTO
+    """
+    print("🚀 LOAD-WKV INICIADO - Campaign:", campaign_id)
+    
+    from database import AutoCampaign, AutoCampaignExecutionLog, db
+    from auto_campaign_executor import fetch_data_from_bigquery, _get_token
+    from flask import jsonify, request
+    from datetime import datetime, timezone
+    import requests
+    import json
+    import re
+    
+    # 1. Obtener campaña
+    campaign = AutoCampaign.query.get(campaign_id)
+    if not campaign:
+        return jsonify({"success": False, "message": "Campaña no encontrada."}), 404
+    
+    # 2. Obtener token
+    token = _get_token(campaign)
+    if not token:
+        return jsonify({"success": False, "message": "No se encontró token Wolkvox."}), 400
+    
+    print(f"🔑 Token: {token[:20]}...")
+    
+    # 3. Obtener URL del servidor
+    server_mapping = {
+        "operacion-interna": "https://wv0016.wolkvox.com",
+        "qnt_digital": "https://wv0016.wolkvox.com",
+        "qnt_juridico_blaster": "https://wv0016.wolkvox.com",
+        "qnt_cobro_blaster": "https://wv0016.wolkvox.com",
+        "Qnt_RBK_blaster": "https://wv0016.wolkvox.com",
+        "Qnt_recaudo_blaster": "https://wv0016.wolkvox.com",
+    }
+    
+    server_url = server_mapping.get(campaign.server_name, "https://wv0016.wolkvox.com")
+    
+    # 4. Construir URL
+    url = f"{server_url}/api/v2/campaign.php"
+    params = {
+        "api": "add_record",
+        "type_campaign": campaign.campaign_type or "predictive",
+        "campaign_id": campaign.wolkvox_campaign_id,
+        "campaign_status": "1"
+    }
+    
+    print(f"🔍 URL: {url}")
+    print(f"🔍 Params: {params}")
+    
+    # 5. Crear log
+    log = AutoCampaignExecutionLog(
+        auto_campaign_id=campaign.id,
+        start_time=datetime.now(timezone.utc),
+    )
+    db.session.add(log)
+    db.session.commit()
+    
+    try:
+        # 6. Obtener datos de BigQuery
+        print("🔍 Paso 1: Ejecutando BigQuery...")
+        rows = fetch_data_from_bigquery(campaign.bigquery_query)
+        log.records_fetched = len(rows)
+        print(f"🔍 Filas obtenidas: {len(rows)}")
+        
+        if not rows:
+            raise ValueError("La consulta no retornó registros.")
+        
+        # 7. 🔥 PREPARAR DATOS CON TELÉFONO FORMATEADO
+        print("🔍 Paso 2: Preparando datos para Wolkvox...")
+        
+        records = []
+        for idx, row in enumerate(rows):
+            # ===== CUSTOMER ID =====
+            customer_id = str(row.get('customer_id', '')).strip()
+            if not customer_id or customer_id == 'nan' or customer_id == 'None':
+                customer_id = str(row.get('tel1', f"CLI-{idx}")).strip()
+                if not customer_id or customer_id == 'nan' or customer_id == 'None':
+                    customer_id = f"CLI-{idx}"
+            
+            # ===== TELÉFONO FORMATEADO CORRECTAMENTE =====
+            telefono = str(row.get('tel1', '')).strip()
+            
+            # Eliminar caracteres no numéricos
+            telefono = re.sub(r'[^0-9]', '', telefono)
+            
+            # Si tiene prefijo 57, eliminarlo
+            if telefono.startswith('57'):
+                telefono = telefono[2:]
+            
+            # Si tiene prefijo +57, eliminarlo
+            if telefono.startswith('+57'):
+                telefono = telefono[3:]
+            
+            # 🔥 Agregar prefijo 9 si no lo tiene (para celulares colombianos)
+            if telefono and not telefono.startswith('9'):
+                # Si es un número de 10 dígitos (celular colombiano)
+                if len(telefono) == 10:
+                    telefono = '9157' + telefono
+                    print(f"📞 Teléfono formateado: {telefono}")
+            
+            # Si el teléfono está vacío o es inválido
+            if not telefono or len(telefono) < 7:
+                telefono = "0000000000"
+                print(f"⚠️ Teléfono inválido, usando placeholder: {telefono}")
+            
+            # ===== NOMBRE =====
+            nombre = str(row.get('customer_name', '')).strip()
+            if not nombre or nombre == 'nan' or nombre == 'None':
+                nombre = 'Sin Nombre'
+            
+            # ===== APELLIDO =====
+            apellido = str(row.get('customer_last_name', '')).strip()
+            if not apellido or apellido == 'nan' or apellido == 'None':
+                apellido = ''
+            
+            # ===== EMAIL =====
+            email = str(row.get('email', '')).strip()
+            if email == 'nan' or email == 'None':
+                email = ''
+            
+            # 🔥 CREAR REGISTRO
+            record = {
+                # Campos obligatorios
+                "customer_name": nombre,
+                "customer_last_name": apellido,
+                "id_type": "CC",
+                "customer_id": customer_id,
+                
+                # Teléfono formateado
+                "tel1": telefono,
+                "tel2": "",
+                "tel3": "",
+                "tel4": "",
+                "tel5": "",
+                "tel6": "",
+                "tel7": "",
+                "tel8": "",
+                "tel9": "",
+                "tel10": "",
+                "tel_extra": "",
+                
+                # Email
+                "email": email,
+                
+                # Campos demográficos (opcionales)
+                "age": "",
+                "gender": "",
+                "country": "",
+                "state": "",
+                "city": "",
+                "zone": "",
+                "address": "",
+                
+                # Campos opt
+                "opt1": str(row.get('fecha_pago', '')),
+                "opt2": str(row.get('valor_pagar', '')),
+                "opt3": str(row.get('segmento', '')),
+                "opt4": str(row.get('empresa', '')),
+                "opt5": str(row.get('fecha_pago_2', '')),
+                "opt6": str(row.get('valor_pagar_2', '')),
+                "opt7": str(row.get('valor_oferta_esp', '')),
+                "opt8": str(row.get('valor_oferta_esp_2', '')),
+                "opt9": str(row.get('cuotas', '')),
+                "opt10": str(row.get('porcentaje', '')),
+                "opt11": str(row.get('porcentaje_2', '')),
+                "opt12": str(row.get('link_pago', '')),
+                
+                # Rellamada
+                "recall_date": "",
+                "recall_telephone": ""
+            }
+            
+            records.append(record)
+        
+        print(f"🔍 Registros preparados: {len(records)}")
+        
+        # Mostrar muestra del primer registro
+        if records:
+            print("📋 Muestra del primer registro:")
+            print(json.dumps(records[0], indent=2, ensure_ascii=False))
+        
+        # 8. 🔥 ENVIAR A WOLKVOX
+        print("🔍 Paso 3: Enviando a Wolkvox...")
+        
+        headers = {
+            "wolkvox-token": token,
+            "Content-Type": "application/json"
+        }
+        
+        # Enviar en lotes de 100
+        batch_size = 100
+        total_enviados = 0
+        errores = []
+        
+        for i in range(0, len(records), batch_size):
+            batch = records[i:i+batch_size]
+            lote_num = i//batch_size + 1
+            
+            print(f"📤 Lote {lote_num}: {len(batch)} registros")
+            
+            try:
+                response = requests.post(
+                    url,
+                    params=params,
+                    headers=headers,
+                    json=batch,
+                    timeout=60
+                )
+                
+                print(f"📡 Código lote {lote_num}: {response.status_code}")
+                
+                if response.status_code in [200, 201]:
+                    try:
+                        result = response.json()
+                        enviados = int(result.get('data', [{}])[0].get('total_registers', 0))
+                        total_enviados += enviados
+                        print(f"✅ Lote {lote_num}: {enviados} enviados")
+                    except:
+                        total_enviados += len(batch)
+                        print(f"✅ Lote {lote_num}: enviados")
+                else:
+                    print(f"❌ Lote {lote_num}: Error {response.status_code}")
+                    print(f"📄 Respuesta: {response.text[:500]}")
+                    errores.append({
+                        "lote": lote_num,
+                        "status": response.status_code,
+                        "response": response.text[:500]
+                    })
+                    
+            except Exception as e:
+                print(f"❌ Lote {lote_num}: Error {str(e)}")
+                errores.append({
+                    "lote": lote_num,
+                    "error": str(e)
+                })
+        
+        # 9. Resultado final
+        if len(errores) == 0:
+            log.records_sent = total_enviados
+            log.end_time = datetime.now(timezone.utc)
+            db.session.commit()
+            
+            return jsonify({
+                "success": True,
+                "records_sent": total_enviados,
+                "records_fetched": log.records_fetched,
+                "message": f"{total_enviados} registros cargados exitosamente."
+            })
+        else:
+            log.records_sent = total_enviados
+            log.records_failed = len(records) - total_enviados
+            log.error_message = f"Errores en {len(errores)} lotes"
+            log.end_time = datetime.now(timezone.utc)
+            db.session.commit()
+            
+            return jsonify({
+                "success": False,
+                "records_sent": total_enviados,
+                "records_fetched": log.records_fetched,
+                "message": f"{total_enviados} de {len(records)} registros cargados.",
+                "errors": errores
+            }), 207
+            
+    except Exception as e:
+        print("❌ ERROR:", str(e))
+        import traceback
+        traceback.print_exc()
+        
+        db.session.rollback()
+        log.end_time = datetime.now(timezone.utc)
+        log.error_message = str(e)
+        log.records_failed = log.records_fetched or 0
+        db.session.commit()
+        
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route("/auto-campaigns/<int:campaign_id>/start-wkv", methods=["POST"])
+def auto_campaigns_start_wkv(campaign_id):
+    """Inicia una campaña en Wolkvox."""
+    from database import AutoCampaign
+    from auto_campaign_executor import start_wolkvox_campaign, _get_token
+    
+    campaign = AutoCampaign.query.get(campaign_id)
+    if not campaign:
+        return jsonify({"success": False, "message": "Campaña no encontrada."}), 404
+    
+    try:
+        token = _get_token(campaign)
+        if not token:
+            return jsonify({"success": False, "message": "No se encontró token Wolkvox."}), 400
+        
+        result = start_wolkvox_campaign(
+            campaign.wolkvox_add_record_endpoint,
+            token,
+            campaign.wolkvox_campaign_id,
+            server_name=campaign.server_name or "",
+        )
+        
+        if result.get("success"):
+            log_gui_action("Iniciar campaña Wolkvox", id=campaign_id, campaign_name=campaign.name)
+        else:
+            log_gui_action("Iniciar campaña Wolkvox falló", id=campaign_id, mensaje=result.get("message"))
+        
+        return jsonify(result)
+    except Exception as e:
+        logger.exception("Error iniciando campaña Wolkvox")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@app.route("/auto-campaigns/<int:campaign_id>/stop-wkv", methods=["POST"])
+def auto_campaigns_stop_wkv(campaign_id):
+    """Detiene una campaña en Wolkvox."""
+    from database import AutoCampaign
+    from auto_campaign_executor import _get_base_url_wolkvox, _get_token
+    
+    campaign = AutoCampaign.query.get(campaign_id)
+    if not campaign:
+        return jsonify({"success": False, "message": "Campaña no encontrada."}), 404
+    
+    try:
+        token = _get_token(campaign)
+        if not token:
+            return jsonify({"success": False, "message": "No se encontró token Wolkvox."}), 400
+        
+        base_url = _get_base_url_wolkvox(campaign.server_name or "")
+        campaign_id_wkv = str(campaign.wolkvox_campaign_id or "").strip()
+        
+        stop_url = f"{base_url}/api/v2/campaign.php?api=stop&campaign_id={campaign_id_wkv}"
+        headers = {"wolkvox-token": token}
+        
+        response = requests.put(stop_url, headers=headers, timeout=60)
+        
+        if response.ok:
+            log_gui_action("Detener campaña Wolkvox", id=campaign_id, campaign_name=campaign.name)
+            return jsonify({"success": True, "message": "Campaña detenida."})
+        else:
+            return jsonify({
+                "success": False,
+                "message": f"Error HTTP {response.status_code}",
+                "detail": response.text[:500]
+            }), 500
+            
+    except Exception as e:
+        logger.exception("Error deteniendo campaña Wolkvox")
+        return jsonify({"success": False, "message": str(e)}), 500
+@app.route("/api/servers/<server_name>/url", methods=["GET"])
+def get_server_url(server_name):
+    """Devuelve la URL base de un servidor Wolkvox."""
+    try:
+        from servers import get_server
+        server = get_server(server_name)
+        if server:
+            url = (server.get('url') or '').strip().rstrip('/')
+            if url and not url.startswith(('http://', 'https://')):
+                url = f'https://wv{url}.wolkvox.com'
+            return jsonify({"success": True, "url": url})
+        return jsonify({"success": False, "message": "Servidor no encontrado"}), 404
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+
+
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
