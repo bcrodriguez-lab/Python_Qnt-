@@ -108,6 +108,15 @@ def obtener_nombre_campana_especifica(servidor, campaign_id):
         logger.debug(f"Error: {e}")
         return None
 
+def iniciar_scheduler():
+    schedule.every(15).minutes.do(descarga_campañas)
+    logger.info("Scheduler iniciado para descargar campañas cada 15 minutos")
+
+    while True: 
+        schedule.run_pending()
+        time.sleep(30) 
+
+
 def to_ts(fecha, is_end=False):
     try:
         d = datetime.strptime(fecha, '%Y-%m-%d')
@@ -153,15 +162,58 @@ def guardar_excel_simple(contenido, servidor, fecha):
         logger.error(f"   ❌ Error guardando: {e}")
         return False
 
+
+def ejecutar_descarga():
+    #Obtener fecha
+    fecha = datetime.now().strftime("%Y-%m-%d")
+
+    #Log
+    logger.info(f"\n Ejecutando descarga automática de reportes AMD para {fecha}...")
+        
+        
+    # Llammar a la fucnion fecha
+    try:
+        descargar_todos_los_reportes_amd(fecha)
+    except Exception as e: 
+        logger.info(f"Error en la desdecar de reportes amd: {e}")
+
+
+def iniciar_scheduler_amd(): 
+    global _scheduler_running_amd, _scheduler_thread_amd
+    if _scheduler_running_amd:
+        logger.info("⚠️ El scheduler AMD ya está en ejecución")
+        return True
+
+    try:
+        schedule.every(15).minutes.do(ejecutar_descarga)  
+        logger.info("Scheduler Funciona cada 15 Minutos archvio download_campaign")
+
+        _scheduler_running_amd = True
+        
+        def run_scheduler_amd():
+            while _scheduler_running_amd:
+                schedule.run_pending()
+                time.sleep(30)
+        
+        _scheduler_thread_amd = threading.Thread(target=run_scheduler_amd, daemon=True)
+        _scheduler_thread_amd.start()
+        
+        logger.info("✅ Scheduler AMD iniciado")
+        return True
+            
+    except Exception as e:
+        logger.error(f"❌ Error iniciando scheduler AMD: {e}")
+        return False
+
+
 def descargar_todos_los_reportes_amd(fecha: str = None):
     with _descarga_lock_amd:
         if fecha is None:
             fecha = datetime.now().strftime("%Y-%m-%d")
 
-        logger.info(f"\n{'='*60}")
-        logger.info(f"📥 INICIANDO DESCARGA DE REPORTES AMD")
+        logger.info(f"Descarga de reportes de campaña")
         logger.info(f"📅 Fecha: {fecha}")
-        logger.info(f"{'='*60}")
+
 
         if not os.path.exists(str(BASE_DIR)):
             logger.error(f"❌ La ruta base {BASE_DIR} no existe")
@@ -203,50 +255,15 @@ def descargar_todos_los_reportes_amd(fecha: str = None):
             except Exception as e:
                 logger.error(f"❌ Error en BigQuery: {e}")
 
-# ========== FUNCIONES PARA BACKEND ==========
 
-def iniciar_scheduler_amd():  # ← Este es el nombre que espera backend.py
-    global _scheduler_running_amd, _scheduler_thread_amd
-    if _scheduler_running_amd:
-        logger.info("⚠️ El scheduler AMD ya está en ejecución")
-        return True
 
-    try:
-        def ejecutar_descarga():
-            logger.info(f"\n⏰ Ejecución programada AMD a las {datetime.now().strftime('%H:%M')}")
-            try:
-                descargar_segun_configuracion_amd()
-            except Exception as e:
-                logger.error(f"❌ Error en descarga AMD: {e}")
-        
-        for horario in HORARIOS_EJECUCION:
-            schedule.every().day.at(horario).do(ejecutar_descarga)
-            logger.info(f"   ✅ AMD programada a las {horario}")
-        
-        _scheduler_running_amd = True
-        
-        def run_scheduler_amd():
-            while _scheduler_running_amd:
-                schedule.run_pending()
-                time.sleep(30)
-        
-        _scheduler_thread_amd = threading.Thread(target=run_scheduler_amd, daemon=True)
-        _scheduler_thread_amd.start()
-        
-        logger.info("✅ Scheduler AMD iniciado")
-        return True
-            
-    except Exception as e:
-        logger.error(f"❌ Error iniciando scheduler AMD: {e}")
-        return False
-
-def detener_scheduler_amd():  # ← Este es el nombre que espera backend.py
+def detener_scheduler_amd():  #
     global _scheduler_running_amd
     _scheduler_running_amd = False
     logger.info("⏹️ Scheduler AMD detenido")
     return True
 
-def estado_scheduler_amd():  # ← Este es el nombre que espera backend.py
+def estado_scheduler_amd():  #
     try:
         trabajos = schedule.get_jobs()
         proximos = []

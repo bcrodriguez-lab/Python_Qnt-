@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────────────────
 PROJECT_ID        = "capable-arbor-209819"
 TABLE_CONSOLIDADO = f"{PROJECT_ID}.Temporal.Embudo_Consolidado"
-TABLE_POSITIVOS   = f"{PROJECT_ID}.Temporal.Embudo_Positivo_Robot_TEST"
+TABLE_POSITIVOS   = f"{PROJECT_ID}.Operacion_Analitica.Embudos_Robot_Advanced"
 
 BASE_DIR_CRED     = os.path.dirname(os.path.abspath(__file__))
 CREDENTIALS_PATH  = os.path.join(BASE_DIR_CRED, "config", "google_key.json")

@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 # ========== CONFIGURACIÓN ==========
 BASE_DIR = Path(__file__).resolve().parent
 
-# Intentar importar config
+
 try:
     from config import (
         BASE_DIR as CONFIG_BASE_DIR,
@@ -59,7 +59,7 @@ except ImportError as e:
     def obtener_token(nombre=None):
         return ""
     
-    HORARIOS_EJECUCION = ["08:00", "12:00", "18:00"]
+    
     MODO_DESCARGA = "hoy"
     DESCARGAR_CDR = True
 
@@ -247,15 +247,21 @@ def descargar_todos_los_reportes(fecha: str = None):
     return descargados > 0
 
 def descargar_segun_configuracion():
-    """Descarga según la configuración"""
+    """Descarga según la configuración (solo si hay cambios)"""
     fechas = obtener_fechas_descarga()
+    
+    hoy = datetime.now().strftime("%Y-%m-%d")
+    
     for fecha in fechas:
+        # Si la fecha es hoy y ya se descargó, podría saltar (opcional)
+        if fecha == hoy:
+            logger.info(f"📅 Procesando fecha actual: {fecha}")
         descargar_todos_los_reportes(fecha)
 
 # ========== FUNCIONES PARA BACKEND ==========
 # NOTA: Los nombres de las funciones DEBEN coincidir con lo que espera backend.py
 
-def iniciar_scheduler():  # ← Este es el nombre que espera backend.py
+def iniciar_scheduler(): 
     """Inicia el scheduler para ejecutar descargas automáticas"""
     global _scheduler_running, _scheduler_thread
     
@@ -271,9 +277,8 @@ def iniciar_scheduler():  # ← Este es el nombre que espera backend.py
             except Exception as e:
                 logger.error(f"❌ Error en descarga programada: {e}")
         
-        for horario in HORARIOS_EJECUCION:
-            schedule.every().day.at(horario).do(ejecutar_descarga)
-            logger.info(f"   ✅ CDR programada a las {horario}")
+        schedule.every(15).minutes.do(ejecutar_descarga)
+        logger.info(f" CDR programada a las 15")
         
         _scheduler_running = True
         
@@ -292,14 +297,14 @@ def iniciar_scheduler():  # ← Este es el nombre que espera backend.py
         logger.error(f"❌ Error iniciando scheduler CDR: {e}")
         return False
 
-def detener_scheduler():  # ← Este es el nombre que espera backend.py
+def detener_scheduler(): 
     """Detiene el scheduler de CDR"""
     global _scheduler_running
     _scheduler_running = False
     logger.info("⏹️ Scheduler CDR detenido")
     return True
 
-def estado_scheduler():  # ← Este es el nombre que espera backend.py
+def estado_scheduler():  
     """Retorna el estado actual del scheduler"""
     try:
         trabajos = schedule.get_jobs()
@@ -313,7 +318,7 @@ def estado_scheduler():  # ← Este es el nombre que espera backend.py
         
         return {
             'running': _scheduler_running,
-            'horarios': HORARIOS_EJECUCION,
+            'INTERVALO_MINUTOS': INTERVALO_MINUTOS,
             'proximos': proximos,
             'modo': MODO_DESCARGA,
             'base_dir': str(BASE_DIR),
