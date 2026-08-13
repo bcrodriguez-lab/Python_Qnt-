@@ -138,29 +138,35 @@ def guardar_email_log(client, registros: List[Dict]) -> None:
         logger.error(f"Error guardando logs: {e}")
 
 def traducir_a_member(html: str, mapeo: Dict[str, int]) -> str:
-    """
-    Traduce {{Nombre Columna}} a %Member:CustomFieldX%
-    """
     import re
     
     resultado = html
-    
     variables = re.findall(r"{{\s*([^{}]+?)\s*}}", html)
     
     for var in variables:
         var_original = var.strip()
         var_lower = var_original.lower()
+        var_guion = var_lower.replace(" ", "_")
+        var_sin_espacios = var_lower.replace(" ", "")
         
+        campo_id = None
         if var_lower in mapeo:
             campo_id = mapeo[var_lower]
+        elif var_guion in mapeo:
+            campo_id = mapeo[var_guion]
+        elif var_sin_espacios in mapeo:
+            campo_id = mapeo[var_sin_espacios]
+        
+        if campo_id:
             resultado = re.sub(
                 r"{{\s*" + re.escape(var_original) + r"\s*}}",
                 f"%Member:CustomField{campo_id}%",
                 resultado,
                 flags=re.IGNORECASE
             )
+            logger.info(f"✅ Mapeado: '{var_original}' → CustomField{campo_id}")
         else:
-            logger.warning(f"⚠️ Variable sin mapeo: '{var_original}'")
+            logger.warning(f"⚠️ Variable sin mapeo: '{var_original}' (buscada como: {var_lower}, {var_guion}, {var_sin_espacios})")
     
     return resultado
 

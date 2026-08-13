@@ -401,16 +401,12 @@ def consultar_auxiliares(fecha: str, mes_inicio: str, client) -> dict[str, pd.Da
               AND Contacto__c IS NOT NULL
         """,
         "venta": f"""
-            SELECT
-                Contacto__c,
-                CAST(Fecha_Acuerdo_de_Pago__c AS STRING) AS Fecha_dia,
+            SELECT DISTINCT
+                ID_ContactoSalesforce AS Contacto__c, 
+                DATE(acu_FechaAcuerdoDePago) AS Fecha_dia, 
                 1 AS Venta_Humano_aux
-            FROM `{PROJECT_ID}.Tablas_Reporteria.reporteMes`
-            WHERE Fecha_Acuerdo_de_Pago__c >= '{mes_inicio}'
-              AND entidades_habilitadas = 'Habilitado'
-              AND Estado_Base__c = 'Habilitado'
-              AND Contacto__c IS NOT NULL
-            GROUP BY Contacto__c, Fecha_dia
+            FROM MySql.qnt_AcuerdoPago
+            WHERE DATE(acu_FechaAcuerdoDePago) >= '{mes_inicio}'
         """,
     }
 
