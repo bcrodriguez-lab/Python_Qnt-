@@ -706,12 +706,10 @@ def procesar_datos(
         1, 0
     ).astype("int64")
 
-    df["Venta_Humano_Identificado"] = np.where(
-        (df["Contacto_Identificado_Robot"] == 1)
-        & (df["Contacto_Identificado_Humano"].fillna(0) == 1)
-        & (df["Venta_Humano"].fillna(0) == 1),
+    df['Venta_Humano_Identificado'] = np.where(
+        df['Venta_Humano'].fillna(0) == 1, 
         1, 0
-    ).astype("int64")
+    )
 
     if "Venta_Humano" in df.columns:
         df.drop(columns=["Venta_Humano"], inplace=True)

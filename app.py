@@ -3625,34 +3625,93 @@ def email_cancelar_programacion(schedule_id):
         return jsonify({"success": False, "message": str(exc)}), 500
 
 
-# ========== NUEVOS ENDPOINTS SIMPLIFICADOS WOLKVOX ==========
 
-@app.route("/auto-campaigns/<int:campaign_id>/clear-wkv", methods=["POST"])
+# ========== ENDPOINT SIMPLIFICADO WOLKVOX (CON clear_campaign) ==========
+@app.route("/auto-campaigns/<int:campaign_id>/clear-wkv", methods=["DELETE"])
 def auto_campaigns_clear_wkv(campaign_id):
-    """Limpia los registros de una campaña en Wolkvox."""
+    """
+    Limpia TODOS los registros de una campaña en Wolkvox.
+    Usa el endpoint nativo clear_campaign de Wolkvox.
+    """
     from database import AutoCampaign
-    from auto_campaign_executor import _clean_wolkvox_campaign, _get_token
+    from auto_campaign_executor import _get_token, _get_base_url_wolkvox
+    import requests
+    import logging
     
-    campaign = AutoCampaign.query.get(campaign_id)
+    logger = logging.getLogger(__name__)
+    
+    # 1. Buscar campaña en BD
+    campaign = db.session.get(AutoCampaign, campaign_id)
     if not campaign:
         return jsonify({"success": False, "message": "Campaña no encontrada."}), 404
     
     try:
+        # 2. Obtener token
         token = _get_token(campaign)
         if not token:
             return jsonify({"success": False, "message": "No se encontró token Wolkvox."}), 400
         
-        result = _clean_wolkvox_campaign(campaign, token)
+        # 3. Obtener datos de la campaña
+        campaign_id_wkv = str(campaign.wolkvox_campaign_id or "").strip()
+        base_url = _get_base_url_wolkvox(campaign.server_name or "")
+        campaign_type = campaign.campaign_type or "predictive"
         
-        if result.get("success"):
-            log_gui_action("Limpiar campaña Wolkvox", id=campaign_id, campaign_name=campaign.name)
+        # 4. 🔥 CONSTRUIR URL CON EL ENDPOINT NATIVO clear_campaign
+        url = f"{base_url}/api/v2/campaign.php"
+        params = {
+            "api": "clear_campaign",
+            "type_campaign": campaign_type,
+            "campaign_id": campaign_id_wkv
+        }
+        headers = {"wolkvox-token": token}
+        
+        logger.info(f"🗑️ Limpiando campaña {campaign_id_wkv} en {base_url}")
+        logger.info(f"📡 DELETE {url}?api=clear_campaign&type_campaign={campaign_type}&campaign_id={campaign_id_wkv}")
+        
+        # 5. 🔥 UNA SOLA PETICIÓN DELETE (en lugar de GET + múltiples DELETE)
+        response = requests.delete(url, params=params, headers=headers, timeout=60)
+        
+        # 6. Procesar respuesta
+        if response.ok:
+            data = response.json()
+            logger.info(f"✅ Campaña limpiada exitosamente: {data}")
+            
+            log_gui_action("Limpiar campaña Wolkvox (clear_campaign)", 
+                          id=campaign_id, 
+                          campaign_name=campaign.name,
+                          wkv_id=campaign_id_wkv)
+            
+            return jsonify({
+                "success": True,
+                "message": f"Todos los registros de la campaña {campaign_id_wkv} han sido eliminados.",
+                "campaign_id": campaign_id_wkv,
+                "response": data
+            })
         else:
-            log_gui_action("Limpiar campaña Wolkvox falló", id=campaign_id, mensaje=result.get("message"))
-        
-        return jsonify(result)
+            # Error en la petición
+            error_msg = f"Error HTTP {response.status_code}: {response.text[:200]}"
+            logger.error(f"❌ {error_msg}")
+            
+            log_gui_action("Limpiar campaña Wolkvox falló", 
+                          id=campaign_id, 
+                          mensaje=error_msg)
+            
+            return jsonify({
+                "success": False,
+                "message": f"No se pudo limpiar la campaña: {response.status_code}",
+                "detail": response.text[:500]
+            }), response.status_code
+            
+    except requests.exceptions.Timeout:
+        logger.error("⏱️ Timeout al limpiar campaña")
+        return jsonify({"success": False, "message": "Timeout al comunicarse con Wolkvox"}), 500
+    except requests.exceptions.ConnectionError as e:
+        logger.error(f"🔌 Error de conexión: {e}")
+        return jsonify({"success": False, "message": f"Error de conexión: {str(e)}"}), 500
     except Exception as e:
         logger.exception("Error limpiando campaña Wolkvox")
         return jsonify({"success": False, "message": str(e)}), 500
+
 
 def get_blacklist_phones():
    
