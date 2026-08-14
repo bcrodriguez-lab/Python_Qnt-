@@ -11,3 +11,9 @@
 2026-08-13 10:46:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-08-13...
 2026-08-13 10:48:34 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-08-13
 2026-08-13 10:48:34 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-08-13
+2026-08-14 09:29:29 - INFO - [SMS] Campaña='Prueba api' Usuario='Bryan' Total=2 Enviados=500 Fallidos=0 Estado=exitoso
+2026-08-14 09:29:45 - INFO - [SMS] Campaña='Prueba api' Usuario='Bryan' Total=2 Enviados=500 Fallidos=0 Estado=exitoso
+2026-08-14 10:46:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-08-14...
+2026-08-14 10:46:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-08-14...
+2026-08-14 10:46:05 - ERROR - ❌ bigquery_processor.py falló con código 1
+2026-08-14 10:46:05 - ERROR - ❌ bigquery_processor.py falló con código 1

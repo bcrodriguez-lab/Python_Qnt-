@@ -785,6 +785,15 @@ def inject_admin_ui():
 def config_sms():
     return render_template("config_sms.html")
 
+def registrar_resumen_sms(campaign, usuario, query, plantilla, total, enviados, fallidos, estado):
+    """Registra un resumen del envío en el log (no interrumpe el flujo)."""
+    try:
+        log_task(
+            f"[SMS] Campaña='{campaign}' Usuario='{usuario}' "
+            f"Total={total} Enviados={enviados} Fallidos={fallidos} Estado={estado}"
+        )
+    except Exception:
+        pass
 
 # ==================== SMS - PREVIEW ====================
 
@@ -1532,6 +1541,7 @@ def email_validar():
 
 @app.route("/api/email/enviar", methods=["POST"])
 def email_send():
+    """Envía emails usando campos personalizados de la API."""
     data = request.get_json(silent=True) or {}
     query = (data.get("query") or "").strip()
     plantilla = (data.get("plantilla") or "").strip()
@@ -1615,7 +1625,24 @@ def email_send():
         if not campos_result.get("success"):
             raise EmailServiceError("No se pudieron obtener los campos personalizados")
 
-        mapeo_campos = {}
+        email_config = config.get("email",{})
+        mapeo_campos = email_config.get("field_mapping", {})
+
+        if not mapeo_campos:
+        # Usar mapeo por defecto
+            mapeo_campos = {
+                "customer_name": 1, "nombre": 1, "customer_id": 3, "id_cliente": 3,
+                "cuotas": 5, "segmento": 7, "link_pago": 8, "link": 8,
+                "campaign_id": 10, "id_campana": 10, "id_mensaje": 11,
+                "descripcion_campana": 12, "objetivo_campana": 13,
+                "nombre_banco": 14, "nombre_campana": 15,
+                "canal_ley": 16, "ley_contacto": 17,
+                "id_asunto": 18, "asunto": 19,
+                "tel1": 21, "telefono": 21, "celular": 21,
+                "valor_pagar": 22, "porcentaje": 23, "fecha_pago": 24,
+                "valor_pagar_2": 2, "valor_oferta_esp_2": 4,
+                "porcentaje_2": 6, "link_2": 9, "fecha_pago_2": 20,
+            }
         for campo in campos_result.get("data", []):
             nombre_original = campo["name"]
             id_campo = campo["id"]
@@ -1633,16 +1660,23 @@ def email_send():
         emails_enviados = []
         errores = []
         contenido_preview = ""
+        asunto_preview = ""
 
+        # 🔥🔥🔥 RECORRER FILAS Y PROCESAR PLANTILLA 🔥🔥🔥
         for i, row in enumerate(rows):
             email = str(row.get(email_column, "")).strip()
             if not email or "@" not in email:
                 continue
 
-            contenido = construir_contenido(row, plantilla)
+            # 🔥 PROCESAR PLANTILLA PARA CADA FILA
+            contenido_personalizado = construir_contenido(row, plantilla)
+            asunto_personalizado = construir_contenido(row, asunto) if asunto else "Sin asunto"
+            
             if i == 0:
-                contenido_preview = contenido
+                contenido_preview = contenido_personalizado
+                asunto_preview = asunto_personalizado
 
+            # Mapear valores de la fila a campos personalizados
             campos_personalizados = {}
             for col_name, col_value in row.items():
                 if col_value is None or str(col_value).strip() == "":
@@ -1696,22 +1730,25 @@ def email_send():
 
         client.suscribir_contactos(contact_ids, lista_id)
 
-        if not contenido_preview or len(str(contenido_preview).strip()) < 50:
-            contenido_preview = plantilla
-
+        # ========== 🔥🔥🔥 CREAR CAMPAÑA CON CONTENIDO PROCESADO 🔥🔥🔥 ==========
         from services.email_service import traducir_a_member
+        
+        # 🔥 IMPORTANTE: Traducir la plantilla ORIGINAL (con {{variables}}) a formato Member
         plantilla_api = traducir_a_member(plantilla, mapeo_campos)
         asunto_api = traducir_a_member(asunto, mapeo_campos) if asunto else ""
 
+        # 🔥 La campaña se crea con la plantilla traducida
+        # Infobip reemplazará %Member:CustomFieldX% con los valores de cada contacto
         campana_result = client.crear_campana({
             "name": campana_nombre or f"Email {datetime.now().strftime('%Y-%m-%d %H:%M')}",
             "subject": asunto_api or "Sin asunto",
             "fromAlias": from_alias or "QNT",
             "fromEmail": from_email,
             "replyEmail": reply_email or from_email,
-            "content": plantilla_api,
+            "content": plantilla_api,  # ← Plantilla traducida con %Member:CustomFieldX%
             "mailListsIds": [lista_id]
         })
+        
         if not campana_result.get("success"):
             raise EmailServiceError("No se pudo crear la campaña")
 
@@ -1720,34 +1757,46 @@ def email_send():
         if not send_result.get("success"):
             raise EmailServiceError("No se pudo enviar la campaña")
 
+        # ========== GUARDAR LOGS ==========
         now = datetime.now(timezone.utc).isoformat()
         registros = []
         for email in emails_enviados:
             registros.append({
-                "id": str(uuid4()), "email": email, "asunto": asunto,
-                "contenido": str(contenido_preview)[:1000],
-                "campana_id": str(campana_id), "campana_nombre": campana_nombre or "",
-                "fecha_envio": now, "resultado": "enviado", "bulk_id": str(campana_id),
-                "error": "", "campana": campana_nombre or "", "usuario": usuario or "",
-                "fecha_creacion": now, "fecha_actualizacion": now
+                "id": str(uuid4()),
+                "email": email,
+                "asunto": asunto_preview or asunto,
+                "contenido": str(contenido_preview)[:1000] if contenido_preview else plantilla[:1000],
+                "campana_id": str(campana_id),
+                "campana_nombre": campana_nombre or "",
+                "fecha_envio": now,
+                "resultado": "enviado",
+                "bulk_id": str(campana_id),
+                "error": "",
+                "campana": campana_nombre or "",
+                "usuario": usuario or "",
+                "fecha_creacion": now,
+                "fecha_actualizacion": now
             })
 
         guardar_email_log(bq_client, registros)
         log_gui_action("Envio Email", campana_id=campana_id, enviados=len(emails_enviados))
 
         return jsonify({
-            "success": True, "campana_id": campana_id,
-            "enviados": len(emails_enviados), "fallidos": len(errores),
+            "success": True,
+            "campana_id": campana_id,
+            "enviados": len(emails_enviados),
+            "fallidos": len(errores),
             "errores": errores[:10],
-            "blacklist_excluidos": len(blacklist), "duplicados_excluidos": len(duplicados),
+            "blacklist_excluidos": len(blacklist),
+            "duplicados_excluidos": len(duplicados),
             "message": f"{len(emails_enviados)} emails enviados"
         })
+        
     except (EmailServiceError, EmailClientError) as exc:
         return jsonify({"success": False, "message": str(exc)}), 400
     except Exception as exc:
         logger.exception("Error enviando emails")
         return jsonify({"success": False, "message": str(exc)}), 500
-
 
 # ==================== EMAIL - HISTORIAL ====================
 

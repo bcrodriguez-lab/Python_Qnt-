@@ -401,12 +401,24 @@ def consultar_auxiliares(fecha: str, mes_inicio: str, client) -> dict[str, pd.Da
               AND Contacto__c IS NOT NULL
         """,
         "venta": f"""
-            SELECT DISTINCT
-                ID_ContactoSalesforce AS Contacto__c, 
-                DATE(acu_FechaAcuerdoDePago) AS Fecha_dia, 
-                1 AS Venta_Humano_aux
+            SELECT 
+            ID_ContactoSalesforce AS Contacto__c,
+            DATE(acu_FechaAcuerdoDePago) AS Fecha_dia,
+            EXTRACT(HOUR FROM acu_FechaAcuerdoDePago) AS HORA_VENTA,  
+            1 AS Venta_Humano_aux, 
+            SUM(acu_VrCuota1) AS acu_VrCuota1,
+            SUM(acu_VrCuotaMensual) AS acu_VrCuotaMensual,
+            SUM(acu_ValorPagadoFiltrado) AS acu_ValorPagadoFiltrado
+                    
+
             FROM MySql.qnt_AcuerdoPago
-            WHERE DATE(acu_FechaAcuerdoDePago) >= '{mes_inicio}'
+
+            WHERE acu_FechaAcuerdoDePago >='{mes_inicio}'
+
+            GROUP BY 
+            Contacto__c, 
+            Fecha_dia,
+            HORA_VENTA;
         """,
     }
 
@@ -469,8 +481,11 @@ def procesar_datos(
 
     # Normalizar tipos
     if "DATE" in df.columns:
-        df["DATE"] = pd.to_datetime(df["DATE"], errors="coerce")
+        if df["DATE"].dtype == "object":
+            df["DATE"] = pd.to_datetime(df["DATE"], errors="coerce")
+    
     if "Contacto__c" in df.columns:
+
         df["Contacto__c"] = df["Contacto__c"].astype(str).str.strip()
     if "COD_ACT" in df.columns:
         df["COD_ACT"] = df["COD_ACT"].astype(str).str.strip()
@@ -670,14 +685,25 @@ def procesar_datos(
     # ── 8. Merge con ventas ──────────────────────────────────────────────
     df_venta = auxiliares.get("venta", pd.DataFrame())
     if not df_venta.empty:
+        if "HORA_VENTA" not in df_venta.columns:
+            df_venta["HORA_VENTA"] = 0
+
+
         df = df.merge(
-            df_venta[["Contacto__c", "Fecha_dia", "Venta_Humano_aux"]],
+            df_venta[["Contacto__c", "Fecha_dia", "Venta_Humano_aux","HORA_VENTA"]],
             on=["Contacto__c", "Fecha_dia"],
             how="left",
         )
         df["Venta_Humano"] = pd.to_numeric(
             df["Venta_Humano_aux"], errors="coerce"
         ).fillna(0).astype("int64")
+
+        df["Hora_Venta"] = pd.to_datetime(
+            df["Fecha_dia"] + " " + df["HORA_VENTA"].astype(str) + ":00:00",
+            errors= "coerce"
+        )
+
+
         df.drop(columns=["Venta_Humano_aux"], inplace=True)
 
     logger.info(
@@ -703,9 +729,11 @@ def procesar_datos(
     ).astype("int64")
 
     df['Venta_Humano_Identificado'] = np.where(
-        df['Venta_Humano'].fillna(0) == 1, 
+        (df['Venta_Humano'].fillna(0) == 1) &
+        (df["Hora_Venta"] >= df ["DATE"]), 
+        
         1, 0
-    )
+    ).astype("int64")
 
     if "Venta_Humano" in df.columns:
         df.drop(columns=["Venta_Humano"], inplace=True)

@@ -259,7 +259,6 @@ def descargar_segun_configuracion():
         descargar_todos_los_reportes(fecha)
 
 # ========== FUNCIONES PARA BACKEND ==========
-# NOTA: Los nombres de las funciones DEBEN coincidir con lo que espera backend.py
 
 def iniciar_scheduler(): 
     """Inicia el scheduler para ejecutar descargas automáticas"""
