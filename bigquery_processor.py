@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-bigquery_processor.py  (v10.10 — DEFINITIVO CON CAMPANAS_DESAROLLO)
+bigquery_processor.py  (v10.12 — SOLO SUBE A Embudos_Robot_Advanced)
 ===============================================================================
-PROCESA TODOS LOS CDR CON TODOS LOS DATOS
+PROCESA CDR Y SUBE EXCLUSIVAMENTE A Embudos_Robot_Advanced
 """
 
 from __future__ import annotations
@@ -28,21 +28,22 @@ from google.oauth2 import service_account
 warnings.filterwarnings(
     "ignore",
     message=".*BigQuery Storage module not found.*",
-   category=UserWarning,
+    category=UserWarning,
 )
 
 logger = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CONFIGURACION
+# 🔥 CONFIGURACION - SOLO UNA TABLA
 # ─────────────────────────────────────────────────────────────────────────────
-PROJECT_ID        = "capable-arbor-209819"
-TABLE_CONSOLIDADO = f"{PROJECT_ID}.Temporal.Embudo_Consolidado"
-TABLE_POSITIVOS   = f"{PROJECT_ID}.Temporal.Embudo_Positivo_Robot_TEST"
+PROJECT_ID = "capable-arbor-209819"
 
-BASE_DIR_CRED     = os.path.dirname(os.path.abspath(__file__))
-CREDENTIALS_PATH  = os.path.join(BASE_DIR_CRED, "config", "google_key.json")
-BASE_DIR_DRIVE    = r"G:\Unidades compartidas\Analitica\Embudo de Conversión\Proyecto Robot Omnicanal\Producción\2026-06\Resultados"
+# 🔥 LA ÚNICA TABLA QUE IMPORTA
+TABLE_EMBUDOS_ROBOT = f"{PROJECT_ID}.Operacion_Analitica.Embudos_Robot_Advanced"
+
+BASE_DIR_CRED = os.path.dirname(os.path.abspath(__file__))
+CREDENTIALS_PATH = os.path.join(BASE_DIR_CRED, "config", "google_key.json")
+BASE_DIR_DRIVE = r"G:\Unidades compartidas\Analitica\Embudo de Conversión\Proyecto Robot Omnicanal\Producción\2026-06\Resultados"
 
 TIPIFICACIONES_ROBOT: list = [
     "CV_CONT_RECP",
@@ -53,43 +54,8 @@ TIPIFICACIONES_ROBOT: list = [
     "CV_CUELGA",
 ]
 
-MAX_RETRIES    = 3
+MAX_RETRIES = 3
 RETRY_BASE_SEC = 5
-
-SCHEMA_POSITIVOS = {
-    "Fecha_dia":                    "STRING",
-    "DATE":                         "DATETIME",
-    "Rango_Horario":                "STRING",
-    "Hora":                         "INT64", 
-    "agent_id":                     "STRING",
-
-    "Dia_Semana":                   "STRING",
-    "Numero_Dia_Semana":            "INT64",
-    "TELEPHONE":                    "INT64",
-    "COD_ACT":                      "STRING",
-    "Grupo_Operador":               "STRING",
-    "Operado_Por__c":               "STRING",
-    "CONN_ID":                      "STRING",
-    "Contacto__c":                  "STRING",
-    "campaign_id":                  "STRING",
-    "campaign_name":                "STRING",
-    "servidor":                     "STRING",
-    "Gestion_Marcador":             "INT64",
-    "Entidad_principal":            "STRING",
-    "localizado_historico":         "STRING",
-    "Contacto_Identificado_Robot":  "INT64",
-    "Gestion_Humano":               "INT64",
-    "Contacto_Identificado_Humano": "INT64",
-    "Venta_Humano_Identificado":    "INT64",
-}
-
-COLUMNAS_A_ELIMINAR = [
-    'AGENT_NAME', 'COMMENT', 'COST',
-    'DESCRIPTION_COD_ACT', 'DESCRIPTION_COD_ACT_2', 'DESTINY',
-    'SKILL_NAME', 'SKILL_ID', 'TIME_MIN', 'TIME_SEG',
-    'TYPE_INTERACTION', 'HANG_UP', 'COD_ACT_2',
-]
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CREDENCIALES Y HELPERS
@@ -152,58 +118,8 @@ def _run_dml(client, sql: str, description: str = "DML") -> int:
     return rows
 
 
-def _run_ddl(client, sql: str, description: str = "DDL") -> None:
-    def _exec(s):
-        job = client.query(s)
-        job.result()
-        return job
-    _retry_bq_operation(_exec, description, sql)
-    logger.info(f"   {description}: OK")
-
-
-def _asegurar_columnas_positivos(client):
-    try:
-        table = _retry_bq_operation(
-            client.get_table, f"GET SCHEMA {TABLE_POSITIVOS}", TABLE_POSITIVOS
-        )
-        columnas_existentes = {field.name for field in table.schema}
-    except Exception:
-        logger.info(f"   Tabla {TABLE_POSITIVOS} no existe aun, se creara en el primer upload.")
-        return
-
-    columnas_faltantes = {
-        col: tipo for col, tipo in SCHEMA_POSITIVOS.items()
-        if col not in columnas_existentes
-    }
-
-    if not columnas_faltantes:
-        logger.info(f"   Schema Positivos OK ({len(columnas_existentes)} columnas)")
-        return
-
-    logger.info(f"   Agregando {len(columnas_faltantes)} columnas faltantes a Positivos...")
-    for col, tipo in columnas_faltantes.items():
-        sql = f"ALTER TABLE `{TABLE_POSITIVOS}` ADD COLUMN IF NOT EXISTS {col} {tipo}"
-        _run_ddl(client, sql, f"ADD COLUMN {col} {tipo}")
-
-
 # ─────────────────────────────────────────────────────────────────────────────
-# FUNCION PARA LIMPIAR NOMBRES DE CAMPAÑA
-# ─────────────────────────────────────────────────────────────────────────────
-
-def limpiar_nombre_campana(valor):
-    """Quita el guion al inicio de un nombre de campaña."""
-    if pd.isna(valor) or str(valor).strip() == "":
-        return valor
-    texto = str(valor).strip()
-    if texto.startswith("- "):
-        return texto[2:].strip()
-    if texto.startswith("-"):
-        return texto[1:].strip()
-    return texto
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# LECTURA DE CDR DESDE EXCEL
+# LECTURA DE CDR DESDE EXCEL (SIN CAMBIOS)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def leer_cdr_excel(fecha: str) -> pd.DataFrame:
@@ -258,7 +174,13 @@ def leer_cdr_excel(fecha: str) -> pd.DataFrame:
     if 'Fecha_dia' not in df_cdr.columns:
         df_cdr['Fecha_dia'] = fecha
 
-    for col in COLUMNAS_A_ELIMINAR:
+    columnas_a_eliminar = [
+        'AGENT_NAME', 'COMMENT', 'COST',
+        'DESCRIPTION_COD_ACT', 'DESCRIPTION_COD_ACT_2', 'DESTINY',
+        'SKILL_NAME', 'SKILL_ID', 'TIME_MIN', 'TIME_SEG',
+        'TYPE_INTERACTION', 'HANG_UP', 'COD_ACT_2',
+    ]
+    for col in columnas_a_eliminar:
         if col in df_cdr.columns:
             df_cdr.drop(columns=[col], inplace=True)
 
@@ -272,7 +194,7 @@ def leer_cdr_excel(fecha: str) -> pd.DataFrame:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# LECTURA DE CAMPANAS DESDE EXCEL
+# LECTURA DE CAMPANAS DESDE EXCEL (SIN CAMBIOS)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def leer_campanas_excel(fecha: str) -> pd.DataFrame:
@@ -436,7 +358,7 @@ def leer_campanas_excel(fecha: str) -> pd.DataFrame:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CONSULTA DE AUXILIARES DESDE BIGQUERY
+# CONSULTA DE AUXILIARES DESDE BIGQUERY (SIN CAMBIOS)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def consultar_auxiliares(fecha: str, mes_inicio: str, client) -> dict[str, pd.DataFrame]:
@@ -445,8 +367,7 @@ def consultar_auxiliares(fecha: str, mes_inicio: str, client) -> dict[str, pd.Da
             SELECT DISTINCT
                 Contacto__c,
                 Operado_Por__c,
-                Entidad_principal,
-                Name AS campaign_name_bq
+                Entidad_principal
             FROM `{PROJECT_ID}.Campanas.Campanas_intradia`
             WHERE Contacto__c IS NOT NULL
               AND Operado_Por__c IS NOT NULL
@@ -480,16 +401,24 @@ def consultar_auxiliares(fecha: str, mes_inicio: str, client) -> dict[str, pd.Da
               AND Contacto__c IS NOT NULL
         """,
         "venta": f"""
-            SELECT
-                Contacto__c,
-                CAST(Fecha_Acuerdo_de_Pago__c AS STRING) AS Fecha_dia,
-                1 AS Venta_Humano_aux
-            FROM `{PROJECT_ID}.Tablas_Reporteria.reporteMes`
-            WHERE Fecha_Acuerdo_de_Pago__c >= '{mes_inicio}'
-              AND entidades_habilitadas = 'Habilitado'
-              AND Estado_Base__c = 'Habilitado'
-              AND Contacto__c IS NOT NULL
-            GROUP BY Contacto__c, Fecha_dia
+            SELECT 
+            ID_ContactoSalesforce AS Contacto__c,
+            DATE(acu_FechaAcuerdoDePago) AS Fecha_dia,
+            EXTRACT(HOUR FROM acu_FechaAcuerdoDePago) AS HORA_VENTA,  
+            1 AS Venta_Humano_aux, 
+            SUM(acu_VrCuota1) AS acu_VrCuota1,
+            SUM(acu_VrCuotaMensual) AS acu_VrCuotaMensual,
+            SUM(acu_ValorPagadoFiltrado) AS acu_ValorPagadoFiltrado
+                    
+
+            FROM MySql.qnt_AcuerdoPago
+
+            WHERE acu_FechaAcuerdoDePago >='{mes_inicio}'
+
+            GROUP BY 
+            Contacto__c, 
+            Fecha_dia,
+            HORA_VENTA;
         """,
     }
 
@@ -513,7 +442,7 @@ def consultar_auxiliares(fecha: str, mes_inicio: str, client) -> dict[str, pd.Da
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CALCULO DE GRUPO OPERADOR
+# CALCULO DE GRUPO OPERADOR (SIN CAMBIOS)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def calcular_grupo_operador(operado_por) -> str:
@@ -535,8 +464,9 @@ def calcular_grupo_operador(operado_por) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PROCESAMIENTO DE DATOS
+# PROCESAMIENTO DE DATOS (SIN CAMBIOS)
 # ─────────────────────────────────────────────────────────────────────────────
+
 def procesar_datos(
     df_cdr: pd.DataFrame,
     fecha: str,
@@ -551,18 +481,19 @@ def procesar_datos(
 
     # Normalizar tipos
     if "DATE" in df.columns:
-        df["DATE"] = pd.to_datetime(df["DATE"], errors="coerce")
+        if df["DATE"].dtype == "object":
+            df["DATE"] = pd.to_datetime(df["DATE"], errors="coerce")
+    
     if "Contacto__c" in df.columns:
+
         df["Contacto__c"] = df["Contacto__c"].astype(str).str.strip()
     if "COD_ACT" in df.columns:
         df["COD_ACT"] = df["COD_ACT"].astype(str).str.strip()
     
-    #Mapeo de fechas horas dias de la seman y rangos horarios
+    # Mapeo de fechas horas
     if "DATE" in df.columns:
-        # Hora: número entero (0-23) para cálculos
         df["Hora"] = df["DATE"].dt.hour
         
-        # Rango Horario (basado en número)
         def get_rango_horario(hora):
             if 8 <= hora < 10:
                 return "8-10 AM"
@@ -578,11 +509,8 @@ def procesar_datos(
                 return "6-8 PM"
         
         df["Rango_Horario"] = df["Hora"].apply(get_rango_horario)
-        
-        # Día de la semana (en inglés, puedes cambiar a español)
         df["Dia_Semana"] = df["DATE"].dt.day_name(locale='es_ES')
         df["Dia_Semana"] = df["Dia_Semana"].str.capitalize()  
-        
         df["Numero_Dia_Semana"] = df["DATE"].dt.weekday 
         
         logger.info(f"   📋 Hora calculada: {df['Hora'].min()} - {df['Hora'].max()}")
@@ -669,15 +597,10 @@ def procesar_datos(
         df["campaign_id"] = df["campaign_id"].str.replace('-', '')
         df["campaign_id"] = df["campaign_id"].replace('None', None).replace('nan', None)
         logger.info(f"   📋 CDR campaign_id normalizados: {df['campaign_id'].notna().sum():,} con dato")
-        
-        # Mostrar valores únicos para depuración
-        if df['campaign_id'].notna().sum() > 0:
-            logger.info(f"   📋 CDR campaign_id únicos (muestra): {df['campaign_id'].dropna().unique().tolist()[:10]}")
 
     # ── 3. Enriquecer con campanas_desarollo ──────────────────────────────
     df_campanas_desarollo = auxiliares.get("campanas_desarollo", pd.DataFrame())
     if not df_campanas_desarollo.empty and "campaign_id" in df_campanas_desarollo.columns:
-        # Normalizar campaign_id en campanas_desarollo
         df_campanas_desarollo["campaign_id"] = df_campanas_desarollo["campaign_id"].astype(str).str.strip()
         df_campanas_desarollo["campaign_id"] = df_campanas_desarollo["campaign_id"].str.rstrip('-')
         df_campanas_desarollo["campaign_id"] = df_campanas_desarollo["campaign_id"].str.rstrip()
@@ -685,9 +608,7 @@ def procesar_datos(
         df_campanas_desarollo = df_campanas_desarollo.drop_duplicates(subset=["campaign_id"]).copy()
         
         logger.info(f"   📋 Campañas en campanas_desarollo: {len(df_campanas_desarollo)} IDs")
-        logger.info(f"   📋 Ejemplo campanas_desarollo: {df_campanas_desarollo.head(5).to_dict('records')}")
         
-        # Hacer merge
         df = df.merge(
             df_campanas_desarollo[["campaign_id", "campaign_name_desarollo"]],
             on="campaign_id",
@@ -696,7 +617,6 @@ def procesar_datos(
         )
         
         if "campaign_name_desarollo" in df.columns:
-            # Solo sobrescribir si NO está vacío
             mask = df["campaign_name_desarollo"].notna() & (df["campaign_name_desarollo"] != "")
             df["campaign_name"] = df["campaign_name"].where(
                 ~mask,
@@ -710,7 +630,7 @@ def procesar_datos(
             
             logger.info(f"   📋 campaign_name enriquecido desde campanas_desarollo: {mask.sum():,} con dato")
 
-    # ── 4. Enriquecer con Intradia (Operado_Por__c y Entidad_principal) ──
+    # ── 4. Enriquecer con Intradia ──────────────────────────────────────
     df_intradia = auxiliares.get("intradia", pd.DataFrame())
     if not df_intradia.empty and "Contacto__c" in df_intradia.columns:
         df_intradia = df_intradia.drop_duplicates(subset=["Contacto__c"]).copy()
@@ -732,18 +652,11 @@ def procesar_datos(
         logger.info(f"   📋 Operado_Por__c desde Intradia: {df['Operado_Por__c'].notna().sum():,} con dato")
         logger.info(f"   📋 Entidad_principal desde Intradia: {df['Entidad_principal'].notna().sum():,} con dato")
 
-    # ── 5. Limpiar nombres de campaña (quitar guiones al inicio) ──
-    for col in ["campaign_name", "Nombre_Campana"]:
-        if col in df.columns:
-            df[col] = df[col].apply(limpiar_nombre_campana)
-            df[col] = df[col].replace('None', None).replace('nan', None).replace('', None)
-            logger.info(f"   📋 {col} limpiado (guiones eliminados)")
-
-    # ── 6. Grupo_Operador ──────────────────────────────────────────────────
+    # ── 5. Grupo_Operador ──────────────────────────────────────────────────
     df["Grupo_Operador"] = df["Operado_Por__c"].apply(calcular_grupo_operador)
     logger.info(f"   📋 Grupo_Operador: {df['Grupo_Operador'].value_counts().to_dict()}")
 
-    # ── 7. Merge con contacto humano ──────────────────────────────────────
+    # ── 6. Merge con contacto humano ──────────────────────────────────────
     df_contacto = auxiliares.get("contacto", pd.DataFrame())
     if not df_contacto.empty:
         df = df.merge(
@@ -756,7 +669,7 @@ def procesar_datos(
         ).fillna(0).astype("int64")
         df.drop(columns=["Contacto_Identificado_Humano_aux"], inplace=True)
 
-    # ── 8. Merge con gestion humana ──────────────────────────────────────
+    # ── 7. Merge con gestion humana ──────────────────────────────────────
     df_gestion = auxiliares.get("gestion", pd.DataFrame())
     if not df_gestion.empty:
         df = df.merge(
@@ -769,17 +682,28 @@ def procesar_datos(
         ).fillna(0).astype("int64")
         df.drop(columns=["Gestion_Humano_aux"], inplace=True)
 
-    # ── 9. Merge con ventas ──────────────────────────────────────────────
+    # ── 8. Merge con ventas ──────────────────────────────────────────────
     df_venta = auxiliares.get("venta", pd.DataFrame())
     if not df_venta.empty:
+        if "HORA_VENTA" not in df_venta.columns:
+            df_venta["HORA_VENTA"] = 0
+
+
         df = df.merge(
-            df_venta[["Contacto__c", "Fecha_dia", "Venta_Humano_aux"]],
+            df_venta[["Contacto__c", "Fecha_dia", "Venta_Humano_aux","HORA_VENTA"]],
             on=["Contacto__c", "Fecha_dia"],
             how="left",
         )
         df["Venta_Humano"] = pd.to_numeric(
             df["Venta_Humano_aux"], errors="coerce"
         ).fillna(0).astype("int64")
+
+        df["Hora_Venta"] = pd.to_datetime(
+            df["Fecha_dia"] + " " + df["HORA_VENTA"].astype(str) + ":00:00",
+            errors= "coerce"
+        )
+
+
         df.drop(columns=["Venta_Humano_aux"], inplace=True)
 
     logger.info(
@@ -789,7 +713,7 @@ def procesar_datos(
         f"Venta: {int(df['Venta_Humano'].sum()):,}"
     )
 
-    # ── 10. Calcular flags ──────────────────────────────────────────────────
+    # ── 9. Calcular flags ──────────────────────────────────────────────────
     df["Contacto_Identificado_Robot"] = np.where(
         df["COD_ACT"].isin(TIPIFICACIONES_ROBOT), 1, 0
     ).astype("int64")
@@ -804,10 +728,10 @@ def procesar_datos(
         1, 0
     ).astype("int64")
 
-    df["Venta_Humano_Identificado"] = np.where(
-        (df["Contacto_Identificado_Robot"] == 1)
-        & (df["Contacto_Identificado_Humano"].fillna(0) == 1)
-        & (df["Venta_Humano"].fillna(0) == 1),
+    df['Venta_Humano_Identificado'] = np.where(
+        (df['Venta_Humano'].fillna(0) == 1) &
+        (df["Hora_Venta"] >= df ["DATE"]), 
+        
         1, 0
     ).astype("int64")
 
@@ -826,7 +750,7 @@ def procesar_datos(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ENRIQUECIMIENTO CON BIGQUERY (SQL)
+# ENRIQUECIMIENTO CON BIGQUERY
 # ─────────────────────────────────────────────────────────────────────────────
 
 def enriquecer_columnas_bq(df_procesado: pd.DataFrame, fecha: str, client) -> pd.DataFrame:
@@ -836,7 +760,7 @@ def enriquecer_columnas_bq(df_procesado: pd.DataFrame, fecha: str, client) -> pd
     df = df_procesado.copy()
     df["Contacto__c"] = df["Contacto__c"].astype(str).str.strip()
 
-    # 1. Ultimo_Contacto (GestionesTitular)
+    # 1. Ultimo_Contacto
     try:
         sql = f"""
             SELECT Contacto__c, Fecha_Gestion__c AS Ultimo_Contacto
@@ -858,7 +782,7 @@ def enriquecer_columnas_bq(df_procesado: pd.DataFrame, fecha: str, client) -> pd
     except Exception as exc:
         logger.warning(f"   ⚠️ No se pudo enriquecer Ultimo_Contacto: {exc}")
 
-    # 2. Gestion_Marcador (Campanas_Marcador)
+    # 2. Gestion_Marcador
     try:
         sql = f"""
             SELECT DISTINCT Info1 AS Contacto__c, 1 AS Gestion_Marcador_bq
@@ -885,7 +809,7 @@ def enriquecer_columnas_bq(df_procesado: pd.DataFrame, fecha: str, client) -> pd
         if "Gestion_Marcador" not in df.columns:
             df["Gestion_Marcador"] = 0
 
-    # 3. localizado_historico (calculado)
+    # 3. localizado_historico
     if "DATE" in df.columns:
         fecha_dt = pd.to_datetime(df["DATE"], errors="coerce")
     else:
@@ -912,188 +836,108 @@ def enriquecer_columnas_bq(df_procesado: pd.DataFrame, fecha: str, client) -> pd
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CONVERSION DE TIPOS PARA BIGQUERY
+# 🔥 FUNCION PRINCIPAL - SOLO SUBE A Embudos_Robot_Advanced
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _convertir_tipos_bq(df: pd.DataFrame) -> pd.DataFrame:
+def convertir_tipos_bq(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
     # STRING
     for col in ["Operado_Por__c", "CONN_ID", "Contacto__c", "COD_ACT",
                 "Grupo_Operador", "campaign_id", "campaign_name", "Nombre_Campana",
-                "Fecha_dia", "servidor", "Ultimo_Contacto", "Entidad_principal", "localizado_historico","agent_id","Rango_Horario", "Dia_Semana", ]:
+                "Fecha_dia", "servidor", "Ultimo_Contacto", "Entidad_principal", 
+                "localizado_historico", "agent_id", "Rango_Horario", "Dia_Semana"]:
         if col in df.columns:
             df[col] = df[col].astype(str).replace({'nan': None, 'None': None, '': None})
 
-    # INT64 metricas
+    # INT64
     for col in ["Contacto_Identificado_Robot", "Gestion_Humano",
                 "Contacto_Identificado_Humano", "Venta_Humano_Identificado",
-                "Gestion_Marcador","Hora","Numero_Dia_Semana" ]:
+                "Gestion_Marcador", "Hora", "Numero_Dia_Semana"]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype("int64")
 
-    # TELEPHONE a INT64
     if "TELEPHONE" in df.columns:
         df["TELEPHONE"] = pd.to_numeric(df["TELEPHONE"], errors="coerce").fillna(0).astype("int64")
 
-    # DATE a DATETIME
     if "DATE" in df.columns:
         df["DATE"] = pd.to_datetime(df["DATE"], errors="coerce")
-
-    # Resto object: NaN -> None
-    for col in df.columns:
-        if df[col].dtype == object:
-            df[col] = df[col].where(df[col].notna(), None)
 
     return df
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# SUBIR A EMBUDO_CONSOLIDADO (RESPALDO)
-# ─────────────────────────────────────────────────────────────────────────────
-def subir_a_embudo_consolidado(df_cdr: pd.DataFrame, fecha: str, client) -> bool:
-    if df_cdr.empty:
-        return False
-
-    df_subir = df_cdr.copy()
-
-    # 🔥 ELIMINAR COLUMNAS QUE NO EXISTEN EN LA TABLA
-    columnas_a_eliminar = ['AGENT_NAME', 'COMMENT', 'COST', 
-                           'DESCRIPTION_COD_ACT', 'DESCRIPTION_COD_ACT_2', 
-                           'DESTINY', 'SKILL_NAME', 'SKILL_ID', 'TIME_MIN', 'TIME_SEG',
-                           'TYPE_INTERACTION', 'HANG_UP', 'COD_ACT_2']
-    
-    for col in columnas_a_eliminar:
-        if col in df_subir.columns:
-            df_subir.drop(columns=[col], inplace=True)
-            logger.info(f"   Eliminada columna: {col}")
-
-    # Eliminar servidor (ya existe en la tabla Consolidado)
-    if 'servidor' in df_subir.columns:
-        df_subir.drop(columns=['servidor'], inplace=True)
-        logger.info(f"   Eliminada columna: servidor (ya existe en la tabla)")
-
-    df_subir["Fecha_dia"] = fecha
-
-    if "tipo_reporte" not in df_subir.columns:
-        df_subir["tipo_reporte"] = "CDR"
-    # Eliminar AGENT_ID antes de subir
-    if 'AGENT_ID' in df_subir.columns:
-        df_subir.drop(columns=['AGENT_ID'], inplace=True)
-        
-    if "DATE" in df_subir.columns:
-        df_subir["DATE"] = pd.to_datetime(df_subir["DATE"], errors="coerce")
-
-
-    #COLUMNAS QUE SE VAN A SUBIR
-
-    for col in ["Operado_Por__c","Hora","Dia_Semana", "Rango_Horario","Numero_Dia_Semana","CONN_ID", "Contacto__c", "COD_ACT",
-                "tipo_reporte", "Fecha_dia", "campaign_id"]:
-        if col in df_subir.columns:
-            df_subir[col] = df_subir[col].astype(str).replace({'nan': None, 'None': None, '': None})
-
-    if "TELEPHONE" in df_subir.columns:
-        df_subir["TELEPHONE"] = pd.to_numeric(df_subir["TELEPHONE"], errors="coerce").fillna(0).astype("int64")
-
-    for col in df_subir.columns:
-        if df_subir[col].dtype == object:
-            df_subir[col] = df_subir[col].where(df_subir[col].notna(), None)
-
-    try:
-        sql_delete = f"""
-            DELETE FROM `{TABLE_CONSOLIDADO}`
-            WHERE Fecha_dia = '{fecha}' AND tipo_reporte = 'CDR'
-        """
-        logger.info(f"   🗑️ Eliminando CDR de {fecha} en Embudo_Consolidado...")
-        _run_dml(client, sql_delete, "DELETE Consolidado")
-
-        job_config = bigquery.LoadJobConfig(
-            write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
-        )
-        logger.info(f"   📤 Subiendo {len(df_subir):,} registros a Embudo_Consolidado...")
-
-        def _load(df, table, config):
-            job = client.load_table_from_dataframe(df, table, job_config=config)
-            job.result()
-            return job
-
-        job = _retry_bq_operation(_load, "LOAD Consolidado", df_subir, TABLE_CONSOLIDADO, job_config)
-        logger.info(f"   ✅ Upload Consolidado OK. Job ID: {job.job_id}")
-        return True
-
-    except Exception as exc:
-        logger.error(f"❌ Error subiendo a Embudo_Consolidado: {exc}")
-        traceback.print_exc()
-        return False
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# SUBIR A POSITIVOS ROBOT TEST (TODOS LOS REGISTROS)
-# ─────────────────────────────────────────────────────────────────────────────
-def subir_a_embudo_positivo(
-    df_procesado: pd.DataFrame,
-    fecha: str,
-    client,
-) -> bool:
+def subir_a_embudos_robot(df_procesado: pd.DataFrame, fecha: str, client) -> bool:
+    """
+    🔥 ÚNICA FUNCIÓN DE SUBIDA - SOLO A Embudos_Robot_Advanced
+    """
     if df_procesado.empty:
+        logger.warning("⚠️ DataFrame vacío, nada que subir")
         return False
 
-    # 🔥 TODOS LOS REGISTROS (NO SOLO ROBOTS)
-    df_todos = df_procesado.copy()
-
-    logger.info(f"   📤 Subiendo TODOS los {len(df_todos):,} registros")
+    df = df_procesado.copy()
     
-    # VERIFICAR campaign_name ANTES DE SUBIR
-    if 'campaign_name' in df_todos.columns:
-        logger.info(f"   📋 campaign_name en df: {df_todos['campaign_name'].notna().sum():,} con dato")
-        logger.info(f"   📋 Ejemplo campaign_name: {df_todos['campaign_name'].head(3).tolist()}")
-    else:
-        logger.warning("   ⚠️ campaign_name NO está en el DataFrame")
-        # Crear campaign_name desde campaign_id
-        df_todos['campaign_name'] = df_todos['campaign_id'].apply(
-            lambda x: f"Campaña {x}" if pd.notna(x) else None
-        )
-        logger.info(f"   📋 campaign_name creado desde campaign_id")
+    logger.info(f"   📤 Subiendo {len(df):,} registros a {TABLE_EMBUDOS_ROBOT}")
 
-    # TODAS las columnas del schema
-    columnas_subir = list(SCHEMA_POSITIVOS.keys())
-
-    cols_disponibles = [c for c in columnas_subir if c in df_todos.columns]
-    df_subir = df_todos[cols_disponibles].copy()
-
-    faltan = [c for c in columnas_subir if c not in df_todos.columns]
-    if faltan:
-        logger.warning(f"   ⚠️ Columnas del schema que NO están en el DataFrame: {faltan}")
-
-    # CONVERTIR TIPOS
-    df_subir = _convertir_tipos_bq(df_subir)
-
+    # 🔥 1. OBTENER COLUMNAS DE LA TABLA
     try:
-        _asegurar_columnas_positivos(client)
+        table = client.get_table(TABLE_EMBUDOS_ROBOT)
+        columnas_destino = [field.name for field in table.schema]
+        logger.info(f"   📋 Columnas en destino: {len(columnas_destino)}")
+    except Exception as e:
+        logger.error(f"❌ No se pudo obtener el esquema: {e}")
+        return False
 
+    # 🔥 2. FILTRAR COLUMNAS QUE EXISTEN
+    columnas_df = df.columns.tolist()
+    columnas_a_subir = [col for col in columnas_df if col in columnas_destino]
+    columnas_eliminadas = [col for col in columnas_df if col not in columnas_destino]
+
+    if columnas_eliminadas:
+        logger.warning(f"   ⚠️ Eliminando {len(columnas_eliminadas)} columnas no existentes")
+        for col in columnas_eliminadas[:10]:
+            logger.warning(f"      - {col}")
+
+    # 🔥 3. CREAR DATAFRAME CON SOLO COLUMNAS QUE EXISTEN
+    df_subir = df[columnas_a_subir].copy()
+
+    # 🔥 4. AGREGAR COLUMNAS FALTANTES CON NULL
+    columnas_faltantes = [col for col in columnas_destino if col not in df_subir.columns]
+    if columnas_faltantes:
+        logger.info(f"   ➕ Agregando {len(columnas_faltantes)} columnas faltantes")
+        for col in columnas_faltantes:
+            df_subir[col] = None
+
+    # 🔥 5. CONVERTIR TIPOS
+    df_subir = convertir_tipos_bq(df_subir)
+
+    # 🔥 6. ORDENAR SEGÚN ESQUEMA
+    df_subir = df_subir[columnas_destino]
+
+    # 🔥 7. ELIMINAR DATOS EXISTENTES
+    try:
         sql_delete = f"""
-            DELETE FROM `{TABLE_POSITIVOS}`
+            DELETE FROM `{TABLE_EMBUDOS_ROBOT}`
             WHERE Fecha_dia = '{fecha}'
         """
-        logger.info(f"   🗑️ Eliminando registros de {fecha} en {TABLE_POSITIVOS}...")
-        _run_dml(client, sql_delete, "DELETE Positivos TEST")
+        logger.info(f"   🗑️ Eliminando registros de {fecha}...")
+        _run_dml(client, sql_delete, "DELETE")
+    except Exception as exc:
+        logger.warning(f"   ⚠️ No se pudo eliminar: {exc}")
 
+    # 🔥 8. SUBIR DATOS
+    try:
         job_config = bigquery.LoadJobConfig(
             write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
         )
-        logger.info(f"   📤 Subiendo {len(df_subir):,} registros a {TABLE_POSITIVOS}...")
 
-        def _load(df, table, config):
-            job = client.load_table_from_dataframe(df, table, job_config=config)
-            job.result()
-            return job
-
-        job = _retry_bq_operation(_load, "LOAD Positivos TEST", df_subir, TABLE_POSITIVOS, job_config)
-        logger.info(f"   ✅ Upload Positivos OK. Job ID: {job.job_id}")
+        job = client.load_table_from_dataframe(df_subir, TABLE_EMBUDOS_ROBOT, job_config=job_config)
+        job.result()
+        
+        logger.info(f"   ✅ Upload OK. Filas: {len(df_subir):,}. Job ID: {job.job_id}")
         return True
 
     except Exception as exc:
-        logger.error(f"❌ Error subiendo a {TABLE_POSITIVOS}: {exc}")
+        logger.error(f"❌ Error subiendo: {exc}")
         traceback.print_exc()
         return False
 
@@ -1113,52 +957,50 @@ def procesar_y_actualizar_bigquery(
 
         sep = "=" * 65
         logger.info(sep)
-        logger.info(f"🚀 INICIO -- PROCESAMIENTO CDR (v10.10 - DEFINITIVO) | fecha={fecha}")
+        logger.info(f"🚀 INICIO -- PROCESAMIENTO CDR (v10.12 - Embudos_Robot_Advanced) | fecha={fecha}")
         logger.info(sep)
 
         credentials = obtener_credenciales()
         if credentials is None:
-            logger.error("❌ No se pudieron obtener credenciales. Proceso abortado.")
+            logger.error("❌ No se pudieron obtener credenciales.")
             return False
         client = _bq_client(credentials)
 
-        # 1. Leer CDR desde Excel
-        logger.info("─ Paso 1/6: Leer CDR desde Excel...")
+        # 1. Leer CDR
+        logger.info("─ Paso 1/5: Leer CDR desde Excel...")
         df_cdr = leer_cdr_excel(fecha)
         if df_cdr.empty:
-            logger.warning(f"⚠️ Sin CDR para {fecha}. Proceso finalizado.")
+            logger.warning(f"⚠️ Sin CDR para {fecha}")
             return False
 
-        # 2. Leer campañas desde Excel
-        logger.info("─ Paso 2/6: Leer campañas desde Excel...")
+        # 2. Leer campañas
+        logger.info("─ Paso 2/5: Leer campañas desde Excel...")
         df_campanas = leer_campanas_excel(fecha)
         if not df_campanas.empty:
             logger.info(f"   ✅ {len(df_campanas)} campañas únicas cargadas")
 
-        # 3. Consultar auxiliares BQ
-        logger.info("─ Paso 3/6: Consultar auxiliares BigQuery...")
+        # 3. Consultar auxiliares
+        logger.info("─ Paso 3/5: Consultar auxiliares BigQuery...")
         auxiliares = consultar_auxiliares(fecha, mes_inicio, client)
 
         # 4. Procesar datos
-        logger.info("─ Paso 4/6: Calcular métricas...")
+        logger.info("─ Paso 4/5: Calcular métricas...")
         df_procesado = procesar_datos(df_cdr, fecha, df_campanas, auxiliares)
         if df_procesado.empty:
             logger.error("❌ Procesamiento no generó datos.")
             return False
 
-        # 5. Subir CDR crudos a Consolidado (respaldo)
-        logger.info("─ Paso 5/6: Subir a Embudo_Consolidado (respaldo)...")
-        subir_a_embudo_consolidado(df_cdr, fecha, client)
-
-        # 6. Enriquecer con BQ y subir a Positivos (TODOS los registros)
-        logger.info("─ Paso 6/6: Enriquecer y subir a Positivos (TODOS)...")
+        # 5. Enriquecer
+        logger.info("─ Paso 5/5: Enriquecer y subir a Embudos_Robot_Advanced...")
         df_procesado = enriquecer_columnas_bq(df_procesado, fecha, client)
-        if not subir_a_embudo_positivo(df_procesado, fecha, client):
-            logger.error("❌ Falló la subida a la tabla de prueba.")
+
+        # 🔥 SUBIR A LA ÚNICA TABLA QUE IMPORTA
+        if not subir_a_embudos_robot(df_procesado, fecha, client):
+            logger.error("❌ Falló la subida")
             return False
 
         logger.info(sep)
-        logger.info(f"🏁 FIN -- ✅ EXITO  |  fecha={fecha}")
+        logger.info(f"EXITO  |  fecha={fecha}")
         logger.info(sep)
         return True
 

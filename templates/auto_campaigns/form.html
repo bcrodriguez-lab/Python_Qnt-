@@ -198,7 +198,6 @@
             <div class="form-text">La consulta debe incluir al menos una columna de teléfono. Todos los campos se enviarán automáticamente a Wolkvox.</div>
         </div>
         
-        <!-- 🔥 SOLO VALIDACIÓN DE CONSULTA (sin mapeo) -->
         <div style="margin-top:16px;">
             <button type="button" class="btn btn-outline-primary" id="btnValidate">
                 <i class="fas fa-check-circle"></i> Validar consulta
@@ -380,7 +379,7 @@
     if (!confirm('¿Limpiar todos los registros de la campaña en Wolkvox?')) return;
     try {
       setLoading(document.getElementById('btnClear'), true);
-      const resp = await fetch('/auto-campaigns/' + campaignId + '/clear-wkv', {method: 'POST'});
+      const resp = await fetch('/auto-campaigns/' + campaignId + '/clear-wkv', {method: 'DELETE'});
       const data = await resp.json();
       showResult(data.success, data.message || 'Campaña limpiada');
     } catch(e) {
