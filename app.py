@@ -613,6 +613,59 @@ def _get_sms_rows(query):
     if not result.get("success"):
         return None, (jsonify(result), 400)
     return result["rows"], None
+
+
+
+#------------------------ Listas Negras --------------------------------------------#
+
+
+def get_blacklist_phones():
+    """
+    Obtiene los teléfonos en lista negra desde la tabla Telefonos_Tutela
+    Retorna: set con teléfonos normalizados (múltiples variantes)
+    """
+    import re
+    
+    try:
+        query = """
+            SELECT DISTINCT Telefono AS telefono
+            FROM `capable-arbor-209819.Tablas_Reporteria.Telefonos_Tutela`
+            WHERE Telefono IS NOT NULL
+              AND Telefono != ''
+        """
+        df = bq_client.query(query).to_dataframe()
+        
+        blacklist = set()
+        for telefono in df['telefono'].astype(str):
+            # Normalizar usando la misma función
+            normalizado = normalizar_telefono(telefono)
+            
+            if normalizado:
+                # Guardar el teléfono normalizado
+                blacklist.add(normalizado)
+                
+                # Guardar variantes para comparación flexible
+                if len(normalizado) == 10:
+                    # Celular con prefijo 57
+                    blacklist.add(f"57{normalizado}")
+                elif len(normalizado) == 7:
+                    # Fijo con prefijo 57 + código de ciudad
+                    blacklist.add(f"571{normalizado}")
+                elif len(normalizado) == 8:
+                    # Fijo con prefijo 57
+                    blacklist.add(f"57{normalizado}")
+        
+        print(f"📋 Lista negra cargada: {len(blacklist)} teléfonos")
+        
+        # Mostrar ejemplos para depuración
+        ejemplo = list(blacklist)[:5]
+        print(f"📋 Ejemplo de teléfonos en lista negra: {ejemplo}")
+        
+        return blacklist
+    except Exception as e:
+        print(f"❌ Error cargando lista negra: {e}")
+        return set()
+
     
 def validar_destinatarios_email(rows, client, confirmar_reenvio=False):
     """Valida emails: inválidos, duplicados y lista negra."""
