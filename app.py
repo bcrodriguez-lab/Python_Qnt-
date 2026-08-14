@@ -615,6 +615,51 @@ def _get_sms_rows(query):
     return result["rows"], None
 
 
+#--------------------------Normalizar telefnos ------------------------------------------------#
+def normalizar_telefono(telefono):
+    """
+    Normaliza un teléfono para comparación en lista negra
+    - Elimina caracteres no numéricos
+    - Elimina prefijo 57 y +57
+    - Maneja diferentes formatos (celulares, fijos, etc.)
+    """
+    import re
+    
+    if not telefono:
+        return ""
+    
+    # 1. Eliminar caracteres no numéricos
+    limpio = re.sub(r'[^0-9]', '', str(telefono))
+    
+    if not limpio:
+        return ""
+    
+    # 2. Eliminar prefijo 57 (si existe)
+    if limpio.startswith('57'):
+        limpio = limpio[2:]
+    
+    # 3. Eliminar prefijo +57 (por si acaso, después de limpiar)
+    if limpio.startswith('57'):
+        limpio = limpio[2:]
+    
+    # 4. Si tiene 9 al inicio y más de 10 dígitos, quitar el 9
+    if len(limpio) > 10 and limpio.startswith('9'):
+        limpio = limpio[1:]
+    
+    # 5. Si tiene 10 dígitos, es celular colombiano
+    if len(limpio) == 10:
+        return limpio
+    
+    # 6. Si tiene 7 dígitos, es fijo (asumimos Bogotá, código 1)
+    if len(limpio) == 7:
+        return f"1{limpio}"
+    
+    # 7. Si tiene 8 dígitos, es fijo con código de ciudad
+    if len(limpio) == 8:
+        return limpio
+    
+    # 8. Otros casos, devolver el número limpio sin modificar
+    return limpio
 
 #------------------------ Listas Negras --------------------------------------------#
 

@@ -4,13 +4,13 @@
 {% block title %}{{ "Editar" if is_edit else "Nueva" }} campaña Wolkvox{% endblock %}
 
 {% block page_title %}
-  <div class="d-flex align-items-center gap-3">
-    <div style="font-size:2rem; color: var(--primary);">
+  <div class="d-flex align-items-center">
+    <div class="mr-3" style="font-size:2rem; color: #3452E1;">
       <i class="fas fa-phone-volume"></i>
     </div>
     <div>
       <h1 class="m-0" style="font-weight:700;">{{ "Editar" if is_edit else "Nueva" }} campaña Wolkvox</h1>
-      <small style="color: var(--text-secondary);">BigQuery → Wolkvox · Carga automática de registros</small>
+      <small class="text-muted">BigQuery → Wolkvox · Carga automática de registros</small>
     </div>
   </div>
 {% endblock %}
@@ -22,309 +22,508 @@
 
 {% block extra_css %}
 <style>
-  .form-section {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 24px;
-    margin-bottom: 20px;
+  :root {
+    --sms-primary: #3452E1;
+    --sms-primary-dark: #2438B0;
+    --sms-primary-light: #EEF1FD;
+    --sms-accent: #7B6EF6;
+    --sms-success: #17A673;
+    --sms-success-bg: #E7F8F1;
+    --sms-danger: #E24C4B;
+    --sms-danger-bg: #FCEAEA;
+    --sms-warning: #B8790A;
+    --sms-warning-bg: #FDF2E1;
+    --sms-info: #00B4D8;
+    --sms-info-bg: #E3F6FC;
+    --sms-text: #1C2333;
+    --sms-muted: #6B7280;
+    --sms-border: #E4E7F0;
+    --sms-bg: #F5F6FA;
+    --sms-radius: 16px;
+    --sms-shadow: 0 8px 30px rgba(31, 41, 102, 0.08);
+    --sms-transition: all 0.25s ease;
   }
-  .form-section-title {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 20px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 8px;
+
+  .content-wrapper { background: var(--sms-bg); }
+
+  .sms-container { display: grid; grid-template-columns: 1fr 380px; gap: 24px; align-items: start; }
+  @media (max-width: 1199px) { .sms-container { grid-template-columns: 1fr; } }
+
+  .sms-card {
+    background: #ffffff; border: 1px solid var(--sms-border);
+    border-radius: var(--sms-radius); box-shadow: var(--sms-shadow);
+    overflow: hidden; transition: var(--sms-transition);
   }
-  .form-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 4px;
+  .sms-card:hover { box-shadow: 0 12px 40px rgba(31, 41, 102, 0.12); }
+  .sms-card-body { padding: 24px 26px 26px; }
+
+  .sms-tabs {
+    display: flex; gap: 2px; background: #F0F2F8;
+    border-radius: 10px; padding: 4px; margin-bottom: 22px;
   }
-  .form-group { margin-bottom: 16px; }
-  .form-group label {
-    font-weight: 600;
-    font-size: 0.82rem;
-    color: var(--text-primary);
-    margin-bottom: 5px;
-    display: block;
+  .sms-tabs .tab {
+    flex: 1; padding: 8px 14px; border: none; border-radius: 8px;
+    background: transparent; font-weight: 600; font-size: 0.82rem;
+    color: var(--sms-muted); cursor: pointer; transition: var(--sms-transition); text-align: center;
   }
-  .form-group .form-text {
-    font-size: 0.72rem;
-    color: var(--text-secondary);
-    margin-top: 4px;
+  .sms-tabs .tab:hover { color: var(--sms-text); background: rgba(255,255,255,0.5); }
+  .sms-tabs .tab.active { background: #ffffff; color: var(--sms-primary); box-shadow: 0 2px 8px rgba(31, 41, 102, 0.06); }
+  .sms-tab-panel { display: none; animation: fadeIn 0.3s ease; }
+  .sms-tab-panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .sms-field { margin-bottom: 18px; }
+  .sms-field label {
+    font-weight: 600; font-size: 0.85rem; color: var(--sms-text);
+    margin-bottom: 5px; display: flex; align-items: center; gap: 6px;
   }
+  .sms-field label .badge-required {
+    background: var(--sms-danger); color: #fff; font-size: 0.6rem;
+    padding: 1px 8px; border-radius: 20px;
+  }
+  .sms-help {
+    font-size: 0.76rem; color: var(--sms-muted); margin-top: 5px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+
   .form-control {
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 9px 12px;
-    font-size: 0.88rem;
-    color: var(--text-primary);
-    background: #fff;
-    transition: var(--transition);
-    width: 100%;
+    border: 1.5px solid var(--sms-border); border-radius: 10px;
+    font-size: 0.9rem; color: var(--sms-text); transition: var(--sms-transition);
   }
-  .form-control:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(11,80,218,0.12);
-    outline: none;
+  .form-control:focus { border-color: var(--sms-primary); box-shadow: 0 0 0 4px rgba(52, 82, 225, 0.12); }
+  textarea.textarea-code {
+    min-height: 120px; font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.82rem; line-height: 1.6; background: #FBFBFE; tab-size: 2;
   }
-  textarea.form-control {
-    resize: vertical;
-    min-height: 100px;
-    font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 0.85rem;
-    background: #FBFBFE;
+
+  .sms-auto-section {
+    background: #FAFAFD; border: 1.5px dashed var(--sms-border);
+    border-radius: 12px; padding: 14px 18px; margin-bottom: 16px;
   }
-  .form-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    padding-top: 8px;
+  .sms-auto-section .section-title {
+    font-weight: 700; font-size: 0.85rem; color: var(--sms-primary);
+    margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
   }
-  
-  .action-buttons {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 16px;
+
+  .sms-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  .btn {
+    border-radius: 10px; font-weight: 600; font-size: 0.86rem;
+    padding: 0.55rem 1.2rem; transition: var(--sms-transition);
+    border: none; display: inline-flex; align-items: center; gap: 8px;
   }
-  
-  .result-box {
-    background: #FBFBFE;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 12px 16px;
-    margin-top: 16px;
-    display: none;
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+  .btn:active { transform: translateY(0); }
+  .btn-outline-primary { background: #fff; color: var(--sms-primary); border: 1.5px solid var(--sms-primary); }
+  .btn-outline-primary:hover { background: var(--sms-primary-light); color: var(--sms-primary-dark); }
+  .btn-success { background: var(--sms-success); color: #fff; box-shadow: 0 6px 16px rgba(23, 166, 115, 0.28); }
+  .btn-success:hover { background: #13895D; }
+  .btn-success:disabled { background: #B9C0CC; box-shadow: none; cursor: not-allowed; transform: none; }
+  .btn-primary { background: var(--sms-primary); color: #fff; }
+  .btn-primary:hover { background: var(--sms-primary-dark); }
+  .btn-outline-secondary { background: #fff; color: var(--sms-muted); border: 1.5px solid var(--sms-border); }
+  .btn-outline-secondary:hover { background: #F0F2F8; color: var(--sms-text); }
+  .btn-danger { background: var(--sms-danger); color: #fff; box-shadow: 0 6px 16px rgba(226, 76, 75, 0.25); }
+  .btn-danger:hover { background: #C0392B; }
+  .btn-sm { padding: 0.35rem 0.8rem; font-size: 0.78rem; }
+
+  .sms-side { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+  .sms-stats {
+    background: #fff; border: 1px solid var(--sms-border);
+    border-radius: var(--sms-radius); padding: 16px 18px; box-shadow: var(--sms-shadow);
   }
-  .result-box.visible { display: block; }
-  
-  .table-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    overflow: hidden;
-    margin-top: 20px;
+  .sms-stats .row { display: flex; justify-content: space-between; font-size: 0.82rem; padding: 5px 0; }
+  .sms-stats .row + .row { border-top: 1px dashed var(--sms-border); }
+  .sms-stats .label { color: var(--sms-muted); }
+  .sms-stats .value { font-weight: 700; color: var(--sms-text); }
+  .sms-stats .value.success { color: var(--sms-success); }
+  .sms-stats .value.danger { color: var(--sms-danger); }
+  .sms-stats .value.warning { color: var(--sms-warning); }
+  .sms-stats .value.primary { color: var(--sms-primary); }
+
+  .sms-result { margin-top: 20px; display: none; }
+  .sms-result.visible { display: block; animation: fadeIn 0.3s ease; }
+
+  #smsToastArea {
+    position: fixed; top: 0.6rem; right: 0.6rem; z-index: 9999;
+    display: flex; flex-direction: column; gap: 1px; max-width: 220px; width: 100%;
   }
-  .table-card .card-header {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
+  .sms-toast {
+    background: #fff; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+    padding: 10px 12px; border-left: 5px solid var(--sms-primary);
+    animation: slideIn 0.3s ease; display: flex; align-items: flex-start; gap: 12px;
   }
-  .table-card .card-header h3 {
-    margin: 0;
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text-primary);
+  .sms-toast.success { border-left-color: var(--sms-success); }
+  .sms-toast.danger { border-left-color: var(--sms-danger); }
+  .sms-toast.warning { border-left-color: var(--sms-warning); }
+  .sms-toast.info { border-left-color: var(--sms-info); }
+  .sms-toast .icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 2px; }
+  .sms-toast .content { flex: 1; font-size: 0.88rem; color: var(--sms-text); }
+  .sms-toast .close-btn {
+    background: none; border: none; font-size: 1.2rem;
+    color: var(--sms-muted); cursor: pointer; padding: 0 4px;
   }
-  .table-card .card-body { padding: 0; }
-  
+  .sms-toast .close-btn:hover { color: var(--sms-text); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(30px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
   .spinner-sm {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
+    display: inline-block; width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  
-  .badge-success { background: #28a745; color: white; padding: 4px 8px; border-radius: 4px; }
-  .badge-danger { background: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 999px;
+  }
+  .status-pill.idle { color: var(--sms-muted); background: #F1F3F8; }
+  .status-pill.loading { color: var(--sms-primary); background: var(--sms-primary-light); }
+  .status-pill.ok { color: var(--sms-success); background: var(--sms-success-bg); }
+  .status-pill.err { color: var(--sms-danger); background: var(--sms-danger-bg); }
+
+  .result-box {
+    margin-top: 16px; padding: 16px 20px; border-radius: 10px;
+    display: none; border: 1px solid var(--sms-border);
+  }
+  .result-box.visible { display: block; }
+  .result-box.success { background: var(--sms-success-bg); border-color: #BEEBDA; }
+  .result-box.error { background: var(--sms-danger-bg); border-color: #FBD6D7; }
+  .result-box .result-content { font-size: 0.9rem; }
+
+  .table-card {
+    background: #ffffff; border: 1px solid var(--sms-border);
+    border-radius: var(--sms-radius); box-shadow: var(--sms-shadow);
+    overflow: hidden; margin-top: 20px;
+  }
+  .table-card .card-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--sms-border);
+  }
+  .table-card .card-header h3 {
+    margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--sms-text);
+  }
+  .table-card .card-body { padding: 0; }
+  .table-card table { width: 100%; font-size: 0.85rem; }
+  .table-card table th {
+    background: #F8FAFC; font-weight: 600; color: var(--sms-muted);
+    padding: 12px 16px; border-bottom: 1px solid var(--sms-border);
+  }
+  .table-card table td { padding: 10px 16px; border-bottom: 1px solid var(--sms-border); }
+
+  .badge-success {
+    background: var(--sms-success-bg); color: var(--sms-success);
+    padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600;
+  }
+  .badge-danger {
+    background: var(--sms-danger-bg); color: var(--sms-danger);
+    padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600;
+  }
+  .badge-warning {
+    background: var(--sms-warning-bg); color: var(--sms-warning);
+    padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600;
+  }
+
+  .form-actions {
+    display: flex; gap: 10px; flex-wrap: wrap; padding-top: 8px; margin-top: 20px;
+  }
+  .action-buttons {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto;
+  }
+
+  @media (max-width: 768px) {
+    .sms-card-body { padding: 16px; }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<form id="wolkvoxForm" data-id="{{ campaign.id if is_edit else '' }}">
-    
-    <!-- SECCIÓN 1: Datos básicos -->
-    <div class="form-section">
-        <div class="form-section-title">
-            <i class="fas fa-info-circle"></i> Datos de la campaña
-        </div>
-        
-        <div class="form-row">
-            <div class="form-group">
-                <label>Nombre <span class="text-danger">*</span></label>
-                <input class="form-control" name="name" value="{{ campaign.name if is_edit else '' }}" placeholder="Ej: Cobro Agosto 2026" required>
-            </div>
-            <div class="form-group">
-                <label>Campaign ID Wolkvox <span class="text-danger">*</span></label>
-                <input class="form-control" name="wolkvox_campaign_id" value="{{ campaign.wolkvox_campaign_id if is_edit else '' }}" placeholder="Ej: 20213" required>
-            </div>
-            <div class="form-group">
-                <label>Servidor <span class="text-danger">*</span></label>
-                <select class="form-control" name="server_name" required>
-                    <option value="">Seleccionar servidor</option>
-                    {% for server in servers %}
-                        <option value="{{ server.name }}" {% if is_edit and campaign.server_name == server.name %}selected{% endif %}>{{ server.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Tipo de campaña <span class="text-danger">*</span></label>
-                <select class="form-control" name="campaign_type" required>
-                    <option value="predictive" {% if is_edit and campaign.campaign_type == 'predictive' %}selected{% endif %}>Predictivo</option>
-                    <option value="preview" {% if is_edit and campaign.campaign_type == 'preview' %}selected{% endif %}>Vista previa (Preview)</option>
-                </select>
-            </div>
-            
-        </div>
-    </div>
-    <div class="alert alert-info">
-                <strong>📊 Resumen de carga:</strong><br>
-                Total consulta: {{ records_fetched }}<br>
-                Enviados a Wolkvox: {{ records_sent }}<br>
-                🚫 Bloqueados por lista negra: {{ records_blocked }}
-            </div>
-    <!-- SECCIÓN 2: BigQuery -->
-    <div class="form-section">
-        <div class="form-section-title">
-            <i class="fas fa-database"></i> Consulta SQL BigQuery
-        </div>
-        
-        <div class="form-group">
-            <label>Consulta SQL <span class="text-danger">*</span></label>
-            <textarea class="form-control" name="bigquery_query" required placeholder="SELECT telefono, nombre_completo, monto FROM `proyecto.dataset.tabla` LIMIT 100">{{ campaign.bigquery_query if is_edit else '' }}</textarea>
-            <div class="form-text">La consulta debe incluir al menos una columna de teléfono. Todos los campos se enviarán automáticamente a Wolkvox.</div>
-        </div>
-        
-        <div style="margin-top:16px;">
-            <button type="button" class="btn btn-outline-primary" id="btnValidate">
-                <i class="fas fa-check-circle"></i> Validar consulta
-            </button>
-            <span id="validateStatus" style="margin-left:12px;font-size:0.82rem;color:var(--text-secondary);"></span>
-        </div>
-        
-        <div id="columnsInfo" style="display:none; margin-top:12px; padding:12px; background:#F0F7FF; border-radius:var(--radius-sm);">
-            <small><i class="fas fa-table"></i> Columnas detectadas: <span id="detectedColumns"></span></small>
-        </div>
-    </div>
-    
-    <!-- BOTONES -->
-    <div class="form-actions">
-        <button class="btn btn-primary" type="submit"><i class="fas fa-save"></i> Guardar campaña</button>
-        <a class="btn btn-outline-secondary" href="/auto-campaigns">Volver</a>
-        {% if is_edit %}
-        <div class="action-buttons" style="margin-left:auto;">
-            <button class="btn btn-warning" type="button" id="btnClear">
-                <i class="fas fa-broom"></i> Limpiar campaña
-            </button>
-            <button class="btn btn-success" type="button" id="btnLoad">
-                <i class="fas fa-upload"></i> Cargar registros
-            </button>
-            <button class="btn btn-primary" type="button" id="btnStart">
-                <i class="fas fa-play"></i> Iniciar
-            </button>
-            <button class="btn btn-danger" type="button" id="btnStop">
-                <i class="fas fa-stop"></i> Detener
-            </button>
-        </div>
-        {% endif %}
-    </div>
-    
-    <div class="result-box" id="resultBox">
-        <div id="resultContent"></div>
-    </div>
-</form>
+<div id="smsToastArea"></div>
 
-{% if is_edit %}
-<div class="table-card">
-    <div class="card-header">
-        <h3><i class="fas fa-history"></i> Historial de cargas</h3>
-    </div>
-    <div class="card-body table-responsive">
-        <table class="table table-sm">
-            <thead>
+<div class="sms-container">
+
+  <div class="sms-card">
+    <div class="sms-card-body">
+
+      <div class="sms-tabs" id="smsTabs">
+        <button class="tab active" data-tab="send"><i class="fas fa-paper-plane"></i> Enviar</button>
+        <button class="tab" data-tab="history"><i class="fas fa-history"></i> Historial</button>
+        <button class="tab" data-tab="scheduled"><i class="fas fa-clock"></i> Programados</button>
+      </div>
+
+      <!-- PANEL ENVIAR -->
+      <div class="sms-tab-panel active" id="panel-send">
+        <form id="wolkvoxForm" data-id="{{ campaign.id if is_edit else '' }}">
+
+          <!-- DATOS DE LA CAMPAÑA -->
+          <div class="sms-auto-section">
+            <div class="section-title">
+              <i class="fas fa-info-circle"></i> Datos de la campaña
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+              <div class="sms-field" style="margin-bottom:0;">
+                <label>Nombre <span class="text-danger">*</span></label>
+                <input class="form-control form-control-sm" name="name" value="{{ campaign.name if is_edit else '' }}" placeholder="Ej: Cobro Agosto 2026" required>
+              </div>
+              <div class="sms-field" style="margin-bottom:0;">
+                <label>Campaign ID <span class="text-danger">*</span></label>
+                <input class="form-control form-control-sm" name="wolkvox_campaign_id" value="{{ campaign.wolkvox_campaign_id if is_edit else '' }}" placeholder="Ej: 20213" required>
+              </div>
+              <div class="sms-field" style="margin-bottom:0;">
+                <label>Servidor <span class="text-danger">*</span></label>
+                <select class="form-control form-control-sm" name="server_name" required>
+                  <option value="">Seleccionar servidor</option>
+                  {% for server in servers %}
+                    <option value="{{ server.name }}" {% if is_edit and campaign.server_name == server.name %}selected{% endif %}>{{ server.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="sms-field" style="margin-bottom:0;">
+                <label>Tipo <span class="text-danger">*</span></label>
+                <select class="form-control form-control-sm" name="campaign_type" required>
+                  <option value="predictive" {% if is_edit and campaign.campaign_type == 'predictive' %}selected{% endif %}>Predictivo</option>
+                  <option value="preview" {% if is_edit and campaign.campaign_type == 'preview' %}selected{% endif %}>Vista previa</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- CONSULTA SQL -->
+          <div class="sms-field">
+            <label for="query">Consulta SQL <span class="badge-required">requerido</span></label>
+            <textarea id="query" name="bigquery_query" class="form-control textarea-code" placeholder="SELECT celular, nombre, monto FROM ..." rows="4" required>{{ campaign.bigquery_query if is_edit else "SELECT \n  '3001234567' AS telefono,\n  'Juan Pérez' AS nombre,\n  '100000' AS monto" }}</textarea>
+            <div class="sms-help">
+              <span>Incluye columna de teléfono: <code>telefono</code>, <code>celular</code>, <code>movil</code>, <code>phone</code>.</span>
+              <span id="rowCount" style="font-weight:600;color:var(--sms-primary);">0 filas</span>
+            </div>
+          </div>
+
+          <!-- BOTONES -->
+          <div class="sms-actions">
+            <button type="button" class="btn btn-outline-primary" id="btnValidate">
+              <i class="fas fa-check-circle"></i> Validar consulta
+            </button>
+            <span class="status-pill idle" id="validateStatus">
+              <i class="fas fa-circle" style="font-size:6px;"></i> Sin validar
+            </span>
+          </div>
+
+          <div id="columnsInfo" style="display:none;padding:10px;background:var(--sms-primary-light);border-radius:10px;margin:12px 0;">
+            <small><i class="fas fa-table"></i> Columnas detectadas: <span id="detectedColumns"></span></small>
+          </div>
+
+          {% if is_edit %}
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;">
+            <button type="button" class="btn btn-warning btn-sm" id="btnClear">
+              <i class="fas fa-broom"></i> Limpiar campaña
+            </button>
+            <button type="button" class="btn btn-success btn-sm" id="btnLoad">
+              <i class="fas fa-upload"></i> Cargar registros
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" id="btnStart">
+              <i class="fas fa-play"></i> Iniciar
+            </button>
+            <button type="button" class="btn btn-danger btn-sm" id="btnStop">
+              <i class="fas fa-stop"></i> Detener
+            </button>
+          </div>
+          {% endif %}
+
+          <div id="resultBox" class="result-box">
+            <div id="resultContent" class="result-content"></div>
+          </div>
+
+          <!-- BOTONES FINALES -->
+          <div class="form-actions">
+            <button class="btn btn-primary" type="submit"><i class="fas fa-save"></i> Guardar campaña</button>
+            <a class="btn btn-outline-secondary" href="/auto-campaigns">Volver</a>
+          </div>
+
+        </form>
+      </div>
+
+      <!-- PANEL HISTORIAL -->
+      <div class="sms-tab-panel" id="panel-history">
+        {% if is_edit %}
+        <div class="table-card">
+          <div class="card-header">
+            <h3><i class="fas fa-history"></i> Historial de cargas</h3>
+          </div>
+          <div class="card-body table-responsive">
+            <table class="table">
+              <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Fecha</th>
-                    <th>Registros</th>
-                    <th>Estado</th>
-                    <th>Error</th>
+                  <th>ID</th>
+                  <th>Fecha</th>
+                  <th>Registros</th>
+                  <th>Bloqueados</th>
+                  <th>Estado</th>
+                  <th>Error</th>
                 </tr>
-            </thead>
-            <tbody>
+              </thead>
+              <tbody>
                 {% for log in logs %}
                 <tr>
-                    <td><code>{{ log.id }}</code></td>
-                    <td>{{ log.start_time }}</td>
-                    <td><span class="badge badge-success">{{ log.records_sent }}</span></td>
-                    <td><span class="badge {{ 'badge-success' if log.records_failed == 0 else 'badge-danger' }}">{{ 'Éxito' if log.records_failed == 0 else 'Error' }}</span></td>
-                    <td>{{ log.error_message or '—' }}</td>
+                  <td><code>{{ log.id }}</code></td>
+                  <td>{{ log.start_time }}</td>
+                  <td><span class="badge-success">{{ log.records_sent }}</span></td>
+                  <td><span class="badge-danger">{{ log.records_blocked or 0 }}</span></td>
+                  <td><span class="{{ 'badge-success' if log.records_failed == 0 else 'badge-danger' }}">{{ 'Éxito' if log.records_failed == 0 else 'Error' }}</span></td>
+                  <td>{{ log.error_message or '—' }}</td>
                 </tr>
                 {% else %}
-                <tr><td colspan="5" class="text-center text-muted py-4">Sin cargas registradas.</td></tr>
+                <tr><td colspan="6" class="text-center" style="padding:30px;color:var(--sms-muted);">Sin cargas registradas.</td></tr>
                 {% endfor %}
-            </tbody>
-        </table>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:60px 20px;color:var(--sms-muted);">
+          <i class="fas fa-inbox" style="font-size:3rem;display:block;margin-bottom:16px;opacity:0.3;"></i>
+          <p style="font-size:0.95rem;">Guarda la campaña para ver el historial de cargas.</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- PANEL PROGRAMADOS -->
+      <div class="sms-tab-panel" id="panel-scheduled">
+        <div style="text-align:center;padding:60px 20px;color:var(--sms-muted);">
+          <i class="fas fa-clock" style="font-size:3rem;display:block;margin-bottom:16px;opacity:0.3;"></i>
+          <p style="font-size:0.95rem;">Próximamente: Programación de campañas automáticas.</p>
+        </div>
+      </div>
+
     </div>
+  </div>
+
+  <!-- COLUMNA DERECHA: ESTADÍSTICAS -->
+  <div class="sms-side">
+    <div class="sms-stats">
+      <div class="row"><span class="label"><i class="fas fa-users"></i> Total destinatarios</span><span class="value" id="statTotal">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-check-circle" style="color:var(--sms-success);"></i> Válidos</span><span class="value success" id="statValidos">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-exclamation-circle" style="color:var(--sms-danger);"></i> Inválidos</span><span class="value danger" id="statInvalidos">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-copy" style="color:var(--sms-warning);"></i> Duplicados (hoy)</span><span class="value warning" id="statDuplicados">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-ban" style="color:var(--sms-danger);"></i> Lista negra</span><span class="value danger" id="statBlacklist">—</span></div>
+      <div class="row" style="border-top:2px solid var(--sms-border);padding-top:8px;margin-top:4px;">
+        <span class="label" style="font-weight:700;">📤 A enviar</span>
+        <span class="value primary" id="statAEnviar" style="font-size:1.1rem;color:var(--sms-primary);">—</span>
+      </div>
+    </div>
+
+    <div class="sms-stats" id="validationDetail" style="display:none;">
+      <div style="font-weight:700;font-size:0.9rem;margin-bottom:10px;color:var(--sms-primary);">
+        <i class="fas fa-shield-alt"></i> Detalle de validación
+      </div>
+      <div class="row"><span class="label">📊 Total consulta</span><span class="value" id="valTotalConsulta">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-check-circle" style="color:var(--sms-success);"></i> Válidos</span><span class="value success" id="valValidos">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-times-circle" style="color:var(--sms-danger);"></i> Inválidos</span><span class="value danger" id="valInvalidos">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-copy" style="color:var(--sms-warning);"></i> Duplicados hoy</span><span class="value warning" id="valDuplicados">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-ban" style="color:var(--sms-danger);"></i> Lista negra</span><span class="value danger" id="valBlacklist">—</span></div>
+      <div class="row" style="border-top:2px solid var(--sms-primary);padding-top:8px;margin-top:4px;">
+        <span class="label" style="font-weight:700;font-size:0.9rem;">📤 A ENVIAR</span>
+        <span class="value primary" id="valAEnviar" style="font-size:1.2rem;color:var(--sms-primary);font-weight:700;">—</span>
+      </div>
+    </div>
+  </div>
+
 </div>
-{% endif %}
 
 {% endblock %}
+
 {% block extra_js %}
 <script>
 (function() {
   'use strict';
-  
+
   const form = document.getElementById('wolkvoxForm');
   const campaignId = form.dataset.id;
+  const isEdit = !!campaignId;
   const resultBox = document.getElementById('resultBox');
   const resultContent = document.getElementById('resultContent');
-  
-  let bqColumns = [];
-  
+
+  // ========== TABS ==========
+  document.querySelectorAll('.sms-tabs .tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.sms-tabs .tab').forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+
+      const target = this.dataset.tab;
+      document.querySelectorAll('.sms-tab-panel').forEach(p => p.classList.remove('active'));
+
+      const panelMap = {
+        'send': 'panel-send',
+        'history': 'panel-history',
+        'scheduled': 'panel-scheduled'
+      };
+      document.getElementById(panelMap[target]).classList.add('active');
+    });
+  });
+
+  // ========== CONTADOR DE FILAS SQL ==========
+  const queryTextarea = document.getElementById('query');
+  const rowCountEl = document.getElementById('rowCount');
+
+  function updateRowCount() {
+    const lines = queryTextarea.value.split('\n').filter(l => l.trim() !== '');
+    const hasSelect = /select/i.test(queryTextarea.value);
+    if (hasSelect) {
+      const dataLines = lines.filter(l => /^\s*(SELECT|'|\d|from)/i.test(l.trim()));
+      rowCountEl.textContent = dataLines.length + ' filas';
+    } else {
+      rowCountEl.textContent = '0 filas';
+    }
+  }
+
+  queryTextarea.addEventListener('input', updateRowCount);
+  updateRowCount();
+
+  // ========== TOAST ==========
+  function showToast(message, type) {
+    const area = document.getElementById('smsToastArea');
+    const toast = document.createElement('div');
+    toast.className = 'sms-toast ' + (type || '');
+    const iconMap = {
+      success: 'fa-check-circle',
+      danger: 'fa-exclamation-circle',
+      warning: 'fa-exclamation-triangle',
+      info: 'fa-info-circle'
+    };
+    const icon = iconMap[type] || iconMap.info;
+    toast.innerHTML = `<span class="icon"><i class="fas ${icon}"></i></span><div class="content">${message}</div><button class="close-btn" onclick="this.parentElement.remove()">&times;</button>`;
+    area.appendChild(toast);
+    setTimeout(() => { if (toast.parentElement) toast.remove(); }, 5000);
+  }
+
+  // ========== SHOW RESULT ==========
   function showResult(success, message, extraData) {
     resultBox.className = 'result-box visible';
-    resultBox.style.background = success ? '#E7F8F1' : '#FCEAEA';
-    resultBox.style.borderColor = success ? '#C3E6CB' : '#F5C6CB';
-    
+    resultBox.classList.add(success ? 'success' : 'error');
+
     let html = message;
-    
-    // 🔥 NUEVO: Mostrar estadísticas de lista negra si existen
-    if (extraData && extraData.records_blocked !== undefined) {
+
+    if (extraData) {
       html += `
         <div style="margin-top:12px;padding:12px;background:#FFF3CD;border-radius:8px;border:1px solid #FFC107;">
-          <strong>📊 Estadísticas de validación:</strong><br>
-          <span style="color:#28a745;">✅ Registros válidos: ${extraData.records_sent || 0}</span><br>
-          <span style="color:#dc3545;">🚫 Bloqueados por lista negra: ${extraData.records_blocked || 0}</span><br>
-          <span style="color:#6c757d;">📋 Total consulta: ${extraData.records_fetched || 0}</span>
+          <strong>📊 Estadísticas:</strong><br>
+          <span style="color:#28a745;">✅ Válidos: ${extraData.records_sent || 0}</span><br>
+          <span style="color:#dc3545;">🚫 Bloqueados: ${extraData.records_blocked || 0}</span><br>
+          <span style="color:#6c757d;">📋 Total: ${extraData.records_fetched || 0}</span>
         </div>
       `;
-      
-      // 🔥 Mostrar detalle de los bloqueados (si hay)
-      if (extraData.blocked_details && extraData.blocked_details.length > 0) {
-        html += `
-          <div style="margin-top:10px;padding:10px;background:#F8D7DA;border-radius:8px;border:1px solid #F5C6CB;max-height:200px;overflow-y:auto;">
-            <strong>🚫 Teléfonos bloqueados (${extraData.blocked_details.length}):</strong>
-            <ul style="margin:5px 0 0 20px;font-size:0.85rem;">
-              ${extraData.blocked_details.map(item => 
-                `<li>${item.telefono || item.row?.tel1 || 'N/A'} - ${item.motivo || 'Lista negra'}</li>`
-              ).join('')}
-            </ul>
-          </div>
-        `;
-      }
     }
-    
+
     resultContent.innerHTML = html;
-    
-    // Auto-cerrar después de 10 segundos si es éxito
+
     if (success) {
       setTimeout(() => { resultBox.className = 'result-box'; }, 10000);
     }
   }
-  
+
   function setLoading(btn, loading) {
     if (loading) {
       btn._orig = btn.innerHTML;
@@ -335,153 +534,205 @@
       if (btn._orig) btn.innerHTML = btn._orig;
     }
   }
-  
+
+  function updateStats(data) {
+    // Actualizar estadísticas principales
+    document.getElementById('statTotal').textContent = data.records_fetched || '—';
+    document.getElementById('statValidos').textContent = data.records_sent || '—';
+    document.getElementById('statBlacklist').textContent = data.records_blocked || '—';
+    document.getElementById('statAEnviar').textContent = (data.records_sent || 0) - (data.records_blocked || 0) || '—';
+    
+    // Detalle de validación
+    document.getElementById('valTotalConsulta').textContent = data.records_fetched || '—';
+    document.getElementById('valValidos').textContent = data.records_sent || '—';
+    document.getElementById('valBlacklist').textContent = data.records_blocked || '—';
+    document.getElementById('valAEnviar').textContent = (data.records_sent || 0) - (data.records_blocked || 0) || '—';
+    document.getElementById('validationDetail').style.display = 'block';
+  }
+
   // ========== VALIDAR CONSULTA ==========
   document.getElementById('btnValidate').addEventListener('click', async () => {
-    const query = form.querySelector('[name="bigquery_query"]').value.trim();
+    const query = queryTextarea.value.trim();
     if (!query) {
-      showResult(false, '⚠️ Escribe una consulta SQL primero.');
+      showToast('⚠️ Escribe una consulta SQL primero.', 'warning');
       return;
     }
-    
+
     const statusEl = document.getElementById('validateStatus');
-    statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validando...';
-    statusEl.style.color = 'var(--text-secondary)';
-    
+    statusEl.className = 'status-pill loading';
+    statusEl.innerHTML = '<span class="spinner-sm"></span> Validando...';
+
     try {
       const resp = await fetch('/auto-campaigns/validate-query-fields', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({query: query})
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: query })
       });
       const data = await resp.json();
-      
+
       if (data.success) {
-        bqColumns = data.detected_columns || [];
-        statusEl.innerHTML = '✅ ' + bqColumns.length + ' columnas detectadas: ' + bqColumns.join(', ');
-        statusEl.style.color = 'var(--success)';
-        
+        const columns = data.detected_columns || [];
+        statusEl.className = 'status-pill ok';
+        statusEl.innerHTML = '✅ ' + columns.length + ' columnas: ' + columns.join(', ');
+
         document.getElementById('columnsInfo').style.display = 'block';
-        document.getElementById('detectedColumns').textContent = bqColumns.join(', ');
+        document.getElementById('detectedColumns').textContent = columns.join(', ');
+
+        showToast('✅ Consulta válida: ' + columns.length + ' columnas detectadas', 'success');
       } else {
+        statusEl.className = 'status-pill err';
         statusEl.innerHTML = '❌ ' + data.message;
-        statusEl.style.color = 'var(--danger)';
         document.getElementById('columnsInfo').style.display = 'none';
+        document.getElementById('validationDetail').style.display = 'none';
+        showToast('❌ ' + data.message, 'danger');
       }
-    } catch(e) {
-      statusEl.innerHTML = '❌ Error: ' + e.message;
-      statusEl.style.color = 'var(--danger)';
+    } catch (e) {
+      statusEl.className = 'status-pill err';
+      statusEl.innerHTML = '❌ Error';
+      showToast('❌ Error: ' + e.message, 'danger');
     }
   });
-  
+
   // ========== LIMPIAR CAMPAÑA ==========
   document.getElementById('btnClear')?.addEventListener('click', async () => {
     if (!confirm('¿Limpiar todos los registros de la campaña en Wolkvox?')) return;
     try {
       setLoading(document.getElementById('btnClear'), true);
-      const resp = await fetch('/auto-campaigns/' + campaignId + '/clear-wkv', {method: 'DELETE'});
+      const resp = await fetch('/auto-campaigns/' + campaignId + '/clear-wkv', { method: 'DELETE' });
       const data = await resp.json();
-      showResult(data.success, data.message || 'Campaña limpiada');
-    } catch(e) {
-      showResult(false, 'Error: ' + e.message);
+      showResult(data.success, data.message || '✅ Campaña limpiada');
+      if (data.success) {
+        showToast('✅ Campaña limpiada', 'success');
+        // Resetear estadísticas
+        document.getElementById('statTotal').textContent = '—';
+        document.getElementById('statValidos').textContent = '—';
+        document.getElementById('statBlacklist').textContent = '—';
+        document.getElementById('statAEnviar').textContent = '—';
+        document.getElementById('validationDetail').style.display = 'none';
+      }
+    } catch (e) {
+      showResult(false, '❌ Error: ' + e.message);
+      showToast('❌ Error: ' + e.message, 'danger');
     } finally {
       setLoading(document.getElementById('btnClear'), false);
     }
   });
-  
+
   // ========== CARGAR REGISTROS ==========
   document.getElementById('btnLoad')?.addEventListener('click', async () => {
     if (!confirm('¿Cargar registros a la campaña Wolkvox?')) return;
-    
+
     try {
       setLoading(document.getElementById('btnLoad'), true);
+      showToast('📤 Cargando registros...', 'info');
+      
       const resp = await fetch('/auto-campaigns/' + campaignId + '/load-wkv', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({})
       });
       const data = await resp.json();
-      
-      // 🔥 NUEVO: Mostrar estadísticas completas
+
+      // Actualizar estadísticas con los datos reales
+      updateStats(data);
+
       if (data.success) {
-        let message = `✅ ${data.records_sent || 0} registros cargados exitosamente a Wolkvox.`;
+        let message = `✅ ${data.records_sent || 0} registros cargados.`;
         if (data.records_blocked > 0) {
-          message += ` 🚫 ${data.records_blocked} teléfonos bloqueados por lista negra.`;
+          message += ` 🚫 ${data.records_blocked} bloqueados por lista negra.`;
         }
         showResult(true, message, data);
+        showToast('✅ Carga completada', 'success');
       } else {
-        showResult(false, '❌ Error: ' + data.message, data);
+        let message = '❌ ' + (data.message || 'Error en la carga');
+        if (data.records_sent > 0) {
+          message += ` (${data.records_sent} enviados, ${data.records_blocked || 0} bloqueados)`;
+        }
+        showResult(false, message, data);
+        showToast('⚠️ Carga parcial', 'warning');
       }
-    } catch(e) {
-      showResult(false, 'Error: ' + e.message);
+    } catch (e) {
+      showResult(false, '❌ Error: ' + e.message);
+      showToast('❌ Error: ' + e.message, 'danger');
     } finally {
       setLoading(document.getElementById('btnLoad'), false);
     }
   });
-  
+
   // ========== INICIAR CAMPAÑA ==========
   document.getElementById('btnStart')?.addEventListener('click', async () => {
     if (!confirm('¿Iniciar la campaña en Wolkvox?')) return;
     try {
       setLoading(document.getElementById('btnStart'), true);
-      const resp = await fetch('/auto-campaigns/' + campaignId + '/start-wkv', {method: 'POST'});
+      const resp = await fetch('/auto-campaigns/' + campaignId + '/start-wkv', { method: 'POST' });
       const data = await resp.json();
-      showResult(data.success, data.message || 'Campaña iniciada');
-    } catch(e) {
-      showResult(false, 'Error: ' + e.message);
+      showResult(data.success, data.message || '✅ Campaña iniciada');
+      if (data.success) showToast('✅ Campaña iniciada', 'success');
+    } catch (e) {
+      showResult(false, '❌ Error: ' + e.message);
+      showToast('❌ Error: ' + e.message, 'danger');
     } finally {
       setLoading(document.getElementById('btnStart'), false);
     }
   });
-  
+
   // ========== DETENER CAMPAÑA ==========
   document.getElementById('btnStop')?.addEventListener('click', async () => {
     if (!confirm('¿Detener la campaña en Wolkvox?')) return;
     try {
       setLoading(document.getElementById('btnStop'), true);
-      const resp = await fetch('/auto-campaigns/' + campaignId + '/stop-wkv', {method: 'POST'});
+      const resp = await fetch('/auto-campaigns/' + campaignId + '/stop-wkv', { method: 'POST' });
       const data = await resp.json();
-      showResult(data.success, data.message || 'Campaña detenida');
-    } catch(e) {
-      showResult(false, 'Error: ' + e.message);
+      showResult(data.success, data.message || '✅ Campaña detenida');
+      if (data.success) showToast('✅ Campaña detenida', 'success');
+    } catch (e) {
+      showResult(false, '❌ Error: ' + e.message);
+      showToast('❌ Error: ' + e.message, 'danger');
     } finally {
       setLoading(document.getElementById('btnStop'), false);
     }
   });
-  
+
   // ========== GUARDAR FORMULARIO ==========
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(form);
     const data = Object.fromEntries(formData);
-    
+
     data.operation = 'default';
     data.type = 'predictivo';
     data.user_name = 'admin';
     data.schedule_type = 'manual';
     data.status = 'true';
-    
+
     const url = campaignId ? '/auto-campaigns/' + campaignId : '/auto-campaigns';
     const method = campaignId ? 'PUT' : 'POST';
-    
+
     try {
       const resp = await fetch(url, {
         method: method,
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
       const result = await resp.json();
       if (result.success) {
         const newId = result.campaign?.id || result.id || campaignId;
-        window.location.href = '/auto-campaigns/' + newId;
+        showToast('✅ Campaña guardada', 'success');
+        if (!campaignId) {
+          window.location.href = '/auto-campaigns/' + newId;
+        } else {
+          showResult(true, '✅ Campaña actualizada correctamente');
+        }
       } else {
-        showResult(false, result.message || 'Error al guardar');
+        showResult(false, result.message || '❌ Error al guardar');
+        showToast('❌ Error: ' + result.message, 'danger');
       }
-    } catch(e) {
-      showResult(false, 'Error: ' + e.message);
+    } catch (e) {
+      showResult(false, '❌ Error: ' + e.message);
+      showToast('❌ Error: ' + e.message, 'danger');
     }
   });
-  
+
 })();
 </script>
 {% endblock %}
