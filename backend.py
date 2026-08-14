@@ -680,10 +680,10 @@ def programar_bigquery_processor():
 
 
 # ========== INICIALIZAR DESCARGA AUTOMÁTICA ==========
+
 def init_auto_download_on_startup():
     """Inicializa los sistemas de descargas automáticas al iniciar la aplicación."""
     try:
-        # IMPORTAR DESDE CONFIG.PY
         from config import DESCARGAR_CDR, DESCARGAR_AMD, MODO_DESCARGA, HORARIOS_EJECUCION
         import importlib.util
         
@@ -699,69 +699,47 @@ def init_auto_download_on_startup():
         # ===== PROGRAMAR BIGQUERY_PROCESSOR =====
         programar_bigquery_processor()
         
-        # Inicializar CDR si está activado
+        # 🔥 INICIAR CDR
         if DESCARGAR_CDR:
             spec = importlib.util.find_spec("download_auto")
             if spec is not None:
                 from download_auto import iniciar_scheduler, estado_scheduler
-                estado = estado_scheduler()
-                logger.info("="*60)
-                logger.info("📦 SISTEMA DE DESCARGAS AUTOMÁTICAS CDR")
-                logger.info("="*60)
-                logger.info(f"📁 Ruta base: {estado.get('base_dir')}")
-                logger.info(f"📋 Servidores: {estado.get('servidores')}")
-                logger.info(f"🕐 Horarios: {', '.join(estado.get('horarios', []))}")
-                logger.info(f"📅 Modo: {MODO_DESCARGA}")
-                logger.info("\n🔄 Activando descargas automáticas CDR...")
+                logger.info("🔄 Activando descargas automáticas CDR...")
                 resultado = iniciar_scheduler()
                 if resultado:
                     logger.info("✅ Descargas automáticas CDR ACTIVADAS")
                 else:
                     logger.warning("⚠️ No se pudieron activar las descargas CDR")
-                logger.info("="*60)
             else:
-                logger.info("Módulo download_auto no encontrado.")
+                logger.info("⏭️ Módulo download_auto no encontrado.")
         else:
             logger.info("⏭️ Descargas CDR desactivadas en config.py")
         
-        # Inicializar AMD si está activado
+        # 🔥 INICIAR AMD - ESTA ES LA PARTE QUE FALLA
         if DESCARGAR_AMD:
             spec = importlib.util.find_spec("download_campaign_detail")
             if spec is not None:
                 from download_campaign_detail import iniciar_scheduler_amd, estado_scheduler_amd
-                estado = estado_scheduler_amd()
-                logger.info("="*60)
-                logger.info("📦 SISTEMA DE DESCARGAS AUTOMÁTICAS AMD")
-                logger.info("="*60)
-                logger.info(f"📁 Ruta base: {estado.get('base_dir')}")
-                logger.info(f"📋 Servidores: {estado.get('servidores')}")
-                logger.info(f"🕐 Horarios: {', '.join(estado.get('horarios', []))}")
-                logger.info(f"📅 Modo: {estado.get('modo_descarga', MODO_DESCARGA)}")
-                logger.info(f"📅 Fechas: {estado.get('fechas', [])}")
-                logger.info("\n🔄 Activando descargas automáticas AMD...")
-                resultado = iniciar_scheduler_amd()
+                logger.info("🔄 Activando descargas automáticas AMD...")
+                
+                # 🔥 EJECUTAR EL SCHEDULER
+                resultado = iniciar_scheduler_amd()  # ← ESTO DEBE CORRER
+                
                 if resultado:
                     logger.info("✅ Descargas automáticas AMD ACTIVADAS")
                 else:
                     logger.warning("⚠️ No se pudieron activar las descargas AMD")
-                logger.info("="*60)
             else:
-                logger.info("Módulo download_campaign_detail no encontrado.")
+                logger.info("⏭️ Módulo download_campaign_detail no encontrado.")
         else:
             logger.info("⏭️ Descargas AMD desactivadas en config.py")
             
     except ImportError as e:
         logger.error(f"Error importando config: {e}")
-        logger.info("Asegúrate de que config.py tenga todas las variables necesarias:")
-        logger.info("  - MODO_DESCARGA")
-        logger.info("  - DESCARGAR_CDR")
-        logger.info("  - DESCARGAR_AMD")
-        logger.info("  - HORARIOS_EJECUCION")
     except Exception as e:
         logger.error(f"Error inicializando descargas automáticas: {e}")
         import traceback
         traceback.print_exc()
-
 
 # ========== INICIALIZAR SCHEDULER ==========
 _initial_interval = get_campaign_check_interval_seconds()
