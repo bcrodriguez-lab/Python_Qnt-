@@ -4,7 +4,7 @@
 
 {% block page_title %}
   <div class="d-flex align-items-center">
-    <div class="mr-3" style="font-size:2rem; color: #3452E1;">
+    <div class="mr-3" style="font-size:2rem; color: var(--primary);">
       <i class="fas fa-comment-sms"></i>
     </div>
     <div>
@@ -21,148 +21,105 @@
 
 {% block extra_css %}
 <style>
-  :root {
-    --sms-primary: #3452E1;
-    --sms-primary-dark: #2438B0;
-    --sms-primary-light: #EEF1FD;
-    --sms-accent: #7B6EF6;
-    --sms-success: #17A673;
-    --sms-success-bg: #E7F8F1;
-    --sms-danger: #E24C4B;
-    --sms-danger-bg: #FCEAEA;
-    --sms-warning: #B8790A;
-    --sms-warning-bg: #FDF2E1;
-    --sms-info: #00B4D8;
-    --sms-info-bg: #E3F6FC;
-    --sms-text: #1C2333;
-    --sms-muted: #6B7280;
-    --sms-border: #E4E7F0;
-    --sms-bg: #F5F6FA;
-    --sms-radius: 16px;
-    --sms-shadow: 0 8px 30px rgba(31, 41, 102, 0.08);
-    --sms-transition: all 0.25s ease;
-  }
-
-  .content-wrapper { background: var(--sms-bg); }
+  .content-wrapper { background: var(--bg-body); }
 
   .sms-container { display: grid; grid-template-columns: 1fr 380px; gap: 24px; align-items: start; }
   @media (max-width: 1199px) { .sms-container { grid-template-columns: 1fr; } }
 
   .sms-card {
-    background: #ffffff; border: 1px solid var(--sms-border);
-    border-radius: var(--sms-radius); box-shadow: var(--sms-shadow);
-    overflow: hidden; transition: var(--sms-transition);
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    overflow: hidden; transition: var(--transition);
   }
-  .sms-card:hover { box-shadow: 0 12px 40px rgba(31, 41, 102, 0.12); }
+  .sms-card:hover { box-shadow: var(--shadow-lg); }
   .sms-card-body { padding: 24px 26px 26px; }
 
   .sms-tabs {
-    display: flex; gap: 2px; background: #F0F2F8;
+    display: flex; gap: 2px; background: var(--border-light);
     border-radius: 10px; padding: 4px; margin-bottom: 22px;
   }
   .sms-tabs .tab {
     flex: 1; padding: 8px 14px; border: none; border-radius: 8px;
     background: transparent; font-weight: 600; font-size: 0.82rem;
-    color: var(--sms-muted); cursor: pointer; transition: var(--sms-transition); text-align: center;
+    color: var(--text-secondary); cursor: pointer; transition: var(--transition); text-align: center;
   }
-  .sms-tabs .tab:hover { color: var(--sms-text); background: rgba(255,255,255,0.5); }
-  .sms-tabs .tab.active { background: #ffffff; color: var(--sms-primary); box-shadow: 0 2px 8px rgba(31, 41, 102, 0.06); }
+  .sms-tabs .tab:hover { color: var(--text-primary); background: rgba(255,255,255,0.5); }
+  .sms-tabs .tab.active { background: var(--bg-card); color: var(--primary); box-shadow: var(--shadow-sm); }
   .sms-tab-panel { display: none; animation: fadeIn 0.3s ease; }
   .sms-tab-panel.active { display: block; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
   .sms-field { margin-bottom: 18px; }
   .sms-field label {
-    font-weight: 600; font-size: 0.85rem; color: var(--sms-text);
+    font-weight: 600; font-size: 0.85rem; color: var(--text-primary);
     margin-bottom: 5px; display: flex; align-items: center; gap: 6px;
   }
   .sms-field label .badge-required {
-    background: var(--sms-danger); color: #fff; font-size: 0.6rem;
+    background: var(--danger); color: #fff; font-size: 0.6rem;
     padding: 1px 8px; border-radius: 20px;
   }
   .sms-help {
-    font-size: 0.76rem; color: var(--sms-muted); margin-top: 5px;
+    font-size: 0.76rem; color: var(--text-secondary); margin-top: 5px;
     display: flex; justify-content: space-between; align-items: center;
   }
 
   .form-control {
-    border: 1.5px solid var(--sms-border); border-radius: 10px;
-    font-size: 0.9rem; color: var(--sms-text); transition: var(--sms-transition);
+    border: 1.5px solid var(--border); border-radius: 10px;
+    font-size: 0.9rem; color: var(--text-primary); transition: var(--transition);
   }
-  .form-control:focus { border-color: var(--sms-primary); box-shadow: 0 0 0 4px rgba(52, 82, 225, 0.12); }
+  .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(11,80,218,0.12); }
   textarea.textarea-code {
     min-height: 120px; font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-    font-size: 0.82rem; line-height: 1.6; background: #FBFBFE; tab-size: 2;
+    font-size: 0.82rem; line-height: 1.6; background: var(--bg-code); tab-size: 2;
   }
 
   .sms-auto-section {
-    background: #FAFAFD; border: 1.5px dashed var(--sms-border);
+    background: var(--bg-code); border: 1.5px dashed var(--border);
     border-radius: 12px; padding: 14px 18px; margin-bottom: 16px;
   }
   .sms-auto-section .section-title {
-    font-weight: 700; font-size: 0.85rem; color: var(--sms-primary);
+    font-weight: 700; font-size: 0.85rem; color: var(--primary);
     margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
   }
 
   .sms-schedule-row {
     display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
-    background: #FAFAFD; border: 1.5px dashed var(--sms-border);
+    background: var(--bg-code); border: 1.5px dashed var(--border);
     border-radius: 12px; padding: 16px 18px; margin-bottom: 20px;
   }
   .sms-schedule-row .form-group { margin-bottom: 0; flex: 1; min-width: 180px; }
   .sms-schedule-row .form-group label {
-    font-weight: 600; font-size: 0.78rem; color: var(--sms-muted);
+    font-weight: 600; font-size: 0.78rem; color: var(--text-secondary);
     text-transform: uppercase; letter-spacing: 0.04em;
   }
-  .sms-schedule-row input[type="datetime-local"] { padding: 6px 10px; }
   .sms-schedule-row .btn-schedule {
-    background: transparent; border: 1.5px solid var(--sms-border);
+    background: transparent; border: 1.5px solid var(--border);
     border-radius: 10px; padding: 8px 18px; font-weight: 600;
-    font-size: 0.82rem; color: var(--sms-muted); transition: var(--sms-transition);
+    font-size: 0.82rem; color: var(--text-secondary); transition: var(--transition);
     cursor: pointer; white-space: nowrap;
   }
   .sms-schedule-row .btn-schedule:hover {
-    border-color: var(--sms-primary); color: var(--sms-primary);
-    background: var(--sms-primary-light);
+    border-color: var(--primary); color: var(--primary);
+    background: var(--primary-light);
   }
 
   .sms-flag {
     display: flex; gap: 10px; align-items: flex-start;
-    background: var(--sms-warning-bg); border: 1.5px solid #F3DFAE;
+    background: var(--warning-bg); border: 1.5px solid #F3DFAE;
     border-radius: 10px; padding: 12px 16px; font-size: 0.82rem;
-    color: #8A5A00; margin-bottom: 20px; transition: var(--sms-transition);
+    color: #8A5A00; margin-bottom: 20px; transition: var(--transition);
   }
-  .sms-flag.warning { background: var(--sms-danger-bg); border-color: #F5C6CB; color: #721C24; }
-  .sms-flag.success { background: var(--sms-success-bg); border-color: #C3E6CB; color: #155724; }
+  .sms-flag.warning { background: var(--danger-bg); border-color: #F5C6CB; color: #721C24; }
+  .sms-flag.success { background: var(--success-bg); border-color: #C3E6CB; color: #155724; }
   .sms-flag input { margin-top: 2px; flex-shrink: 0; }
 
   .sms-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
-  .btn {
-    border-radius: 10px; font-weight: 600; font-size: 0.86rem;
-    padding: 0.55rem 1.2rem; transition: var(--sms-transition);
-    border: none; display: inline-flex; align-items: center; gap: 8px;
-  }
-  .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
-  .btn:active { transform: translateY(0); }
-  .btn-outline-primary { background: #fff; color: var(--sms-primary); border: 1.5px solid var(--sms-primary); }
-  .btn-outline-primary:hover { background: var(--sms-primary-light); color: var(--sms-primary-dark); }
-  .btn-success { background: var(--sms-success); color: #fff; box-shadow: 0 6px 16px rgba(23, 166, 115, 0.28); }
-  .btn-success:hover { background: #13895D; }
-  .btn-success:disabled { background: #B9C0CC; box-shadow: none; cursor: not-allowed; transform: none; }
-  .btn-primary { background: var(--sms-primary); color: #fff; }
-  .btn-primary:hover { background: var(--sms-primary-dark); }
-  .btn-outline-secondary { background: #fff; color: var(--sms-muted); border: 1.5px solid var(--sms-border); }
-  .btn-outline-secondary:hover { background: #F0F2F8; color: var(--sms-text); }
-  .btn-danger { background: var(--sms-danger); color: #fff; box-shadow: 0 6px 16px rgba(226, 76, 75, 0.25); }
-  .btn-danger:hover { background: #C0392B; }
-  .btn-sm { padding: 0.35rem 0.8rem; font-size: 0.78rem; }
 
   .sms-side { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 16px; }
 
   .sms-phone {
     background: linear-gradient(180deg, #1B1F3B, #262B52);
     border-radius: 28px; padding: 18px 16px 22px;
-    box-shadow: 0 16px 48px rgba(27, 31, 59, 0.25);
+    box-shadow: var(--shadow-xl);
   }
   .sms-phone .notch { width: 80px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 4px; margin: 0 auto 14px; }
   .sms-phone .screen {
@@ -170,11 +127,11 @@
     padding: 16px 14px; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px;
   }
   .sms-phone .bubble {
-    background: linear-gradient(135deg, var(--sms-primary), var(--sms-accent));
+    background: linear-gradient(135deg, var(--primary), var(--accent));
     color: #fff; padding: 10px 14px; border-radius: 16px 16px 4px 16px;
     font-size: 0.82rem; line-height: 1.4; max-width: 92%; align-self: flex-end;
     white-space: pre-wrap; word-break: break-word;
-    box-shadow: 0 4px 12px rgba(52, 82, 225, 0.25); transition: var(--sms-transition);
+    box-shadow: 0 4px 12px rgba(11,80,218,0.25); transition: var(--transition);
   }
   .sms-phone .bubble.is-placeholder {
     background: #E2E4EE; color: #8A90A6; font-style: italic;
@@ -186,61 +143,57 @@
   }
 
   .sms-stats {
-    background: #fff; border: 1px solid var(--sms-border);
-    border-radius: var(--sms-radius); padding: 16px 18px; box-shadow: var(--sms-shadow);
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow);
   }
   .sms-stats .row { display: flex; justify-content: space-between; font-size: 0.82rem; padding: 5px 0; }
-  .sms-stats .row + .row { border-top: 1px dashed var(--sms-border); }
-  .sms-stats .label { color: var(--sms-muted); }
-  .sms-stats .value { font-weight: 700; color: var(--sms-text); }
+  .sms-stats .row + .row { border-top: 1px dashed var(--border); }
+  .sms-stats .label { color: var(--text-secondary); }
+  .sms-stats .value { font-weight: 700; color: var(--text-primary); }
 
   .sms-result { margin-top: 20px; display: none; }
   .sms-result.visible { display: block; animation: fadeIn 0.3s ease; }
 
   .sms-preview-item {
-    border: 1px solid var(--sms-border); border-radius: 10px;
-    padding: 10px 14px; margin-bottom: 8px; background: #FAFAFD;
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 14px; margin-bottom: 8px; background: var(--bg-code);
   }
-  .sms-preview-item .phone { font-weight: 700; font-size: 0.84rem; color: var(--sms-text); }
-  .sms-preview-item .meta { font-size: 0.72rem; color: var(--sms-muted); }
+  .sms-preview-item .phone { font-weight: 700; font-size: 0.84rem; color: var(--text-primary); }
+  .sms-preview-item .meta { font-size: 0.72rem; color: var(--text-secondary); }
   .sms-preview-item .msg {
-    white-space: pre-wrap; font-size: 0.82rem; color: var(--sms-text);
-    background: #fff; border-radius: 6px; padding: 6px 10px; margin-top: 4px;
-    border: 1px solid var(--sms-border);
+    white-space: pre-wrap; font-size: 0.82rem; color: var(--text-primary);
+    background: var(--bg-card); border-radius: 6px; padding: 6px 10px; margin-top: 4px;
+    border: 1px solid var(--border);
   }
 
   #smsToastArea {
     position: fixed; top: 0.6rem; right: 0.6rem; z-index: 9999;
-    display: flex; flex-direction: column; gap: 1px; max-width: 220px; width: 100%;
+    display: flex; flex-direction: column; gap: 8px; max-width: 320px; width: 100%;
   }
   .sms-toast {
-    background: #fff; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.12);
-    padding: 10px 12px; border-left: 5px solid var(--sms-primary);
-    animation: slideIn 0.3s ease; display: flex; align-items: flex-start; gap: 12px;
+    background: var(--bg-card); border-radius: 12px;
+    box-shadow: var(--shadow-xl); padding: 10px 12px;
+    border-left: 5px solid var(--primary);
+    animation: slideIn 0.3s ease; display: flex; align-items: flex-start; gap: 10px;
+    font-size: 0.85rem; color: var(--text-primary);
   }
-  .sms-toast.success { border-left-color: var(--sms-success); }
-  .sms-toast.danger { border-left-color: var(--sms-danger); }
-  .sms-toast.warning { border-left-color: var(--sms-warning); }
-  .sms-toast.info { border-left-color: var(--sms-info); }
-  .sms-toast .icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 2px; }
-  .sms-toast .content { flex: 1; font-size: 0.88rem; color: var(--sms-text); }
+  .sms-toast.success { border-left-color: var(--success); }
+  .sms-toast.danger { border-left-color: var(--danger); }
+  .sms-toast.warning { border-left-color: var(--warning); }
+  .sms-toast.info { border-left-color: var(--info); }
+  .sms-toast .icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 2px; }
+  .sms-toast .content { flex: 1; }
   .sms-toast .close-btn {
-    background: none; border: none; font-size: 1.2rem;
-    color: var(--sms-muted); cursor: pointer; padding: 0 4px;
+    background: none; border: none; font-size: 1.1rem;
+    color: var(--text-secondary); cursor: pointer; padding: 0 4px;
   }
-  .sms-toast .close-btn:hover { color: var(--sms-text); }
-
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateX(30px); }
-    to { opacity: 1; transform: translateX(0); }
-  }
+  .sms-toast .close-btn:hover { color: var(--text-primary); }
 
   .spinner-sm {
     display: inline-block; width: 18px; height: 18px;
     border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
     border-radius: 50%; animation: spin 0.7s linear infinite;
   }
-  @keyframes spin { to { transform: rotate(360deg); } }
 
   /* Switch toggle */
   .switch-sm {
@@ -255,53 +208,53 @@
     position: absolute; content: ""; height: 18px; width: 18px;
     left: 3px; bottom: 3px; background-color: white; transition: 0.3s; border-radius: 50%;
   }
-  input:checked + .slider-sm { background-color: var(--sms-primary); }
+  input:checked + .slider-sm { background-color: var(--primary); }
   input:checked + .slider-sm:before { transform: translateX(20px); }
 
   /* Multi-select */
   .multi-select-container { position: relative; width: 100%; }
   .multi-select-trigger {
-    border: 1.5px solid var(--sms-border); border-radius: 10px;
-    padding: 6px 10px; font-size: 0.9rem; cursor: pointer; background: #fff;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 6px 10px; font-size: 0.9rem; cursor: pointer; background: var(--bg-card);
     min-height: 40px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
-    transition: var(--sms-transition);
+    transition: var(--transition);
   }
-  .multi-select-trigger:hover { border-color: var(--sms-primary); }
-  .multi-select-trigger:focus-within { border-color: var(--sms-primary); box-shadow: 0 0 0 4px rgba(52,82,225,0.12); }
+  .multi-select-trigger:hover { border-color: var(--primary); }
+  .multi-select-trigger:focus-within { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(11,80,218,0.12); }
   .multi-select-chip {
-    background: var(--sms-primary-light); color: var(--sms-primary-dark);
+    background: var(--primary-light); color: var(--primary);
     border: 1px solid #C7D2FE; padding: 2px 8px; border-radius: 50px;
     font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;
   }
-  .multi-select-chip .remove-chip { cursor: pointer; font-size: 0.9rem; color: var(--sms-primary); line-height: 1; }
-  .multi-select-chip .remove-chip:hover { color: var(--sms-danger); }
+  .multi-select-chip .remove-chip { cursor: pointer; font-size: 0.9rem; color: var(--primary); line-height: 1; }
+  .multi-select-chip .remove-chip:hover { color: var(--danger); }
   .multi-select-placeholder { color: #94a3b8; font-size: 0.85rem; }
   .multi-select-dropdown {
-    position: absolute; top: 100%; left: 0; right: 0; background: #fff;
-    border: 1px solid var(--sms-border); border-radius: 10px;
+    position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: 10px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.1); z-index: 100; max-height: 260px;
     display: none; margin-top: 4px; overflow: hidden; flex-direction: column;
   }
   .multi-select-dropdown.open { display: flex; }
-  .multi-select-search { padding: 8px 12px; border-bottom: 1px solid var(--sms-border); flex-shrink: 0; }
+  .multi-select-search { padding: 8px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
   .multi-select-search input {
-    width: 100%; border: 1px solid var(--sms-border); border-radius: 6px;
+    width: 100%; border: 1px solid var(--border); border-radius: 6px;
     padding: 6px 10px; font-size: 0.82rem; outline: none; transition: border 0.2s;
   }
-  .multi-select-search input:focus { border-color: var(--sms-primary); box-shadow: 0 0 0 3px rgba(52,82,225,0.15); }
+  .multi-select-search input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(11,80,218,0.15); }
   .multi-select-options { flex: 1; overflow-y: auto; padding: 4px 0; }
   .multi-select-options label {
     display: flex; align-items: center; gap: 8px; padding: 6px 12px;
     cursor: pointer; font-size: 0.82rem; font-weight: 500; transition: background 0.15s;
   }
   .multi-select-options label:hover { background: #f1f5f9; }
-  .multi-select-options input[type="checkbox"] { accent-color: var(--sms-primary); }
-  .multi-select-actions { display: flex; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--sms-border); flex-shrink: 0; }
+  .multi-select-options input[type="checkbox"] { accent-color: var(--primary); }
+  .multi-select-actions { display: flex; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--border); flex-shrink: 0; }
   .multi-select-actions button {
     flex: 1; font-size: 0.72rem; padding: 5px 10px; border-radius: 6px;
-    border: 1px solid var(--sms-border); background: #fff; cursor: pointer; font-weight: 600;
+    border: 1px solid var(--border); background: var(--bg-card); cursor: pointer; font-weight: 600;
   }
-  .multi-select-actions .btn-aplicar { background: var(--sms-primary); color: #fff; border-color: var(--sms-primary); }
+  .multi-select-actions .btn-aplicar { background: var(--primary); color: #fff; border-color: var(--primary); }
 
   @media (max-width: 768px) {
     .sms-card-body { padding: 16px; }
@@ -332,11 +285,11 @@
         <div class="sms-auto-section">
           <div class="section-title">
             <i class="fas fa-puzzle-piece"></i> Constructor de Mensaje
-            <span class="badge" style="background:#E2E4EE;color:var(--sms-muted);font-size:0.7rem;">Opcional</span>
+            <span class="badge" style="background:#E2E4EE;color:var(--text-secondary);font-size:0.7rem;">Opcional</span>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
             <div style="flex:1;min-width:150px;">
-              <label style="font-size:0.72rem;font-weight:600;color:var(--sms-muted);">Operador(es)</label>
+              <label style="font-size:0.72rem;font-weight:600;color:var(--text-secondary);">Operador(es)</label>
               <div class="multi-select-container" id="msOperadorContainer">
                 <div class="multi-select-trigger" id="msOperadorTrigger">
                   <span class="multi-select-placeholder">-- Selecciona --</span>
@@ -345,25 +298,25 @@
               </div>
             </div>
             <div style="flex:1;min-width:130px;">
-              <label style="font-size:0.72rem;font-weight:600;color:var(--sms-muted);">Categoría</label>
+              <label style="font-size:0.72rem;font-weight:600;color:var(--text-secondary);">Categoría</label>
               <select id="maFiltroCategoria" class="form-control form-control-sm">
                 <option value="">-- Categoría --</option>
               </select>
             </div>
             <div style="flex:1;min-width:130px;">
-              <label style="font-size:0.72rem;font-weight:600;color:var(--sms-muted);">Tipo</label>
+              <label style="font-size:0.72rem;font-weight:600;color:var(--text-secondary);">Tipo</label>
               <select id="maFiltroIntensidad" class="form-control form-control-sm">
                 <option value="">Tipo</option>
               </select>
             </div>
             <div style="flex:2;min-width:200px;">
-              <label style="font-size:0.72rem;font-weight:600;color:var(--sms-muted);">Mensaje</label>
+              <label style="font-size:0.72rem;font-weight:600;color:var(--text-secondary);">Mensaje</label>
               <select id="maMensajeSelect" class="form-control form-control-sm">
                 <option value="">-- Selecciona mensaje --</option>
               </select>
             </div>
           </div>
-          <div style="margin-top:6px;font-size:0.7rem;color:var(--sms-muted);">
+          <div style="margin-top:6px;font-size:0.7rem;color:var(--text-secondary);">
             <i class="fas fa-info-circle"></i> 
             Selecciona combinación de Operador(es), Categoría y/o Tipo para cargar una plantilla.
           </div>
@@ -373,12 +326,12 @@
         <div class="sms-field">
           <label for="query">Consulta SQL <span class="badge-required">requerido</span></label>
           <textarea id="query" class="form-control textarea-code" placeholder="SELECT celular, nombre, monto FROM ..." rows="4">SELECT 
-  '3001234567' AS telefono,
-  'Juan Pérez' AS nombre,
-  '100000' AS monto</textarea>
+SELECT 
+  * FROM `capable-arbor-209819.Temporal.sms_prueba_python`
+          </textarea>
           <div class="sms-help">
             <span>Incluye columna de teléfono: <code>telefono</code>, <code>celular</code>, <code>movil</code>, <code>phone</code>.</span>
-            <span id="rowCount" style="font-weight:600;color:var(--sms-primary);">0 filas</span>
+            <span id="rowCount" style="font-weight:600;color:var(--primary);">0 filas</span>
           </div>
         </div>
 
@@ -420,13 +373,17 @@
         <!-- PROGRAMAR SIMPLE -->
         <div class="sms-schedule-row">
           <div class="form-group">
-            <label for="fechaProgramada"><i class="far fa-calendar-alt"></i> Programar para</label>
-            <input id="fechaProgramada" type="datetime-local" class="form-control">
+              <label for="fechaProgramada"><i class="far fa-calendar-alt"></i> Fecha</label>
+              <input id="fechaProgramada" type="date" class="form-control">
+          </div>
+          <div class="form-group">
+              <label for="horaProgramada"><i class="far fa-clock"></i> Hora</label>
+              <input id="horaProgramada" type="time" class="form-control" value="08:00">
           </div>
           <button id="scheduleBtn" class="btn-schedule"><i class="fas fa-clock"></i> Programar envío</button>
         </div>
 
-        <!-- 🆕 PROGRAMACIÓN RECURRENTE -->
+        <!-- PROGRAMACIÓN RECURRENTE -->
         <div class="sms-auto-section" style="margin-bottom:16px;">
           <div class="section-title">
             <i class="fas fa-sync-alt"></i> Programación Recurrente
@@ -439,31 +396,16 @@
           <div id="recurrenciaOpciones" style="display:none;">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
               <div class="sms-field" style="margin-bottom:0;">
-                <label style="font-size:0.72rem;">Frecuencia</label>
-                <select id="frecuenciaTipo" class="form-control form-control-sm">
-                  <option value="diario">Diario</option>
-                  <option value="semanal">Semanal</option>
-                  <option value="mensual">Mensual</option>
-                </select>
-              </div>
-              <div class="sms-field" style="margin-bottom:0;">
                 <label style="font-size:0.72rem;">⏰ Hora de envío</label>
-                <input type="time" id="horaRecurrente" class="form-control form-control-sm" value="07:00">
+                <input type="time" id="horaRecurrente" class="form-control form-control-sm" value="08:00">
               </div>
-            </div>
-            
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
               <div class="sms-field" style="margin-bottom:0;">
-                <label style="font-size:0.72rem;">📅 Fecha límite (opcional)</label>
+                <label style="font-size:0.72rem;">📅 Fecha fin (opcional)</label>
                 <input type="date" id="fechaLimite" class="form-control form-control-sm">
               </div>
-              <div class="sms-field" style="margin-bottom:0;">
-                <label style="font-size:0.72rem;">🔢 Máx. repeticiones (opcional)</label>
-                <input type="number" id="repeticionesMax" class="form-control form-control-sm" placeholder="Sin límite" min="1" max="999">
-              </div>
             </div>
-            <div style="font-size:0.7rem;color:var(--sms-muted);margin-top:8px;">
-              <i class="fas fa-info-circle"></i> Define al menos un límite (fecha o repeticiones).
+            <div style="font-size:0.7rem;color:var(--text-secondary);margin-top:8px;">
+              <i class="fas fa-info-circle"></i> Se ejecutará todos los días a la hora indicada hasta la fecha fin.
             </div>
           </div>
         </div>
@@ -517,33 +459,33 @@
 
     <div class="sms-stats">
       <div class="row"><span class="label"><i class="fas fa-users"></i> Total destinatarios</span><span class="value" id="statTotal">—</span></div>
-      <div class="row"><span class="label"><i class="fas fa-check-circle" style="color:var(--sms-success);"></i> Válidos</span><span class="value" id="statValidos">—</span></div>
-      <div class="row"><span class="label"><i class="fas fa-exclamation-circle" style="color:var(--sms-danger);"></i> Inválidos</span><span class="value" id="statInvalidos">—</span></div>
-      <div class="row"><span class="label"><i class="fas fa-copy" style="color:var(--sms-warning);"></i> Duplicados (hoy)</span><span class="value" id="statDuplicados">—</span></div>
-      <div class="row"><span class="label"><i class="fas fa-ban" style="color:var(--sms-danger);"></i> Lista negra</span><span class="value" id="statBlacklist">—</span></div>
-      <div class="row" style="border-top:2px solid var(--sms-border);padding-top:8px;margin-top:4px;">
+      <div class="row"><span class="label"><i class="fas fa-check-circle" style="color:var(--success);"></i> Válidos</span><span class="value" id="statValidos">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-exclamation-circle" style="color:var(--danger);"></i> Inválidos</span><span class="value" id="statInvalidos">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-copy" style="color:var(--warning);"></i> Duplicados (hoy)</span><span class="value" id="statDuplicados">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-ban" style="color:var(--danger);"></i> Lista negra</span><span class="value" id="statBlacklist">—</span></div>
+      <div class="row" style="border-top:2px solid var(--border);padding-top:8px;margin-top:4px;">
         <span class="label" style="font-weight:700;">📤 A enviar</span>
-        <span class="value" id="statAEnviar" style="font-size:1.1rem;color:var(--sms-primary);">—</span>
+        <span class="value" id="statAEnviar" style="font-size:1.1rem;color:var(--primary);">—</span>
       </div>
     </div>
 
     <div class="sms-stats" id="validationDetail" style="display:none;">
-      <div style="font-weight:700;font-size:0.9rem;margin-bottom:10px;color:var(--sms-primary);">
+      <div style="font-weight:700;font-size:0.9rem;margin-bottom:10px;color:var(--primary);">
         <i class="fas fa-shield-alt"></i> Detalle de validación
       </div>
       <div class="row"><span class="label">📊 Total consulta</span><span class="value" id="valTotalConsulta">—</span></div>
-      <div class="row"><span class="label"><i class="fas fa-check-circle" style="color:var(--sms-success);"></i> Válidos</span><span class="value" id="valValidos">—</span></div>
-      <div class="row"><span class="label"><i class="fas fa-times-circle" style="color:var(--sms-danger);"></i> Inválidos</span><span class="value" id="valInvalidos">—</span></div>
-      <div class="row"><span class="label"><i class="fas fa-copy" style="color:var(--sms-warning);"></i> Duplicados hoy</span><span class="value" id="valDuplicados">—</span></div>
-      <div class="row"><span class="label"><i class="fas fa-ban" style="color:var(--sms-danger);"></i> Lista negra</span><span class="value" id="valBlacklist">—</span></div>
-      <div class="row" style="border-top:2px solid var(--sms-primary);padding-top:8px;margin-top:4px;">
+      <div class="row"><span class="label"><i class="fas fa-check-circle" style="color:var(--success);"></i> Válidos</span><span class="value" id="valValidos">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-times-circle" style="color:var(--danger);"></i> Inválidos</span><span class="value" id="valInvalidos">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-copy" style="color:var(--warning);"></i> Duplicados hoy</span><span class="value" id="valDuplicados">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-ban" style="color:var(--danger);"></i> Lista negra</span><span class="value" id="valBlacklist">—</span></div>
+      <div class="row" style="border-top:2px solid var(--primary);padding-top:8px;margin-top:4px;">
         <span class="label" style="font-weight:700;font-size:0.9rem;">📤 A ENVIAR</span>
-        <span class="value" id="valAEnviar" style="font-size:1.2rem;color:var(--sms-primary);font-weight:700;">—</span>
+        <span class="value" id="valAEnviar" style="font-size:1.2rem;color:var(--primary);font-weight:700;">—</span>
       </div>
     </div>
 
     <div class="sms-stats" id="previewDetail" style="display:none;">
-      <div style="font-weight:700;font-size:0.9rem;margin-bottom:10px;color:var(--sms-primary);">
+      <div style="font-weight:700;font-size:0.9rem;margin-bottom:10px;color:var(--primary);">
         <i class="fas fa-eye"></i> Vista previa (primeros 3)
       </div>
       <div id="previewMessages"></div>
@@ -565,6 +507,11 @@
   const usuarioEl = document.getElementById('usuario');
   const confirmarReenvioEl = document.getElementById('confirmarReenvio');
   const fechaProgramadaEl = document.getElementById('fechaProgramada');
+  const horaProgramadaEl = document.getElementById('horaProgramada');
+  const esRecurrenteEl = document.getElementById('esRecurrente');
+  const recurrenciaOpciones = document.getElementById('recurrenciaOpciones');
+  const horaRecurrenteEl = document.getElementById('horaRecurrente');
+  const fechaLimiteEl = document.getElementById('fechaLimite');
   const previewBtn = document.getElementById('previewBtn');
   const sendBtn = document.getElementById('sendBtn');
   const scheduleBtn = document.getElementById('scheduleBtn');
@@ -575,22 +522,12 @@
   const phoneMetaCount = document.getElementById('phoneMetaCount');
   const charCounter = document.getElementById('charCounter');
   const rowCount = document.getElementById('rowCount');
-
-  // 🆕 Recurrencia
-  const esRecurrenteEl = document.getElementById('esRecurrente');
-  const recurrenciaOpciones = document.getElementById('recurrenciaOpciones');
-  const frecuenciaTipoEl = document.getElementById('frecuenciaTipo');
-  const horaRecurrenteEl = document.getElementById('horaRecurrente');
-  const fechaLimiteEl = document.getElementById('fechaLimite');
-  const repeticionesMaxEl = document.getElementById('repeticionesMax');
-
   const statTotal = document.getElementById('statTotal');
   const statValidos = document.getElementById('statValidos');
   const statInvalidos = document.getElementById('statInvalidos');
   const statDuplicados = document.getElementById('statDuplicados');
   const statBlacklist = document.getElementById('statBlacklist');
   const statAEnviar = document.getElementById('statAEnviar');
-
   const tabs = document.querySelectorAll('.sms-tabs .tab');
   const panels = {
     send: document.getElementById('panel-send'),
@@ -609,7 +546,7 @@
     return el.innerHTML;
   }
 
-  // 🆕 Toggle recurrencia
+  // Toggle recurrencia
   esRecurrenteEl.addEventListener('change', function() {
     if (this.checked) {
       recurrenciaOpciones.style.display = 'block';
@@ -622,23 +559,25 @@
     }
   });
 
-  // 🆕 getPayload UNIFICADO
   function getPayload() {
     const esRecurrente = esRecurrenteEl.checked;
-    return {
+    const payload = {
       query: queryEl.value.trim(),
       plantilla: plantillaEl.value.trim(),
       campana: campanaEl.value.trim(),
       usuario: usuarioEl.value.trim(),
       confirmar_reenvio: confirmarReenvioEl.checked,
-      fecha_programada: fechaProgramadaEl.value || null,
-      id_mensaje: document.getElementById('idMensajeHidden').value || null,
-      es_recurrente: esRecurrente,
-      frecuencia_tipo: esRecurrente ? frecuenciaTipoEl.value : null,
-      hora_envio: esRecurrente ? horaRecurrenteEl.value : null,
-      fecha_limite: esRecurrente ? fechaLimiteEl.value : null,
-      repeticiones_max: esRecurrente ? parseInt(repeticionesMaxEl.value) || null : null
+      id_mensaje: document.getElementById('idMensajeHidden').value || null
     };
+    if (esRecurrente) {
+      payload.hora_inicio = horaRecurrenteEl.value || null;
+      payload.fecha_fin = fechaLimiteEl.value || null;
+    } else {
+      payload.fecha_programada = fechaProgramadaEl.value 
+        ? `${fechaProgramadaEl.value}T${horaProgramadaEl.value || '08:00'}`
+        : null;
+    }
+    return payload;
   }
 
   function estimarSegmentos(len) {
@@ -952,9 +891,6 @@
       previewData = validacionData;
       totalAEnviar = validacionData.a_enviar || 0;
 
-      if (validacionData.mensaje_detectado) { plantillaEl.value = validacionData.mensaje_detectado; actualizarMockup(); }
-      if (validacionData.id_mensaje_detectado) document.getElementById('idMensajeHidden').value = validacionData.id_mensaje_detectado;
-
       document.getElementById('validationDetail').style.display = 'block';
       document.getElementById('valTotalConsulta').textContent = validacionData.total_consulta || 0;
       document.getElementById('valValidos').textContent = validacionData.total_validos || 0;
@@ -1021,56 +957,43 @@
   // ========== PROGRAMAR SIMPLE ==========
   scheduleBtn.addEventListener('click', async () => {
     const fecha = fechaProgramadaEl.value;
-    if (!fecha) { showToast('⚠️ Selecciona fecha', 'warning'); return; }
-    if (new Date(fecha) <= new Date()) { showToast('⚠️ Fecha futura requerida', 'warning'); return; }
-    if (!queryEl.value.trim() || !plantillaEl.value.trim()) { showToast('⚠️ Completa consulta y plantilla', 'warning'); return; }
+    const hora = horaProgramadaEl.value || '08:00';
+    if (!fecha) { showToast('⚠️ Selecciona la fecha', 'warning'); return; }
+    if (!queryEl.value.trim() || !plantillaEl.value.trim()) { 
+      showToast('⚠️ Completa consulta y plantilla', 'warning'); 
+      return; 
+    }
     try {
       setLoading(scheduleBtn, true);
       const payload = getPayload();
-      payload.fecha_programada = fecha;
+      payload.fecha_programada = `${fecha}T${hora}`;
       const data = await callAPI('/api/sms/programar', payload);
       showToast(`✅ Programado (ID: ${data.id})`, 'success', 5000);
-      showResult(`<div class="alert alert-success mb-0"><i class="fas fa-check-circle"></i> <strong>Programado</strong><br>ID: <code>${data.id}</code><br>Fecha: ${new Date(data.fecha_programada).toLocaleString()}<br>Destinatarios: ${data.total_destinatarios || '—'}</div>`);
+      showResult(`<div class="alert alert-success mb-0"><i class="fas fa-check-circle"></i> <strong>Programado</strong><br>ID: <code>${data.id}</code><br>Fecha: ${fecha} ${hora}<br>Destinatarios: ${data.total_destinatarios || '—'}</div>`);
       fechaProgramadaEl.value = '';
+      horaProgramadaEl.value = '08:00';
     } catch (error) { showToast(`❌ ${escapeHtml(error.message)}`, 'danger'); }
     finally { setLoading(scheduleBtn, false); }
   });
 
-  // 🆕 ========== PROGRAMAR RECURRENTE ==========
+  // ========== PROGRAMAR RECURRENTE ==========
   scheduleRecurrentBtn.addEventListener('click', async () => {
-    const frecuencia = frecuenciaTipoEl.value;
     const hora = horaRecurrenteEl.value;
-    
+    const fechaFin = fechaLimiteEl.value;
+    if (!hora) { showToast('⚠️ Selecciona la hora', 'warning'); return; }
     if (!queryEl.value.trim() || !plantillaEl.value.trim()) { showToast('⚠️ Completa consulta y plantilla', 'warning'); return; }
-    if (!hora) { showToast('⚠️ Selecciona una hora', 'warning'); return; }
-
-    const fechaLimite = fechaLimiteEl.value;
-    const repMax = parseInt(repeticionesMaxEl.value) || null;
-    
-    if (!fechaLimite && !repMax) { showToast('⚠️ Define una fecha límite o máximo de repeticiones', 'warning'); return; }
-
-    const ahora = new Date();
-    const [horas, minutos] = hora.split(':');
-    let primeraFecha = new Date();
-    primeraFecha.setHours(parseInt(horas), parseInt(minutos), 0, 0);
-    if (primeraFecha <= ahora) primeraFecha.setDate(primeraFecha.getDate() + 1);
-
-    const mensaje = `¿Programar envío recurrente?\n• Inicio: ${primeraFecha.toLocaleString()}\n• Frecuencia: ${frecuencia}\n• Hora: ${hora}\n${fechaLimite ? '• Hasta: ' + fechaLimite + '\n' : ''}${repMax ? '• Máx: ' + repMax + ' repeticiones' : ''}`;
-    if (!confirm(mensaje)) return;
-
     try {
       setLoading(scheduleRecurrentBtn, true);
       const payload = getPayload();
-      payload.fecha_programada = primeraFecha.toISOString();
-      const data = await callAPI('/api/sms/programar', payload);
-      
+      const data = await callAPI('/api/sms/programar-recurrente', payload);
       showToast(`✅ Programación recurrente creada (ID: ${data.id})`, 'success', 5000);
-      showResult(`<div class="alert alert-success mb-0"><i class="fas fa-check-circle"></i> <strong>Programación recurrente</strong><br>ID: <code>${data.id}</code><br>Inicio: ${primeraFecha.toLocaleString()}<br>Frecuencia: ${frecuencia} · ${hora}</div>`);
-      
+      showResult(`<div class="alert alert-success mb-0"><i class="fas fa-check-circle"></i> <strong>Programación recurrente</strong><br>ID: <code>${data.id}</code><br>Hora: ${hora}<br>${fechaFin ? 'Fecha fin: ' + fechaFin + '<br>' : ''}Destinatarios: ${data.total_destinatarios || '—'}</div>`);
       esRecurrenteEl.checked = false;
       recurrenciaOpciones.style.display = 'none';
       scheduleRecurrentBtn.style.display = 'none';
       scheduleBtn.style.display = 'inline-flex';
+      horaRecurrenteEl.value = '08:00';
+      fechaLimiteEl.value = '';
     } catch (error) { showToast(`❌ ${escapeHtml(error.message)}`, 'danger'); }
     finally { setLoading(scheduleRecurrentBtn, false); }
   });
@@ -1078,9 +1001,11 @@
   // ========== LIMPIAR ==========
   clearBtn.addEventListener('click', () => {
     queryEl.value = ''; plantillaEl.value = ''; campanaEl.value = ''; usuarioEl.value = '';
-    confirmarReenvioEl.checked = false; fechaProgramadaEl.value = '';
+    confirmarReenvioEl.checked = false;
+    fechaProgramadaEl.value = ''; horaProgramadaEl.value = '08:00';
     esRecurrenteEl.checked = false; recurrenciaOpciones.style.display = 'none';
     scheduleRecurrentBtn.style.display = 'none'; scheduleBtn.style.display = 'inline-flex';
+    horaRecurrenteEl.value = '08:00'; fechaLimiteEl.value = '';
     document.getElementById('idMensajeHidden').value = '';
     if (msOperador) msOperador.limpiar();
     document.getElementById('maFiltroCategoria').innerHTML = '<option value="">-- Categoría --</option>';
@@ -1115,7 +1040,6 @@
   }
 
   // ========== PROGRAMACIONES ==========
-  // ========== PROGRAMACIONES ==========
   async function loadScheduled() {
     const container = document.getElementById('scheduledResult');
     container.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
@@ -1124,32 +1048,25 @@
       const data = await resp.json();
       if (!data.items?.length) { container.innerHTML = '<div class="text-center text-muted py-4">Sin programaciones</div>'; return; }
       
-      let html = '<table class="table table-hover table-sm"><thead><tr><th>ID</th><th>Fecha</th><th>Tipo</th><th>Estado</th><th></th></tr></thead><tbody>';
+      let html = '<table class="table table-hover table-sm"><thead><tr><th>ID</th><th>Tipo</th><th>Fecha/Hora</th><th>Estado</th><th></th></tr></thead><tbody>';
       
       data.items.forEach(row => {
-        const esRecurrente = row.es_recurrente;
-        const frecuencia = row.frecuencia_tipo || '';
-        const reps = row.repeticiones_realizadas || 0;
-        const repsMax = row.repeticiones_max || '-';
+        const tipo = row.tipo_programacion || 'simple';
+        const fecha = row.fecha_programada ? new Date(row.fecha_programada).toLocaleString() : (row.hora_inicio || '—');
         
-        let tipoBadge = '';
-        if (esRecurrente) {
-          tipoBadge = `<span class="badge badge-info" title="${frecuencia} · ${reps}/${repsMax} reps">🔄 ${frecuencia}</span>`;
-        } else {
-          tipoBadge = '<span class="badge badge-secondary">Simple</span>';
-        }
+        const tipoBadge = tipo === 'recurrente'
+          ? '<span class="badge badge-info">🔄 Recurrente</span>'
+          : '<span class="badge badge-secondary">Simple</span>';
         
-        let estadoClass = '';
-        if (row.estado === 'pendiente') estadoClass = 'warning';
-        else if (row.estado === 'enviado') estadoClass = 'success';
-        else if (row.estado === 'completado') estadoClass = 'info';
-        else if (row.estado === 'fallido') estadoClass = 'danger';
-        else estadoClass = 'secondary';
+        const estadoClass = row.estado === 'pendiente' ? 'warning' :
+          row.estado === 'enviado' ? 'success' :
+          row.estado === 'completado' ? 'info' :
+          row.estado === 'fallido' ? 'danger' : 'secondary';
         
         html += `<tr>
           <td><code>${escapeHtml((row.id||'').substring(0,8))}</code></td>
-          <td>${row.fecha_programada ? new Date(row.fecha_programada).toLocaleString() : '—'}</td>
           <td>${tipoBadge}</td>
+          <td>${fecha}</td>
           <td><span class="badge badge-${estadoClass}">${row.estado || '?'}</span></td>
           <td>${row.estado === 'pendiente' ? `<button class="btn btn-sm btn-outline-danger cancelar-btn" data-id="${row.id}"><i class="fas fa-times"></i></button>` : ''}</td>
         </tr>`;
