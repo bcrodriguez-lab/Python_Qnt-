@@ -54,3 +54,7 @@
 2026-08-18 12:34:43 - INFO - [SMS] Campaña='Promoción Julio 2026' Usuario='admin' Total=2 Enviados=500 Fallidos=0 Estado=exitoso
 2026-08-18 14:24:20 - INFO - [SMS] Campaña='Promoción Julio 2026' Usuario='admin' Total=3 Enviados=500 Fallidos=0 Estado=exitoso
 2026-08-18 14:42:25 - INFO - [SMS] Campaña='Promoción Julio 2026' Usuario='admin' Total=3 Enviados=500 Fallidos=0 Estado=exitoso
+2026-08-19 10:46:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-08-19...
+2026-08-19 10:46:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-08-19...
+2026-08-19 10:47:34 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-08-19
+2026-08-19 10:47:35 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-08-19

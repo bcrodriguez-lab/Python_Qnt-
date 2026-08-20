@@ -1,25 +1,23 @@
 from google.cloud import bigquery
+from google.oauth2 import service_account
 
-client = bigquery.Client()
+# Ruta al archivo de credenciales
+credentials = service_account.Credentials.from_service_account_file(
+    "config/google_key.json"
+)
+
+# Crear cliente
+client = bigquery.Client(
+    credentials=credentials,
+    project=credentials.project_id
+)
 
 query = """
-    SELECT 
-        id,
-        fecha_programada,
-        fecha_creacion,
-        fecha_actualizacion,
-        fecha_ejecucion
-    FROM `capable-arbor-209819.Temporal.ProgramacionSMS`
-    ORDER BY fecha_programada DESC
+DELETE FROM `capable-arbor-209819.Tablas_Reporteria.Telefonos_Tutela`
+WHERE Telefono = "3194319978"
 """
 
-df = client.query(query).to_dataframe()
+query_job = client.query(query)
+query_job.result()
 
-# Ver cuáles son NULL
-print("¿Hay NaT en fecha_creacion?:", df['fecha_creacion'].isna().any())
-print("¿Hay NaT en fecha_actualizacion?:", df['fecha_actualizacion'].isna().any())
-print("¿Hay NaT en fecha_ejecucion?:", df['fecha_ejecucion'].isna().any())
-
-# Mostrar filas con NaT
-print("\nFilas con NaT:")
-print(df[df.isna().any(axis=1)])
+print("✅ Registro eliminado correctamente.")

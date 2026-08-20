@@ -868,7 +868,7 @@ def convertir_tipos_bq(df: pd.DataFrame) -> pd.DataFrame:
 
 def subir_a_embudos_robot(df_procesado: pd.DataFrame, fecha: str, client) -> bool:
     """
-    🔥 ÚNICA FUNCIÓN DE SUBIDA - SOLO A Embudos_Robot_Advanced
+     ÚNICA FUNCIÓN DE SUBIDA - SOLO A Embudos_Robot_Advanced
     """
     if df_procesado.empty:
         logger.warning("⚠️ DataFrame vacío, nada que subir")

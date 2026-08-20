@@ -1,0 +1,182 @@
+2026-08-19 07:27:28,403 - INFO - ✅ Configuración cargada desde config.py
+2026-08-19 07:27:28,405 - INFO - 
+============================================================
+2026-08-19 07:27:28,406 - INFO - 📥 INICIANDO DESCARGA DE REPORTES (CDR)
+2026-08-19 07:27:28,409 - INFO - 📅 Fecha: 2026-08-18
+2026-08-19 07:27:28,411 - INFO - ============================================================
+2026-08-19 07:27:28,413 - INFO - ⏭️ Servidor Prueba no está en el mapeo de cortes
+2026-08-19 07:27:28,418 - INFO - 
+📂 Procesando servidor: qnt_juridico_blaster
+2026-08-19 07:27:28,425 - INFO -    📡 Descargando qnt_juridico_blaster para 2026-08-18
+2026-08-19 07:27:38,628 - ERROR -    ❌ Error descargando qnt_juridico_blaster: ('Connection aborted.', ConnectionResetError(10054, 'Se ha forzado la interrupción de una conexión existente por el host remoto', None, 10054, None))
+2026-08-19 07:27:38,630 - INFO - 
+📂 Procesando servidor: qnt_cobro_blaster
+2026-08-19 07:27:38,631 - INFO -    📡 Descargando qnt_cobro_blaster para 2026-08-18
+2026-08-19 07:27:48,727 - ERROR -    ❌ Error descargando qnt_cobro_blaster: ('Connection aborted.', ConnectionResetError(10054, 'Se ha forzado la interrupción de una conexión existente por el host remoto', None, 10054, None))
+2026-08-19 07:27:48,731 - INFO - 
+📂 Procesando servidor: Qnt_RBK_blaster
+2026-08-19 07:27:48,732 - INFO -    📡 Descargando Qnt_RBK_blaster para 2026-08-18
+2026-08-19 07:27:58,929 - ERROR -    ❌ Error descargando Qnt_RBK_blaster: ('Connection aborted.', ConnectionResetError(10054, 'Se ha forzado la interrupción de una conexión existente por el host remoto', None, 10054, None))
+2026-08-19 07:27:58,933 - INFO - 
+📂 Procesando servidor: Qnt_recaudo_blaster
+2026-08-19 07:27:58,940 - INFO -    📡 Descargando Qnt_recaudo_blaster para 2026-08-18
+2026-08-19 07:28:09,959 - ERROR -    ❌ Error descargando Qnt_recaudo_blaster: ('Connection aborted.', ConnectionResetError(10054, 'Se ha forzado la interrupción de una conexión existente por el host remoto', None, 10054, None))
+2026-08-19 07:28:09,962 - INFO - 
+📂 Procesando servidor: qnt_digital
+2026-08-19 07:28:09,962 - INFO -    📡 Descargando qnt_digital para 2026-08-18
+2026-08-19 07:28:20,327 - ERROR -    ❌ Error descargando qnt_digital: ('Connection aborted.', ConnectionResetError(10054, 'Se ha forzado la interrupción de una conexión existente por el host remoto', None, 10054, None))
+2026-08-19 07:28:20,345 - INFO - 
+📂 Procesando servidor: operacion-interna
+2026-08-19 07:28:20,348 - INFO -    📡 Descargando operacion-interna para 2026-08-18
+2026-08-19 07:30:09,111 - INFO -       ✅ Guardado: operacion-interna_2026-08-18.xlsx
+2026-08-19 07:30:11,153 - INFO - 
+============================================================
+2026-08-19 07:30:11,156 - INFO - 📊 RESUMEN CDR: 1 descargados, 5 fallidos
+2026-08-19 07:30:11,158 - INFO - ============================================================
+2026-08-19 07:30:13,643 - INFO - 
+🔄 Procesando BigQuery para 2026-08-18...
+2026-08-19 07:30:13,644 - INFO - =================================================================
+2026-08-19 07:30:13,645 - INFO - 🚀 INICIO -- PROCESAMIENTO CDR (v10.12 - Embudos_Robot_Advanced) | fecha=2026-08-18
+2026-08-19 07:30:13,645 - INFO - =================================================================
+2026-08-19 07:30:13,775 - INFO - ✅ Credenciales cargadas desde: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\config\google_key.json
+2026-08-19 07:30:13,775 - INFO - ─ Paso 1/5: Leer CDR desde Excel...
+2026-08-19 07:30:13,793 - INFO -    📁 Encontrados 1 archivos CDR
+2026-08-19 07:30:47,695 - INFO -       ✅ operacion-interna_2026-08-18.xlsx: 45909 registros
+2026-08-19 07:30:47,909 - INFO -    📊 CDR consolidado: 45,909 registros
+2026-08-19 07:30:47,909 - INFO -    📋 Columnas CDR: ['DATE', 'TELEPHONE', 'COD_ACT', 'Contacto__c', 'campaign_id', 'CONN_ID', 'agent_id', 'SERVIDOR', 'servidor', 'Fecha_dia']
+2026-08-19 07:30:47,920 - INFO -    ✅ servidor: 1 únicos
+2026-08-19 07:30:47,926 - INFO - ─ Paso 2/5: Leer campañas desde Excel...
+2026-08-19 07:30:47,932 - INFO -    📁 Encontrados 1 archivos de campañas
+2026-08-19 07:30:57,171 - INFO -       ✅ operacion-interna_campaign_ALL_2026-08-18.xlsx: 32204 registros
+2026-08-19 07:30:57,172 - INFO -    📋 Columnas en campañas: ['CUSTOMER_ID', 'CAMPAIGN_ID', 'FILE_NAME', 'TELEPHONE', 'RESULT', 'DATE']
+2026-08-19 07:31:01,657 - INFO -    📋 Campañas únicas por customer: 30630
+2026-08-19 07:31:01,670 - INFO -    📋 Ejemplo: [{'campaign_id': '20717', 'customer_id': '0035A00003PL0Q2QAL', 'campaign_name': None, 'Nombre_Campana': None}, {'campaign_id': '20717', 'customer_id': '0035A00003PL0PXQA1', 'campaign_name': None, 'Nombre_Campana': None}, {'campaign_id': '20717', 'customer_id': '0035A00003PL0PtQAL', 'campaign_name': None, 'Nombre_Campana': None}]
+2026-08-19 07:31:01,684 - INFO -    ✅ 30630 campañas únicas cargadas
+2026-08-19 07:31:01,686 - INFO - ─ Paso 3/5: Consultar auxiliares BigQuery...
+2026-08-19 07:31:35,323 - INFO -    📋 Auxiliar intradia: 620,072 registros
+2026-08-19 07:31:36,291 - INFO -    📋 Auxiliar campanas_desarollo: 273 registros
+2026-08-19 07:31:38,965 - INFO -    📋 Auxiliar contacto: 22,928 registros
+2026-08-19 07:31:47,230 - INFO -    📋 Auxiliar gestion: 135,700 registros
+2026-08-19 07:31:48,887 - INFO -    📋 Auxiliar venta: 800 registros
+2026-08-19 07:31:48,887 - INFO - ─ Paso 4/5: Calcular métricas...
+2026-08-19 07:31:49,158 - INFO -    📋 Hora calculada: 7 - 19
+2026-08-19 07:31:49,163 - INFO -    📋 Rangos: ['6-8 PM', '4-6 PM', '2-4 PM', '12-2 PM', '10-12 AM', '8-10 AM']
+2026-08-19 07:31:52,334 - INFO -    📋 Diccionario de campañas: 30630 customer_ids mapeados
+2026-08-19 07:31:52,804 - INFO -    📋 campaign_id (Excel): 45,909 con dato
+2026-08-19 07:31:52,808 - INFO -    📋 campaign_name (Excel): 0 con dato
+2026-08-19 07:31:52,981 - INFO -    📋 CDR campaign_id normalizados: 45,909 con dato
+2026-08-19 07:31:53,007 - INFO -    📋 Campañas en campanas_desarollo: 273 IDs
+2026-08-19 07:31:53,259 - INFO -    📋 campaign_name enriquecido desde campanas_desarollo: 0 con dato
+2026-08-19 07:31:54,261 - INFO -    📋 Operado_Por__c desde Intradia: 45,884 con dato
+2026-08-19 07:31:54,267 - INFO -    📋 Entidad_principal desde Intradia: 45,884 con dato
+2026-08-19 07:31:54,351 - INFO -    📋 Grupo_Operador: {'RBK': 20313, 'DIGITAL': 19102, 'MANTENIMIENTO': 6469, 'OTRO': 25}
+2026-08-19 07:31:54,945 - INFO -    📋 Auxiliares aplicados | Contacto: 608 | Gestion: 6,231 | Venta: 23
+2026-08-19 07:31:54,983 - INFO -    📊 Procesamiento: 45,910 registros | Robot: 9,916 | Gestion: 2,591 | Contacto: 303 | Venta: 12
+2026-08-19 07:31:55,002 - INFO - ─ Paso 5/5: Enriquecer y subir a Embudos_Robot_Advanced...
+2026-08-19 07:32:19,335 - INFO -    📋 Ultimo_Contacto: 45,172
+2026-08-19 07:32:24,388 - INFO -    📋 Gestion_Marcador: 5,929
+2026-08-19 07:32:24,734 - INFO -    📋 localizado_historico: LOCALIZADO=20,449 | PERDIDO=24,723 | NO_LOCALIZADO=738
+2026-08-19 07:32:24,846 - INFO -    📤 Subiendo 45,910 registros a capable-arbor-209819.Operacion_Analitica.Embudos_Robot_Advanced
+2026-08-19 07:32:25,207 - INFO -    📋 Columnas en destino: 24
+2026-08-19 07:32:25,214 - WARNING -    ⚠️ Eliminando 4 columnas no existentes
+2026-08-19 07:32:25,223 - WARNING -       - DATE
+2026-08-19 07:32:25,224 - WARNING -       - SERVIDOR
+2026-08-19 07:32:25,236 - WARNING -       - HORA_VENTA
+2026-08-19 07:32:25,237 - WARNING -       - Hora_Venta
+2026-08-19 07:32:26,065 - INFO -    🗑️ Eliminando registros de 2026-08-18...
+2026-08-19 07:32:28,650 - INFO -    DELETE: 30,727 filas afectadas.
+2026-08-19 07:32:37,199 - INFO -    ✅ Upload OK. Filas: 45,910. Job ID: 943844f2-3b32-4b8e-ab33-be9b797a6b44
+2026-08-19 07:32:37,199 - INFO - =================================================================
+2026-08-19 07:32:37,199 - INFO - EXITO  |  fecha=2026-08-18
+2026-08-19 07:32:37,200 - INFO - =================================================================
+2026-08-19 07:58:52,869 - INFO - ✅ Configuración cargada desde config.py
+2026-08-19 07:58:52,870 - INFO - 
+============================================================
+2026-08-19 07:58:52,870 - INFO - 📥 INICIANDO DESCARGA DE REPORTES (CDR)
+2026-08-19 07:58:52,871 - INFO - 📅 Fecha: 2026-08-18
+2026-08-19 07:58:52,871 - INFO - ============================================================
+2026-08-19 07:58:52,871 - INFO - ⏭️ Servidor Prueba no está en el mapeo de cortes
+2026-08-19 07:58:52,871 - INFO - 
+📂 Procesando servidor: qnt_juridico_blaster
+2026-08-19 07:58:52,873 - INFO -    📡 Descargando qnt_juridico_blaster para 2026-08-18
+2026-08-19 07:59:02,985 - ERROR -    ❌ Error descargando qnt_juridico_blaster: ('Connection aborted.', ConnectionResetError(10054, 'Se ha forzado la interrupción de una conexión existente por el host remoto', None, 10054, None))
+2026-08-19 07:59:02,986 - INFO - 
+📂 Procesando servidor: qnt_cobro_blaster
+2026-08-19 07:59:02,988 - INFO -    📡 Descargando qnt_cobro_blaster para 2026-08-18
+2026-08-19 07:59:13,082 - ERROR -    ❌ Error descargando qnt_cobro_blaster: ('Connection aborted.', ConnectionResetError(10054, 'Se ha forzado la interrupción de una conexión existente por el host remoto', None, 10054, None))
+2026-08-19 07:59:13,083 - INFO - 
+📂 Procesando servidor: Qnt_RBK_blaster
+2026-08-19 07:59:13,083 - INFO -    📡 Descargando Qnt_RBK_blaster para 2026-08-18
+2026-08-19 07:59:23,184 - ERROR -    ❌ Error descargando Qnt_RBK_blaster: ('Connection aborted.', ConnectionResetError(10054, 'Se ha forzado la interrupción de una conexión existente por el host remoto', None, 10054, None))
+2026-08-19 07:59:23,184 - INFO - 
+📂 Procesando servidor: Qnt_recaudo_blaster
+2026-08-19 07:59:23,185 - INFO -    📡 Descargando Qnt_recaudo_blaster para 2026-08-18
+2026-08-19 07:59:33,285 - ERROR -    ❌ Error descargando Qnt_recaudo_blaster: ('Connection aborted.', ConnectionResetError(10054, 'Se ha forzado la interrupción de una conexión existente por el host remoto', None, 10054, None))
+2026-08-19 07:59:33,285 - INFO - 
+📂 Procesando servidor: qnt_digital
+2026-08-19 07:59:33,285 - INFO -    📡 Descargando qnt_digital para 2026-08-18
+2026-08-19 07:59:43,385 - ERROR -    ❌ Error descargando qnt_digital: ('Connection aborted.', ConnectionResetError(10054, 'Se ha forzado la interrupción de una conexión existente por el host remoto', None, 10054, None))
+2026-08-19 07:59:43,386 - INFO - 
+📂 Procesando servidor: operacion-interna
+2026-08-19 07:59:43,386 - INFO -    📡 Descargando operacion-interna para 2026-08-18
+2026-08-19 08:00:36,503 - INFO -       ✅ Guardado: operacion-interna_2026-08-18.xlsx
+2026-08-19 08:00:38,517 - INFO - 
+============================================================
+2026-08-19 08:00:38,518 - INFO - 📊 RESUMEN CDR: 1 descargados, 5 fallidos
+2026-08-19 08:00:38,518 - INFO - ============================================================
+2026-08-19 08:00:39,613 - INFO - 
+🔄 Procesando BigQuery para 2026-08-18...
+2026-08-19 08:00:39,614 - INFO - =================================================================
+2026-08-19 08:00:39,615 - INFO - 🚀 INICIO -- PROCESAMIENTO CDR (v10.12 - Embudos_Robot_Advanced) | fecha=2026-08-18
+2026-08-19 08:00:39,617 - INFO - =================================================================
+2026-08-19 08:00:39,807 - INFO - ✅ Credenciales cargadas desde: C:\Users\bcrodriguez\Desarollo\Python_Qnt-\config\google_key.json
+2026-08-19 08:00:39,850 - INFO - ─ Paso 1/5: Leer CDR desde Excel...
+2026-08-19 08:00:39,862 - INFO -    📁 Encontrados 1 archivos CDR
+2026-08-19 08:01:03,724 - INFO -       ✅ operacion-interna_2026-08-18.xlsx: 45909 registros
+2026-08-19 08:01:03,872 - INFO -    📊 CDR consolidado: 45,909 registros
+2026-08-19 08:01:03,872 - INFO -    📋 Columnas CDR: ['DATE', 'TELEPHONE', 'COD_ACT', 'Contacto__c', 'campaign_id', 'CONN_ID', 'agent_id', 'SERVIDOR', 'servidor', 'Fecha_dia']
+2026-08-19 08:01:03,876 - INFO -    ✅ servidor: 1 únicos
+2026-08-19 08:01:03,882 - INFO - ─ Paso 2/5: Leer campañas desde Excel...
+2026-08-19 08:01:03,886 - INFO -    📁 Encontrados 1 archivos de campañas
+2026-08-19 08:01:10,454 - INFO -       ✅ operacion-interna_campaign_ALL_2026-08-18.xlsx: 32204 registros
+2026-08-19 08:01:10,455 - INFO -    📋 Columnas en campañas: ['CUSTOMER_ID', 'CAMPAIGN_ID', 'FILE_NAME', 'TELEPHONE', 'RESULT', 'DATE']
+2026-08-19 08:01:13,839 - INFO -    📋 Campañas únicas por customer: 30630
+2026-08-19 08:01:13,861 - INFO -    📋 Ejemplo: [{'campaign_id': '20717', 'customer_id': '0035A00003PL0Q2QAL', 'campaign_name': None, 'Nombre_Campana': None}, {'campaign_id': '20717', 'customer_id': '0035A00003PL0PXQA1', 'campaign_name': None, 'Nombre_Campana': None}, {'campaign_id': '20717', 'customer_id': '0035A00003PL0PtQAL', 'campaign_name': None, 'Nombre_Campana': None}]
+2026-08-19 08:01:13,879 - INFO -    ✅ 30630 campañas únicas cargadas
+2026-08-19 08:01:13,891 - INFO - ─ Paso 3/5: Consultar auxiliares BigQuery...
+2026-08-19 08:01:41,207 - INFO -    📋 Auxiliar intradia: 620,072 registros
+2026-08-19 08:01:42,689 - INFO -    📋 Auxiliar campanas_desarollo: 273 registros
+2026-08-19 08:01:45,408 - INFO -    📋 Auxiliar contacto: 22,928 registros
+2026-08-19 08:01:51,730 - INFO -    📋 Auxiliar gestion: 135,700 registros
+2026-08-19 08:01:53,234 - INFO -    📋 Auxiliar venta: 800 registros
+2026-08-19 08:01:53,239 - INFO - ─ Paso 4/5: Calcular métricas...
+2026-08-19 08:01:53,603 - INFO -    📋 Hora calculada: 7 - 19
+2026-08-19 08:01:53,607 - INFO -    📋 Rangos: ['6-8 PM', '4-6 PM', '2-4 PM', '12-2 PM', '10-12 AM', '8-10 AM']
+2026-08-19 08:01:56,844 - INFO -    📋 Diccionario de campañas: 30630 customer_ids mapeados
+2026-08-19 08:01:57,158 - INFO -    📋 campaign_id (Excel): 45,909 con dato
+2026-08-19 08:01:57,160 - INFO -    📋 campaign_name (Excel): 0 con dato
+2026-08-19 08:01:57,237 - INFO -    📋 CDR campaign_id normalizados: 45,909 con dato
+2026-08-19 08:01:57,240 - INFO -    📋 Campañas en campanas_desarollo: 273 IDs
+2026-08-19 08:01:57,320 - INFO -    📋 campaign_name enriquecido desde campanas_desarollo: 0 con dato
+2026-08-19 08:01:57,906 - INFO -    📋 Operado_Por__c desde Intradia: 45,884 con dato
+2026-08-19 08:01:57,909 - INFO -    📋 Entidad_principal desde Intradia: 45,884 con dato
+2026-08-19 08:01:57,966 - INFO -    📋 Grupo_Operador: {'RBK': 20313, 'DIGITAL': 19102, 'MANTENIMIENTO': 6469, 'OTRO': 25}
+2026-08-19 08:01:58,328 - INFO -    📋 Auxiliares aplicados | Contacto: 608 | Gestion: 6,231 | Venta: 23
+2026-08-19 08:01:58,352 - INFO -    📊 Procesamiento: 45,910 registros | Robot: 9,916 | Gestion: 2,591 | Contacto: 303 | Venta: 12
+2026-08-19 08:01:58,370 - INFO - ─ Paso 5/5: Enriquecer y subir a Embudos_Robot_Advanced...
+2026-08-19 08:02:19,047 - INFO -    📋 Ultimo_Contacto: 45,172
+2026-08-19 08:02:24,413 - INFO -    📋 Gestion_Marcador: 5,929
+2026-08-19 08:02:24,624 - INFO -    📋 localizado_historico: LOCALIZADO=20,449 | PERDIDO=24,723 | NO_LOCALIZADO=738
+2026-08-19 08:02:24,706 - INFO -    📤 Subiendo 45,910 registros a capable-arbor-209819.Operacion_Analitica.Embudos_Robot_Advanced
+2026-08-19 08:02:25,138 - INFO -    📋 Columnas en destino: 24
+2026-08-19 08:02:25,139 - WARNING -    ⚠️ Eliminando 4 columnas no existentes
+2026-08-19 08:02:25,143 - WARNING -       - DATE
+2026-08-19 08:02:25,148 - WARNING -       - SERVIDOR
+2026-08-19 08:02:25,156 - WARNING -       - HORA_VENTA
+2026-08-19 08:02:25,160 - WARNING -       - Hora_Venta
+2026-08-19 08:02:25,846 - INFO -    🗑️ Eliminando registros de 2026-08-18...
+2026-08-19 08:02:29,371 - INFO -    DELETE: 45,910 filas afectadas.
+2026-08-19 08:02:35,586 - INFO -    ✅ Upload OK. Filas: 45,910. Job ID: 88157828-fc07-4719-af5d-7e37927ccb02
+2026-08-19 08:02:35,586 - INFO - =================================================================
+2026-08-19 08:02:35,587 - INFO - EXITO  |  fecha=2026-08-18
+2026-08-19 08:02:35,587 - INFO - =================================================================

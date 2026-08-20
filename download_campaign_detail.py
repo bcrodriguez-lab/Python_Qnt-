@@ -109,7 +109,7 @@ def obtener_nombre_campana_especifica(servidor, campaign_id):
         return None
 
 def iniciar_scheduler():
-    schedule.every(15).minutes.do(descarga_campañas)
+    schedule.every(60).minutes.do(descarga_campañas)
     logger.info("Scheduler iniciado para descargar campañas cada 15 minutos")
 
     while True: 
@@ -186,8 +186,8 @@ def iniciar_scheduler_amd():
         return True
 
     try:
-        schedule.every(15).minutes.do(ejecutar_descarga)  
-        logger.info("Scheduler Funciona cada 15 Minutos archvio download_campaign")
+        schedule.every(60).minutes.do(ejecutar_descarga)  
+        logger.info("Scheduler Funciona cada 60 Minutos archvio download_campaign")
 
         _scheduler_running_amd = True
         

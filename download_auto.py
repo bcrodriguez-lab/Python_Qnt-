@@ -276,7 +276,7 @@ def iniciar_scheduler():
             except Exception as e:
                 logger.error(f"❌ Error en descarga programada: {e}")
         
-        schedule.every(15).minutes.do(ejecutar_descarga)
+        schedule.every(60).minutes.do(ejecutar_descarga)
         logger.info(f" CDR programada a las 15")
         
         _scheduler_running = True

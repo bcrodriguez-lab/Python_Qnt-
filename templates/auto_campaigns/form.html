@@ -295,7 +295,7 @@
           <!-- CONSULTA SQL -->
           <div class="sms-field">
             <label for="query">Consulta SQL <span class="badge-required">requerido</span></label>
-            <textarea id="query" name="bigquery_query" class="form-control textarea-code" placeholder="SELECT celular, nombre, monto FROM ..." rows="4" required>{{ campaign.bigquery_query if is_edit else "SELECT \n  '3001234567' AS telefono,\n  'Juan Pérez' AS nombre,\n  '100000' AS monto" }}</textarea>
+            <textarea id="query" name="bigquery_query" class="form-control textarea-code" placeholder="SELECT celular, nombre, monto FROM ..." rows="4" required>{{ campaign.bigquery_query if is_edit else "SELECT  * FROM Temporal.sms_campaign_data where customer_id  = " }}</textarea>
             <div class="sms-help">
               <span>Incluye columna de teléfono: <code>telefono</code>, <code>celular</code>, <code>movil</code>, <code>phone</code>.</span>
               <span id="rowCount" style="font-weight:600;color:var(--sms-primary);">0 filas</span>

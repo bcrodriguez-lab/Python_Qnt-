@@ -2285,6 +2285,9 @@ def auto_campaigns_report(campaign_id):
     return send_file(bio, as_attachment=True, download_name=f"auto_campaign_{campaign_id}_{log.id}.json", mimetype="application/json")
 
 
+
+
+
 @app.route("/auto-campaigns/validate-query-fields", methods=["POST"])
 def auto_campaigns_validate_query_fields():
     from services.query_validator import validate_and_normalize, describe_field_aliases, map_column_name
@@ -2341,6 +2344,10 @@ def auto_campaigns_validate_query_fields():
 
 
 @app.route("/auto-campaigns/<int:campaign_id>/clear-wkv", methods=["DELETE"])
+
+#==================Funciones Reutilizables Wolkbox=======================================#
+
+
 def auto_campaigns_clear_wkv(campaign_id):
     from database import AutoCampaign
     from auto_campaign_executor import _get_token, _get_base_url_wolkvox
@@ -2369,19 +2376,105 @@ def auto_campaigns_clear_wkv(campaign_id):
         return jsonify({"success": False, "message": str(e)}), 500
 
 
-@app.route("/auto-campaigns/<int:campaign_id>/load-wkv", methods=["POST"])
-def auto_campaigns_load_wkv(campaign_id):
-    from database import AutoCampaign, AutoCampaignExecutionLog, db
-    from auto_campaign_executor import fetch_data_from_bigquery, _get_token
 
-    campaign = AutoCampaign.query.get(campaign_id)
-    if not campaign:
-        return jsonify({"success": False, "message": "Campaña no encontrada."}), 404
-
-    token = _get_token(campaign)
-    if not token:
-        return jsonify({"success": False, "message": "No se encontró token Wolkvox."}), 400
-
+def Cargue_Wolkvox(campaign, token):
+    """
+    Ejecuta BigQuery, filtra lista negra, formatea registros
+    y envía a Wolkvox en lotes.
+    """
+    # 1. Ejecutar BigQuery
+    rows = fetch_data_from_bigquery(campaign.bigquery_query)
+    if not rows:
+        raise ValueError("La consulta no retornó registros.")
+    
+    # 2. Cargar lista negra
+    blacklist = get_blacklist_phones()
+    registros_validos = []
+    registros_bloqueados = []
+    
+    for row in rows:
+        telefono_raw = str(row.get('tel1', '')).strip()
+        telefono_limpio = re.sub(r'[^0-9]', '', telefono_raw)
+        if telefono_limpio.startswith('57'):
+            telefono_limpio = telefono_limpio[2:]
+        
+        if telefono_limpio in blacklist:
+            registros_bloqueados.append({
+                'telefono': telefono_limpio,
+                'motivo': 'Lista negra'
+            })
+        else:
+            registros_validos.append(row)
+    
+    if not registros_validos:
+        raise ValueError("Todos los registros fueron bloqueados por lista negra.")
+    
+    # 3. Formatear registros
+    records = []
+    for idx, row in enumerate(registros_validos):
+        
+        def formatear_telefono(telefono):
+            telefono = re.sub(r'[^0-9]', '', str(telefono))
+            if not telefono:
+                return "91570000000000"
+            if telefono.startswith('57'):
+                telefono = telefono[2:]
+            if telefono.startswith('+57'):
+                telefono = telefono[3:]
+            if telefono.startswith('9157'):
+                return telefono
+            return f"9157{telefono}"
+        
+        customer_id = str(row.get('customer_id', '')).strip()
+        if not customer_id or customer_id in ('nan', 'None'):
+            customer_id = str(row.get('tel1', f"CLI-{idx}")).strip()
+            if not customer_id or customer_id in ('nan', 'None'):
+                customer_id = f"CLI-{idx}"
+        
+        telefono_formateado = formatear_telefono(str(row.get('tel1', '')).strip())
+        
+        nombre = str(row.get('customer_name', '')).strip()
+        if not nombre or nombre in ('nan', 'None'):
+            nombre = 'Sin Nombre'
+        
+        apellido = str(row.get('customer_last_name', '')).strip()
+        if apellido in ('nan', 'None'):
+            apellido = ''
+        
+        email = str(row.get('email', '')).strip()
+        if email in ('nan', 'None'):
+            email = ''
+        
+        record = {
+            "customer_name": nombre,
+            "customer_last_name": apellido,
+            "id_type": "CC",
+            "customer_id": customer_id,
+            "tel1": telefono_formateado,
+            "tel2": "", "tel3": "", "tel4": "", "tel5": "",
+            "tel6": "", "tel7": "", "tel8": "", "tel9": "", "tel10": "",
+            "tel_extra": "",
+            "email": email,
+            "age": "", "gender": "", "country": "", "state": "",
+            "city": "", "zone": "", "address": "",
+            "opt1": str(row.get('fecha_pago', '')),
+            "opt2": str(row.get('valor_pagar', '')),
+            "opt3": str(row.get('segmento', '')),
+            "opt4": str(row.get('empresa', '')),
+            "opt5": str(row.get('fecha_pago_2', '')),
+            "opt6": str(row.get('valor_pagar_2', '')),
+            "opt7": str(row.get('valor_oferta_esp', '')),
+            "opt8": str(row.get('valor_oferta_esp_2', '')),
+            "opt9": str(row.get('cuotas', '')),
+            "opt10": str(row.get('porcentaje', '')),
+            "opt11": str(row.get('porcentaje_2', '')),
+            "opt12": str(row.get('link_pago', '')),
+            "recall_date": "",
+            "recall_telephone": ""
+        }
+        records.append(record)
+    
+    # 4. Construir URL de Wolkvox
     server_mapping = {
         "operacion-interna": "https://wv0016.wolkvox.com",
         "qnt_digital": "https://wv0016.wolkvox.com",
@@ -2391,7 +2484,7 @@ def auto_campaigns_load_wkv(campaign_id):
         "Qnt_recaudo_blaster": "https://wv0016.wolkvox.com",
     }
     server_url = server_mapping.get(campaign.server_name, "https://wv0016.wolkvox.com")
-
+    
     url = f"{server_url}/api/v2/campaign.php"
     params = {
         "api": "add_record",
@@ -2399,133 +2492,293 @@ def auto_campaigns_load_wkv(campaign_id):
         "campaign_id": campaign.wolkvox_campaign_id,
         "campaign_status": "1"
     }
+    
+    # 5. Enviar en lotes
+    headers = {"wolkvox-token": token, "Content-Type": "application/json"}
+    batch_size = 100
+    total_enviados = 0
+    errores = []
+    
+    for i in range(0, len(records), batch_size):
+        batch = records[i:i+batch_size]
+        try:
+            response = requests.post(url, params=params, headers=headers, json=batch, timeout=60)
+            if response.status_code in [200, 201]:
+                total_enviados += len(batch)
+            else:
+                errores.append({
+                    "status": response.status_code,
+                    "response": response.text[:500]
+                })
+        except Exception as e:
+            errores.append({"error": str(e)})
+    
+    # 6. Devolver resultado
+    return {
+        "success": len(errores) == 0,
+        "records_sent": total_enviados,
+        "records_fetched": len(rows),
+        "records_blocked": len(registros_bloqueados),
+        "records_failed": len(records) - total_enviados,
+        "errors": errores,
+        "message": f"{total_enviados} registros cargados. {len(registros_bloqueados)} bloqueados."
+    }
 
-    log = AutoCampaignExecutionLog(auto_campaign_id=campaign.id, start_time=datetime.now(timezone.utc))
+
+@app.route("/auto-campaigns/<int:campaign_id>/load-wkv", methods=["POST"])
+def auto_campaigns_load_wkv(campaign_id):
+    """Carga registros manualmente a Wolkvox."""
+    from database import AutoCampaign, AutoCampaignExecutionLog, db
+    from auto_campaign_executor import _get_token
+
+    campaign = AutoCampaign.query.get(campaign_id)
+    if not campaign:
+        return jsonify({"success": False, "message": "Campaña no encontrada."}), 404
+
+    token = _get_token(campaign)
+    if not token:
+        return jsonify({"success": False, "message": "No se encontró token Wolkvox."}), 400
+
+    log = AutoCampaignExecutionLog(
+        auto_campaign_id=campaign.id,
+        start_time=datetime.now(timezone.utc)
+    )
     db.session.add(log)
     db.session.commit()
 
     try:
-        rows = fetch_data_from_bigquery(campaign.bigquery_query)
-        log.records_fetched = len(rows)
-        if not rows:
-            raise ValueError("La consulta no retornó registros.")
+        #  Llamar a la función para cargar los datos a wolkbox
+        resultado = Cargue_Wolkvox(campaign, token)
 
-        blacklist = get_blacklist_phones()
-        registros_validos = []
-        registros_bloqueados = []
+        # Actualizar log
+        log.records_fetched = resultado.get("records_fetched", 0)
+        log.records_sent = resultado.get("records_sent", 0)
+        log.records_failed = resultado.get("records_failed", 0)
+        log.end_time = datetime.now(timezone.utc)
+        db.session.commit()
 
-        for row in rows:
-            telefono_raw = str(row.get('tel1', '')).strip()
-            telefono_limpio = re.sub(r'[^0-9]', '', telefono_raw)
-            if telefono_limpio.startswith('57'):
-                telefono_limpio = telefono_limpio[2:]
-            if telefono_limpio in blacklist:
-                registros_bloqueados.append({'row': row, 'telefono': telefono_limpio, 'motivo': 'Lista negra'})
-            else:
-                registros_validos.append(row)
+        return jsonify(resultado)
 
-        if not registros_validos:
-            raise ValueError("Todos los registros fueron bloqueados por lista negra.")
-
-        records = []
-        for idx, row in enumerate(registros_validos):
-            def formatear_telefono(telefono):
-                telefono = re.sub(r'[^0-9]', '', str(telefono))
-                if not telefono:
-                    return "91570000000000"
-                if telefono.startswith('57'):
-                    telefono = telefono[2:]
-                if telefono.startswith('+57'):
-                    telefono = telefono[3:]
-                if telefono.startswith('9157'):
-                    return telefono
-                return f"9157{telefono}"
-
-            customer_id = str(row.get('customer_id', '')).strip()
-            if not customer_id or customer_id in ('nan', 'None'):
-                customer_id = str(row.get('tel1', f"CLI-{idx}")).strip()
-                if not customer_id or customer_id in ('nan', 'None'):
-                    customer_id = f"CLI-{idx}"
-
-            telefono_formateado = formatear_telefono(str(row.get('tel1', '')).strip())
-
-            nombre = str(row.get('customer_name', '')).strip()
-            if not nombre or nombre in ('nan', 'None'):
-                nombre = 'Sin Nombre'
-
-            apellido = str(row.get('customer_last_name', '')).strip()
-            if apellido in ('nan', 'None'):
-                apellido = ''
-
-            email = str(row.get('email', '')).strip()
-            if email in ('nan', 'None'):
-                email = ''
-
-            record = {
-                "customer_name": nombre, "customer_last_name": apellido,
-                "id_type": "CC", "customer_id": customer_id,
-                "tel1": telefono_formateado,
-                "tel2": "", "tel3": "", "tel4": "", "tel5": "",
-                "tel6": "", "tel7": "", "tel8": "", "tel9": "", "tel10": "",
-                "tel_extra": "", "email": email,
-                "age": "", "gender": "", "country": "", "state": "",
-                "city": "", "zone": "", "address": "",
-                "opt1": str(row.get('fecha_pago', '')), "opt2": str(row.get('valor_pagar', '')),
-                "opt3": str(row.get('segmento', '')), "opt4": str(row.get('empresa', '')),
-                "opt5": str(row.get('fecha_pago_2', '')), "opt6": str(row.get('valor_pagar_2', '')),
-                "opt7": str(row.get('valor_oferta_esp', '')), "opt8": str(row.get('valor_oferta_esp_2', '')),
-                "opt9": str(row.get('cuotas', '')), "opt10": str(row.get('porcentaje', '')),
-                "opt11": str(row.get('porcentaje_2', '')), "opt12": str(row.get('link_pago', '')),
-                "recall_date": "", "recall_telephone": ""
-            }
-            records.append(record)
-
-        headers = {"wolkvox-token": token, "Content-Type": "application/json"}
-        batch_size = 100
-        total_enviados = 0
-        errores = []
-
-        for i in range(0, len(records), batch_size):
-            batch = records[i:i+batch_size]
-            try:
-                response = requests.post(url, params=params, headers=headers, json=batch, timeout=60)
-                if response.status_code in [200, 201]:
-                    total_enviados += len(batch)
-                else:
-                    errores.append({"status": response.status_code, "response": response.text[:500]})
-            except Exception as e:
-                errores.append({"error": str(e)})
-
-        if len(errores) == 0:
-            log.records_sent = total_enviados
-            log.end_time = datetime.now(timezone.utc)
-            db.session.commit()
-            return jsonify({
-                "success": True, "records_sent": total_enviados,
-                "records_fetched": log.records_fetched,
-                "records_blocked": len(registros_bloqueados),
-                "message": f"{total_enviados} registros cargados. {len(registros_bloqueados)} bloqueados."
-            })
-        else:
-            log.records_failed = len(records) - total_enviados
-            log.error_message = f"Errores en {len(errores)} lotes"
-            log.end_time = datetime.now(timezone.utc)
-            db.session.commit()
-            return jsonify({
-                "success": False, "records_sent": total_enviados,
-                "records_fetched": log.records_fetched,
-                "records_blocked": len(registros_bloqueados),
-                "message": f"{total_enviados} de {len(records)} cargados.",
-                "errors": errores
-            }), 207
     except Exception as e:
         db.session.rollback()
         log.end_time = datetime.now(timezone.utc)
         log.error_message = str(e)
-        log.records_failed = log.records_fetched or 0
         db.session.commit()
         return jsonify({"success": False, "message": str(e)}), 500
 
+# ==================== PROGRAMAR SIMPLE ====================
+
+@app.route("/auto-campaigns/<int:campaign_id>/programar", methods=["POST"])
+def campaigns_schedule_simple(campaign_id):
+    """Programa un envío UNA sola vez a una fecha específica."""
+    from database import AutoCampaign, ProgramacionCampana, db
+    from auto_campaign_executor import _get_token
+
+    campaign = AutoCampaign.query.get(campaign_id)
+    if not campaign:
+        return jsonify({"success": False, "message": "Campaña no encontrada."}), 404
+
+    token = _get_token(campaign)
+    if not token:
+        return jsonify({"success": False, "message": "No se encontró token Wolkvox."}), 400
+
+    data = request.get_json(silent=True) or {}
+    fecha_programada = (data.get("fecha_programada") or "").strip()
+
+    if not fecha_programada:
+        return jsonify({"success": False, "message": "Fecha programada es obligatoria."}), 400
+
+    try:
+        run_date = datetime.fromisoformat(fecha_programada)
+        if run_date.tzinfo is None:
+            run_date = run_date.replace(tzinfo=COLOMBIA_TZ)
+        if run_date <= datetime.now(COLOMBIA_TZ):
+            return jsonify({"success": False, "message": "La fecha debe ser futura."}), 400
+
+        nueva = ProgramacionCampana(
+            nombre=campaign.name,
+            campana_id=campaign.id,
+            bigquery_query=campaign.bigquery_query,
+            wolkvox_campaign_id=campaign.wolkvox_campaign_id,
+            server_name=campaign.server_name,
+            tipo_programacion='simple',
+            fecha_programada=run_date,
+            estado='pendiente'
+        )
+        db.session.add(nueva)
+        db.session.commit()
+
+        scheduler.add_job(
+            execute_wolkvox_schedule,
+            trigger="date",
+            run_date=run_date,
+            args=[nueva.id],
+            id=f"wolkvox_simple_{nueva.id}",
+            replace_existing=True
+        )
+
+        log_gui_action("Programación Wolkvox simple", id=nueva.id, fecha=run_date.isoformat())
+
+        return jsonify({
+            "success": True,
+            "id": nueva.id,
+            "tipo_programacion": "simple",
+            "fecha_programada": run_date.isoformat(),
+            "message": "Programación simple creada."
+        })
+
+    except Exception as exc:
+        db.session.rollback()
+        logger.exception("Error programando Wolkvox simple")
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+# ==================== PROGRAMAR RECURRENTE ====================
+
+@app.route("/auto-campaigns/<int:campaign_id>/programar-recurrente", methods=["POST"])
+def campaigns_schedule_recurrent(campaign_id):
+    """Programa un envío recurrente diario a una hora específica."""
+    from database import AutoCampaign, ProgramacionCampana, db
+    from auto_campaign_executor import _get_token
+
+    campaign = AutoCampaign.query.get(campaign_id)
+    if not campaign:
+        return jsonify({"success": False, "message": "Campaña no encontrada."}), 404
+
+    token = _get_token(campaign)
+    if not token:
+        return jsonify({"success": False, "message": "No se encontró token Wolkvox."}), 400
+
+    data = request.get_json(silent=True) or {}
+    hora_inicio = (data.get("hora_inicio") or "").strip()
+    fecha_fin = (data.get("fecha_fin") or "").strip() or None
+
+    if not hora_inicio:
+        return jsonify({"success": False, "message": "Hora de envío es obligatoria."}), 400
+
+    if not re.match(r'^\d{2}:\d{2}$', hora_inicio):
+        return jsonify({"success": False, "message": "Formato de hora inválido. Use HH:MM."}), 400
+
+    try:
+        nueva = ProgramacionCampana(
+            nombre=campaign.name,
+            campana_id=campaign.id,
+            bigquery_query=campaign.bigquery_query,
+            wolkvox_campaign_id=campaign.wolkvox_campaign_id,
+            server_name=campaign.server_name,
+            tipo_programacion='recurrente',
+            hora_inicio=hora_inicio,
+            fecha_fin=fecha_fin,
+            estado='pendiente'
+        )
+        db.session.add(nueva)
+        db.session.commit()
+
+        scheduler.add_job(
+            execute_wolkvox_schedule,
+            trigger="interval",
+            minutes=60,
+            args=[nueva.id],
+            id=f"wolkvox_recurrente_{nueva.id}",
+            replace_existing=True
+        )
+
+        log_gui_action("Programación Wolkvox recurrente", id=nueva.id, hora=hora_inicio, fecha_fin=fecha_fin)
+
+        return jsonify({
+            "success": True,
+            "id": nueva.id,
+            "tipo_programacion": "recurrente",
+            "hora_inicio": hora_inicio,
+            "fecha_fin": fecha_fin,
+            "message": f"Programación recurrente creada para las {hora_inicio}."
+        })
+
+    except Exception as exc:
+        db.session.rollback()
+        logger.exception("Error programando Wolkvox recurrente")
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+# ==================== SCHEDULER ====================
+
+def execute_wolkvox_schedule(programacion_id):
+    from database import AutoCampaign, ProgramacionCampana, db
+    from auto_campaign_executor import _get_token
+
+    try:
+        # 1. Buscar programación
+        prog = ProgramacionCampana.query.get(programacion_id)
+        if not prog:
+            logger.warning(f"Programación {programacion_id} no encontrada")
+            return
+        if prog.estado != 'pendiente':
+            return
+
+        # 2. Buscar campaña
+        campaign = AutoCampaign.query.get(prog.campana_id)
+        if not campaign:
+            prog.estado = 'fallido'
+            db.session.commit()
+            return
+
+        # 3. Verificar condiciones (solo recurrente)
+        ahora = datetime.now(COLOMBIA_TZ)
+        
+        if prog.tipo_programacion == 'recurrente':
+            hora_actual = ahora.strftime("%H:%M")
+            
+            if hora_actual < prog.hora_inicio:
+                logger.info(f"⏰ {prog.id}: Aún no es la hora ({hora_actual} < {prog.hora_inicio})")
+                return
+            
+            if prog.fecha_ejecucion:
+                fe_ejec = prog.fecha_ejecucion.strftime("%Y-%m-%d")
+                if fe_ejec == ahora.strftime("%Y-%m-%d"):
+                    logger.info(f"✅ {prog.id}: Ya se ejecutó hoy")
+                    return
+            
+            if prog.fecha_fin and ahora.strftime("%Y-%m-%d") > prog.fecha_fin:
+                prog.estado = 'completado'
+                db.session.commit()
+                logger.info(f"🛑 {prog.id}: Pasó fecha fin")
+                return
+
+        # 4. Obtener token
+        token = _get_token(campaign)
+        if not token:
+            prog.estado = 'fallido'
+            db.session.commit()
+            return
+
+        # 5. Ejecutar carga
+        logger.info(f"📤 Ejecutando programación Wolkvox: {prog.id}")
+        resultado = Cargue_Wolkvox(campaign, token)
+
+        # 6. Actualizar estado
+        prog.fecha_ejecucion = ahora
+        prog.total_destinatarios = resultado.get("records_sent", 0)
+        prog.fecha_actualizacion = datetime.now(COLOMBIA_TZ)
+        
+        if prog.tipo_programacion == 'simple':
+            prog.estado = 'enviado' if resultado.get("success") else 'fallido'
+            try:
+                scheduler.remove_job(f"wolkvox_simple_{prog.id}")
+            except:
+                pass
+        
+        db.session.commit()
+        logger.info(f"✅ Programación {prog.id} ejecutada: {resultado.get('records_sent', 0)} registros")
+
+    except Exception as exc:
+        logger.exception(f"Error ejecutando programación {programacion_id}")
+        try:
+            prog = ProgramacionCampana.query.get(programacion_id)
+            if prog:
+                prog.estado = 'fallido'
+                db.session.commit()
+        except:
+            pass
 
 @app.route("/auto-campaigns/<int:campaign_id>/start-wkv", methods=["POST"])
 def auto_campaigns_start_wkv(campaign_id):
@@ -2571,6 +2824,7 @@ def auto_campaigns_stop_wkv(campaign_id):
         return jsonify({"success": False, "message": f"Error HTTP {response.status_code}", "detail": response.text[:500]}), 500
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+#===========================Programacion Robot=========================================#
 
 
 @app.route("/api/servers/<server_name>/url", methods=["GET"])
