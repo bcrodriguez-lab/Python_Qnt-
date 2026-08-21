@@ -64,6 +64,15 @@ from auto_campaign_executor import (
     _get_token,
     _get_base_url_wolkvox,
 )
+from auto_campaigns import (
+    create_auto_campaign,
+    delete_auto_campaign,
+    get_auto_campaign,
+    list_auto_campaigns,
+    list_execution_logs,
+    parse_auto_campaign_id,
+    update_auto_campaign,
+)
 from services.email_client import EmailClient, EmailClientError
 from services.email_service import (
     EMAIL_LOG_TABLE, EmailServiceError, detectar_columna_email,
@@ -2565,41 +2574,48 @@ def auto_campaigns_load_wkv(campaign_id):
         db.session.commit()
         return jsonify({"success": False, "message": str(e)}), 500
 
-# ==================== PROGRAMAR SIMPLE ====================
-
-@app.route("/auto-campaigns/<int:campaign_id>/programar", methods=["POST"])
-def campaigns_schedule_simple(campaign_id):
-    """Programa un envío UNA sola vez a una fecha específica."""
-    from database import AutoCampaign, ProgramacionCampana, db
-    from auto_campaign_executor import _get_token
-
-    campaign = AutoCampaign.query.get(campaign_id)
-    if not campaign:
-        return jsonify({"success": False, "message": "Campaña no encontrada."}), 404
-
-    token = _get_token(campaign)
-    if not token:
-        return jsonify({"success": False, "message": "No se encontró token Wolkvox."}), 400
+@app.route("/auto-campaigns/programar", methods=["POST"])
+def campaigns_schedule_simple():
+    """Programa un envío UNA sola vez con datos del formulario."""
+    from database import ProgramacionCampana, db
 
     data = request.get_json(silent=True) or {}
+
+    # 1. Leer TODOS los datos del formulario
+    nombre = (data.get("nombre") or "").strip()
+    bigquery_query = (data.get("bigquery_query") or "").strip()
+    wolkvox_campaign_id = (data.get("wolkvox_campaign_id") or "").strip()  # ← AÑADE
+
+    server_name = (data.get("server_name") or "").strip()
+    campaign_type = (data.get("campaign_type") or "predictive").strip()
     fecha_programada = (data.get("fecha_programada") or "").strip()
 
+    # 2. Validar campos obligatorios
+    if not nombre:
+        return jsonify({"success": False, "message": "El nombre es obligatorio."}), 400
+    if not bigquery_query:
+        return jsonify({"success": False, "message": "La consulta SQL es obligatoria."}), 400
+    if not wolkvox_campaign_id:
+        return jsonify({"success": False, "message": "El Campaign ID es obligatorio."}), 400
+    if not server_name:
+        return jsonify({"success": False, "message": "El servidor es obligatorio."}), 400
     if not fecha_programada:
-        return jsonify({"success": False, "message": "Fecha programada es obligatoria."}), 400
+        return jsonify({"success": False, "message": "La fecha programada es obligatoria."}), 400
 
     try:
+        # 3. Convertir y validar fecha
         run_date = datetime.fromisoformat(fecha_programada)
         if run_date.tzinfo is None:
             run_date = run_date.replace(tzinfo=COLOMBIA_TZ)
         if run_date <= datetime.now(COLOMBIA_TZ):
             return jsonify({"success": False, "message": "La fecha debe ser futura."}), 400
 
+        # 4. Guardar en SQLite
         nueva = ProgramacionCampana(
-            nombre=campaign.name,
-            campana_id=campaign.id,
-            bigquery_query=campaign.bigquery_query,
-            wolkvox_campaign_id=campaign.wolkvox_campaign_id,
-            server_name=campaign.server_name,
+            nombre=nombre,
+            bigquery_query=bigquery_query,
+            wolkvox_campaign_id=wolkvox_campaign_id,
+            server_name=server_name,
             tipo_programacion='simple',
             fecha_programada=run_date,
             estado='pendiente'
@@ -2607,6 +2623,7 @@ def campaigns_schedule_simple(campaign_id):
         db.session.add(nueva)
         db.session.commit()
 
+        # 5. Crear job UNA vez
         scheduler.add_job(
             execute_wolkvox_schedule,
             trigger="date",
@@ -2616,7 +2633,7 @@ def campaigns_schedule_simple(campaign_id):
             replace_existing=True
         )
 
-        log_gui_action("Programación Wolkvox simple", id=nueva.id, fecha=run_date.isoformat())
+        log_gui_action("Programación Wolkvox simple", id=nueva.id, nombre=nombre, fecha=run_date.isoformat())
 
         return jsonify({
             "success": True,
@@ -2631,40 +2648,45 @@ def campaigns_schedule_simple(campaign_id):
         logger.exception("Error programando Wolkvox simple")
         return jsonify({"success": False, "message": str(exc)}), 500
 
-
 # ==================== PROGRAMAR RECURRENTE ====================
 
-@app.route("/auto-campaigns/<int:campaign_id>/programar-recurrente", methods=["POST"])
-def campaigns_schedule_recurrent(campaign_id):
-    """Programa un envío recurrente diario a una hora específica."""
-    from database import AutoCampaign, ProgramacionCampana, db
-    from auto_campaign_executor import _get_token
-
-    campaign = AutoCampaign.query.get(campaign_id)
-    if not campaign:
-        return jsonify({"success": False, "message": "Campaña no encontrada."}), 404
-
-    token = _get_token(campaign)
-    if not token:
-        return jsonify({"success": False, "message": "No se encontró token Wolkvox."}), 400
+@app.route("/auto-campaigns/programar-recurrente", methods=["POST"])
+def campaigns_schedule_recurrent():
+    """Programa un envío recurrente diario con datos del formulario."""
+    from database import ProgramacionCampana, db
 
     data = request.get_json(silent=True) or {}
+
+    nombre = (data.get("nombre") or "").strip()
+    bigquery_query = (data.get("bigquery_query") or "").strip()
+    wolkvox_campaign_id = (data.get("wolkvox_campaign_id") or "").strip()
+    server_name = (data.get("server_name") or "").strip()
+    campaign_type = (data.get("campaign_type") or "predictive").strip()
     hora_inicio = (data.get("hora_inicio") or "").strip()
     fecha_fin = (data.get("fecha_fin") or "").strip() or None
 
+    # 2. Validar campos obligatorios
+    if not nombre:
+        return jsonify({"success": False, "message": "El nombre es obligatorio."}), 400
+    if not bigquery_query:
+        return jsonify({"success": False, "message": "La consulta SQL es obligatoria."}), 400
+   
+    if not server_name:
+        return jsonify({"success": False, "message": "El servidor es obligatorio."}), 400
     if not hora_inicio:
-        return jsonify({"success": False, "message": "Hora de envío es obligatoria."}), 400
-
+        return jsonify({"success": False, "message": "La hora de envío es obligatoria."}), 400
     if not re.match(r'^\d{2}:\d{2}$', hora_inicio):
         return jsonify({"success": False, "message": "Formato de hora inválido. Use HH:MM."}), 400
 
+    if not wolkvox_campaign_id:
+        return jsonify({"success": False, "message": "El Campaign ID es obligatorio."}), 400
+
     try:
         nueva = ProgramacionCampana(
-            nombre=campaign.name,
-            campana_id=campaign.id,
-            bigquery_query=campaign.bigquery_query,
-            wolkvox_campaign_id=campaign.wolkvox_campaign_id,
-            server_name=campaign.server_name,
+            nombre=nombre,
+            bigquery_query=bigquery_query,
+            wolkvox_campaign_id=wolkvox_campaign_id,
+            server_name=server_name,
             tipo_programacion='recurrente',
             hora_inicio=hora_inicio,
             fecha_fin=fecha_fin,
@@ -2682,102 +2704,93 @@ def campaigns_schedule_recurrent(campaign_id):
             replace_existing=True
         )
 
-        log_gui_action("Programación Wolkvox recurrente", id=nueva.id, hora=hora_inicio, fecha_fin=fecha_fin)
-
-        return jsonify({
-            "success": True,
-            "id": nueva.id,
-            "tipo_programacion": "recurrente",
-            "hora_inicio": hora_inicio,
-            "fecha_fin": fecha_fin,
-            "message": f"Programación recurrente creada para las {hora_inicio}."
-        })
-
+        return jsonify({"success": True, "id": nueva.id, "message": "Programación recurrente creada."})
     except Exception as exc:
         db.session.rollback()
-        logger.exception("Error programando Wolkvox recurrente")
         return jsonify({"success": False, "message": str(exc)}), 500
 
-
 # ==================== SCHEDULER ====================
-
 def execute_wolkvox_schedule(programacion_id):
-    from database import AutoCampaign, ProgramacionCampana, db
-    from auto_campaign_executor import _get_token
+    from database import ProgramacionCampana, db
 
-    try:
-        # 1. Buscar programación
-        prog = ProgramacionCampana.query.get(programacion_id)
-        if not prog:
-            logger.warning(f"Programación {programacion_id} no encontrada")
-            return
-        if prog.estado != 'pendiente':
-            return
-
-        # 2. Buscar campaña
-        campaign = AutoCampaign.query.get(prog.campana_id)
-        if not campaign:
-            prog.estado = 'fallido'
-            db.session.commit()
-            return
-
-        # 3. Verificar condiciones (solo recurrente)
-        ahora = datetime.now(COLOMBIA_TZ)
-        
-        if prog.tipo_programacion == 'recurrente':
-            hora_actual = ahora.strftime("%H:%M")
-            
-            if hora_actual < prog.hora_inicio:
-                logger.info(f"⏰ {prog.id}: Aún no es la hora ({hora_actual} < {prog.hora_inicio})")
-                return
-            
-            if prog.fecha_ejecucion:
-                fe_ejec = prog.fecha_ejecucion.strftime("%Y-%m-%d")
-                if fe_ejec == ahora.strftime("%Y-%m-%d"):
-                    logger.info(f"✅ {prog.id}: Ya se ejecutó hoy")
-                    return
-            
-            if prog.fecha_fin and ahora.strftime("%Y-%m-%d") > prog.fecha_fin:
-                prog.estado = 'completado'
-                db.session.commit()
-                logger.info(f"🛑 {prog.id}: Pasó fecha fin")
-                return
-
-        # 4. Obtener token
-        token = _get_token(campaign)
-        if not token:
-            prog.estado = 'fallido'
-            db.session.commit()
-            return
-
-        # 5. Ejecutar carga
-        logger.info(f"📤 Ejecutando programación Wolkvox: {prog.id}")
-        resultado = Cargue_Wolkvox(campaign, token)
-
-        # 6. Actualizar estado
-        prog.fecha_ejecucion = ahora
-        prog.total_destinatarios = resultado.get("records_sent", 0)
-        prog.fecha_actualizacion = datetime.now(COLOMBIA_TZ)
-        
-        if prog.tipo_programacion == 'simple':
-            prog.estado = 'enviado' if resultado.get("success") else 'fallido'
-            try:
-                scheduler.remove_job(f"wolkvox_simple_{prog.id}")
-            except:
-                pass
-        
-        db.session.commit()
-        logger.info(f"✅ Programación {prog.id} ejecutada: {resultado.get('records_sent', 0)} registros")
-
-    except Exception as exc:
-        logger.exception(f"Error ejecutando programación {programacion_id}")
+    with app.app_context():
         try:
+            # 1. Buscar programación
             prog = ProgramacionCampana.query.get(programacion_id)
-            if prog:
+
+            if not prog:
+                logger.warning(f"Programación {programacion_id} no encontrada")
+                return
+            if prog.estado != 'pendiente':
+                return
+
+            # 2. Verificar condiciones (solo recurrente)
+            ahora = datetime.now(COLOMBIA_TZ)
+
+            if prog.tipo_programacion == 'recurrente':
+                hora_actual = ahora.strftime("%H:%M")
+
+                if hora_actual < prog.hora_inicio:
+                    logger.info(f"⏰ {prog.id}: Aún no es la hora ({hora_actual} < {prog.hora_inicio})")
+                    return
+
+                if prog.fecha_ejecucion:
+                    fe_ejec = prog.fecha_ejecucion.strftime("%Y-%m-%d")
+                    if fe_ejec == ahora.strftime("%Y-%m-%d"):
+                        logger.info(f"✅ {prog.id}: Ya se ejecutó hoy")
+                        return
+
+                if prog.fecha_fin and ahora.strftime("%Y-%m-%d") > prog.fecha_fin:
+                    prog.estado = 'completado'
+                    db.session.commit()
+                    logger.info(f"🛑 {prog.id}: Pasó fecha fin")
+                    return
+
+            # 3. Obtener token desde server_name
+            token = _get_token_desde_server(prog.server_name)
+            if not token:
                 prog.estado = 'fallido'
                 db.session.commit()
-        except:
-            pass
+                return
+
+            # 4. Crear objeto temporal para Cargue_Wolkvox
+            class CampaignWrapper:
+                pass
+
+            campaign = CampaignWrapper()
+            campaign.bigquery_query = prog.bigquery_query
+            campaign.wolkvox_campaign_id = prog.wolkvox_campaign_id
+            campaign.server_name = prog.server_name
+            campaign.campaign_type = 'predictive'
+
+            # 5. Ejecutar carga
+            logger.info(f"📤 Ejecutando programación Wolkvox: {prog.id}")
+            resultado = Cargue_Wolkvox(campaign, token)
+
+            # 6. Actualizar estado
+            prog.fecha_ejecucion = ahora
+            prog.total_destinatarios = resultado.get("records_sent", 0)
+            prog.fecha_actualizacion = datetime.now(COLOMBIA_TZ)
+
+            if prog.tipo_programacion == 'simple':
+                prog.estado = 'enviado' if resultado.get("success") else 'fallido'
+                try:
+                    scheduler.remove_job(f"wolkvox_simple_{prog.id}")
+                except:
+                    pass
+
+            db.session.commit()
+            logger.info(f"✅ Programación {prog.id} ejecutada: {resultado.get('records_sent', 0)} registros")
+
+        except Exception as exc:
+            logger.exception(f"Error ejecutando programación {programacion_id}")
+            try:
+                prog = ProgramacionCampana.query.get(programacion_id)
+                if prog:
+                    prog.estado = 'fallido'
+                    db.session.commit()
+            except:
+                pass
 
 @app.route("/auto-campaigns/<int:campaign_id>/start-wkv", methods=["POST"])
 def auto_campaigns_start_wkv(campaign_id):
@@ -2838,7 +2851,13 @@ def get_server_url(server_name):
         return jsonify({"success": False, "message": "Servidor no encontrado"}), 404
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
-
+def _get_token_desde_server(server_name):
+    """Obtiene token de Wolkvox desde config.json según server_name."""
+    from backend import get_authorization_headers, load_config
+    
+    load_config()
+    headers = get_authorization_headers(server_name or None)
+    return headers.get("wolkvox-token") or ""
 
 # ==================== DASHBOARD ====================
 

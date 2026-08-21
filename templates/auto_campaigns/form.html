@@ -214,25 +214,27 @@
   }
   .table-card table td { padding: 10px 16px; border-bottom: 1px solid var(--sms-border); }
 
-  .badge-success {
-    background: var(--sms-success-bg); color: var(--sms-success);
-    padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600;
-  }
-  .badge-danger {
-    background: var(--sms-danger-bg); color: var(--sms-danger);
-    padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600;
-  }
-  .badge-warning {
-    background: var(--sms-warning-bg); color: var(--sms-warning);
-    padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600;
-  }
+  .badge-success { background: var(--sms-success-bg); color: var(--sms-success); padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
+  .badge-danger { background: var(--sms-danger-bg); color: var(--sms-danger); padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
+  .badge-warning { background: var(--sms-warning-bg); color: var(--sms-warning); padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
 
-  .form-actions {
-    display: flex; gap: 10px; flex-wrap: wrap; padding-top: 8px; margin-top: 20px;
+  .form-actions { display: flex; gap: 10px; flex-wrap: wrap; padding-top: 8px; margin-top: 20px; }
+  .action-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+
+  .switch-sm {
+    position: relative; display: inline-block; width: 44px; height: 24px;
   }
-  .action-buttons {
-    display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto;
+  .switch-sm input { opacity: 0; width: 0; height: 0; }
+  .slider-sm {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc; transition: 0.3s; border-radius: 24px;
   }
+  .slider-sm:before {
+    position: absolute; content: ""; height: 18px; width: 18px;
+    left: 3px; bottom: 3px; background-color: white; transition: 0.3s; border-radius: 50%;
+  }
+  input:checked + .slider-sm { background-color: var(--sms-primary); }
+  input:checked + .slider-sm:before { transform: translateX(20px); }
 
   @media (max-width: 768px) {
     .sms-card-body { padding: 16px; }
@@ -390,16 +392,114 @@
         {% endif %}
       </div>
 
-      <!-- PANEL PROGRAMADOS -->
-      <div class="sms-tab-panel" id="panel-scheduled">
-        <div style="text-align:center;padding:60px 20px;color:var(--sms-muted);">
-          <i class="fas fa-clock" style="font-size:3rem;display:block;margin-bottom:16px;opacity:0.3;"></i>
-          <p style="font-size:0.95rem;">Próximamente: Programación de campañas automáticas.</p>
-        </div>
-      </div>
+          <!-- PANEL PROGRAMADOS -->
+        <div class="sms-tab-panel" id="panel-scheduled">
+            
+            <!-- FORMULARIO DE PROGRAMACIÓN INDEPENDIENTE -->
+            <div class="sms-auto-section" style="margin-bottom:16px;">
+                <div class="section-title">
+                    <i class="fas fa-clock"></i> Programar envío a Wolkvox
+                </div>
 
+                <!-- DATOS DE LA PROGRAMACIÓN -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+                    <div class="sms-field" style="margin-bottom:0;">
+                        <label>Nombre <span class="text-danger">*</span></label>
+                        <input class="form-control form-control-sm" id="progNombre" placeholder="Ej: Cobro Septiembre">
+                    </div>
+                    <div class="sms-field" style="margin-bottom:0;">
+                        <label>Campaign ID <span class="text-danger">*</span></label>
+                        <input class="form-control form-control-sm" id="progCampaignId" placeholder="Ej: 20213">
+                    </div>
+                    <div class="sms-field" style="margin-bottom:0;">
+                        <label>Servidor <span class="text-danger">*</span></label>
+                        <select class="form-control form-control-sm" id="progServerName">
+                            <option value="">Seleccionar servidor</option>
+                            {% for server in servers %}
+                                <option value="{{ server.name }}">{{ server.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="sms-field" style="margin-bottom:0;">
+                        <label>Tipo <span class="text-danger">*</span></label>
+                        <select class="form-control form-control-sm" id="progCampaignType">
+                            <option value="predictive">Predictivo</option>
+                            <option value="preview">Vista previa</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- CONSULTA SQL -->
+                <div class="sms-field" style="margin-top:12px;">
+                    <label for="progQuery">Consulta SQL <span class="badge-required">requerido</span></label>
+                    <textarea id="progQuery" class="form-control textarea-code" placeholder="SELECT telefono, nombre FROM..." rows="4"></textarea>
+                    <div class="sms-help">
+                        <span>Incluye columna de teléfono.</span>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnProgValidar">
+                            <i class="fas fa-check-circle"></i> Validar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- FECHA/HORA SIMPLE -->
+                <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-top:12px;">
+                    <div style="flex:1;min-width:140px;">
+                        <label style="font-size:0.72rem;">📅 Fecha</label>
+                        <input type="date" id="progFecha" class="form-control form-control-sm">
+                    </div>
+                    <div style="flex:1;min-width:120px;">
+                        <label style="font-size:0.72rem;">⏰ Hora</label>
+                        <input type="time" id="progHora" class="form-control form-control-sm" value="08:00">
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="btnProgramarSimple">
+                        <i class="fas fa-clock"></i> Programar
+                    </button>
+                </div>
+
+                <!-- RECURRENTE -->
+                <div style="margin-top:16px;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                        <label class="switch-sm">
+                            <input type="checkbox" id="progEsRecurrente">
+                            <span class="slider-sm"></span>
+                        </label>
+                        <span style="font-size:0.8rem;font-weight:600;">Programación recurrente diaria</span>
+                    </div>
+
+                    <div id="progRecurrenteOpciones" style="display:none;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label style="font-size:0.72rem;">⏰ Hora de envío</label>
+                                <input type="time" id="progHoraRecurrente" class="form-control form-control-sm" value="08:00">
+                            </div>
+                            <div>
+                                <label style="font-size:0.72rem;">📅 Fecha fin (opcional)</label>
+                                <input type="date" id="progFechaFin" class="form-control form-control-sm">
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnProgramarRecurrente" style="margin-top:12px;">
+                            <i class="fas fa-sync-alt"></i> Programar recurrente
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABLA DE PROGRAMACIONES -->
+            <div class="table-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-list"></i> Programaciones guardadas</h3>
+                </div>
+                <div class="card-body table-responsive" id="progLista">
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-spinner fa-spin"></i> Cargando programaciones...
+                    </div>
+                </div>
+          </div>
+
+        </div>
+
+      </div>
     </div>
-  </div>
 
   <!-- COLUMNA DERECHA: ESTADÍSTICAS -->
   <div class="sms-side">
@@ -536,13 +636,11 @@
   }
 
   function updateStats(data) {
-    // Actualizar estadísticas principales
     document.getElementById('statTotal').textContent = data.records_fetched || '—';
     document.getElementById('statValidos').textContent = data.records_sent || '—';
     document.getElementById('statBlacklist').textContent = data.records_blocked || '—';
     document.getElementById('statAEnviar').textContent = (data.records_sent || 0) - (data.records_blocked || 0) || '—';
     
-    // Detalle de validación
     document.getElementById('valTotalConsulta').textContent = data.records_fetched || '—';
     document.getElementById('valValidos').textContent = data.records_sent || '—';
     document.getElementById('valBlacklist').textContent = data.records_blocked || '—';
@@ -592,6 +690,7 @@
       showToast('❌ Error: ' + e.message, 'danger');
     }
   });
+  
 
   // ========== LIMPIAR CAMPAÑA ==========
   document.getElementById('btnClear')?.addEventListener('click', async () => {
@@ -603,7 +702,6 @@
       showResult(data.success, data.message || '✅ Campaña limpiada');
       if (data.success) {
         showToast('✅ Campaña limpiada', 'success');
-        // Resetear estadísticas
         document.getElementById('statTotal').textContent = '—';
         document.getElementById('statValidos').textContent = '—';
         document.getElementById('statBlacklist').textContent = '—';
@@ -633,7 +731,6 @@
       });
       const data = await resp.json();
 
-      // Actualizar estadísticas con los datos reales
       updateStats(data);
 
       if (data.success) {
@@ -732,6 +829,219 @@
       showToast('❌ Error: ' + e.message, 'danger');
     }
   });
+  // ========== PROGRAMACIONES ==========
+  const btnProgValidar = document.getElementById('btnProgValidar');
+  const btnProgramarSimple = document.getElementById('btnProgramarSimple');
+  const btnProgramarRecurrente = document.getElementById('btnProgramarRecurrente');
+  const progEsRecurrente = document.getElementById('progEsRecurrente');
+  const progRecurrenteOpciones = document.getElementById('progRecurrenteOpciones');
+
+  if (progEsRecurrente) {
+      progEsRecurrente.addEventListener('change', function() {
+          progRecurrenteOpciones.style.display = this.checked ? 'block' : 'none';
+      });
+  }
+
+  // Validar consulta de programación
+  if (btnProgValidar) {
+      btnProgValidar.addEventListener('click', async () => {
+          const query = document.getElementById('progQuery').value.trim();
+          if (!query) {
+              showToast('⚠️ Escribe una consulta SQL', 'warning');
+              return;
+          }
+          
+          try {
+              setLoading(btnProgValidar, true);
+              const resp = await fetch('/auto-campaigns/validate-query-fields', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ query: query })
+              });
+              const data = await resp.json();
+              
+              if (data.success) {
+                  showToast(`✅ ${data.detected_columns.length} columnas: ${data.detected_columns.join(', ')}`, 'success');
+              } else {
+                  showToast('❌ ' + data.message, 'danger');
+              }
+          } catch (e) {
+              showToast('❌ Error: ' + e.message, 'danger');
+          } finally {
+              setLoading(btnProgValidar, false);
+          }
+      });
+  }
+
+  // Programar simple
+  if (btnProgramarSimple) {
+      btnProgramarSimple.addEventListener('click', async () => {
+          const nombre = document.getElementById('progNombre').value.trim();
+          const campaignId = document.getElementById('progCampaignId').value.trim();
+          const serverName = document.getElementById('progServerName').value;
+          const campaignType = document.getElementById('progCampaignType').value;
+          const query = document.getElementById('progQuery').value.trim();
+          const fecha = document.getElementById('progFecha').value;
+          const hora = document.getElementById('progHora').value || '08:00';
+          
+          if (!nombre || !campaignId || !serverName || !query || !fecha) {
+              showToast('⚠️ Completa todos los campos obligatorios', 'warning');
+              return;
+          }
+          
+          const fechaCompleta = `${fecha}T${hora}`;
+          
+          try {
+              setLoading(btnProgramarSimple, true);
+              const resp = await fetch(`/api/wolkvox/programar`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      nombre: nombre,
+                      bigquery_query: query,
+                      wolkvox_campaign_id: campaignId,
+                      server_name: serverName,
+                      campaign_type: campaignType,
+                      fecha_programada: fechaCompleta
+                  })
+              });
+              const data = await resp.json();
+              
+              if (data.success) {
+                  showToast(`✅ Programado (ID: ${data.id})`, 'success');
+                  document.getElementById('progNombre').value = '';
+                  document.getElementById('progCampaignId').value = '';
+                  document.getElementById('progQuery').value = '';
+                  document.getElementById('progFecha').value = '';
+                  document.getElementById('progHora').value = '08:00';
+                  cargarProgramaciones();
+              } else {
+                  showToast('❌ ' + data.message, 'danger');
+              }
+          } catch (e) {
+              showToast('❌ Error: ' + e.message, 'danger');
+          } finally {
+              setLoading(btnProgramarSimple, false);
+          }
+      });
+  }
+
+  // Programar recurrente
+  if (btnProgramarRecurrente) {
+      btnProgramarRecurrente.addEventListener('click', async () => {
+          const nombre = document.getElementById('progNombre').value.trim();
+          const campaignId = document.getElementById('progCampaignId').value.trim();
+          const serverName = document.getElementById('progServerName').value;
+          const campaignType = document.getElementById('progCampaignType').value;
+          const query = document.getElementById('progQuery').value.trim();
+          const hora = document.getElementById('progHoraRecurrente').value;
+          const fechaFin = document.getElementById('progFechaFin').value;
+          
+          if (!nombre || !campaignId || !serverName || !query || !hora) {
+              showToast('⚠️ Completa todos los campos obligatorios', 'warning');
+              return;
+          }
+          
+          try {
+              setLoading(btnProgramarRecurrente, true);
+              const resp = await fetch('/api/wolkvox/programar-recurrente', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      nombre: nombre,
+                      bigquery_query: query,
+                      wolkvox_campaign_id: campaignId,
+                      server_name: serverName,
+                      campaign_type: campaignType,
+                      hora_inicio: hora,
+                      fecha_fin: fechaFin || null
+                  })
+              });
+              const data = await resp.json();
+              
+              if (data.success) {
+                  showToast(`✅ Recurrente creada (ID: ${data.id})`, 'success');
+                  document.getElementById('progNombre').value = '';
+                  document.getElementById('progCampaignId').value = '';
+                  document.getElementById('progQuery').value = '';
+                  document.getElementById('progHoraRecurrente').value = '08:00';
+                  document.getElementById('progFechaFin').value = '';
+                  progEsRecurrente.checked = false;
+                  progRecurrenteOpciones.style.display = 'none';
+                  cargarProgramaciones();
+              } else {
+                  showToast('❌ ' + data.message, 'danger');
+              }
+          } catch (e) {
+              showToast('❌ Error: ' + e.message, 'danger');
+          } finally {
+              setLoading(btnProgramarRecurrente, false);
+          }
+      });
+  }
+
+  // Cargar lista de programaciones
+  async function cargarProgramaciones() {
+      const container = document.getElementById('progLista');
+      if (!container) return;
+      
+      container.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+      
+      try {
+          const resp = await fetch('/api/wolkvox/programaciones');
+          const data = await resp.json();
+          
+          if (!data.items || data.items.length === 0) {
+              container.innerHTML = '<div class="text-center text-muted py-4">Sin programaciones</div>';
+              return;
+          }
+          
+          let html = `<table class="table table-sm">
+              <thead>
+                  <tr><th>ID</th><th>Nombre</th><th>Tipo</th><th>Fecha/Hora</th><th>Estado</th><th></th></tr>
+              </thead>
+              <tbody>`;
+          
+          data.items.forEach(row => {
+              const tipoBadge = row.tipo_programacion === 'recurrente'
+                  ? '<span class="badge-warning">🔄 Recurrente</span>'
+                  : '<span class="badge-success">📅 Simple</span>';
+              
+              const fecha = row.fecha_programada 
+                  ? new Date(row.fecha_programada).toLocaleString()
+                  : (row.hora_inicio || '—');
+              
+              const estadoClass = row.estado === 'pendiente' ? 'badge-warning' :
+                  row.estado === 'enviado' ? 'badge-success' : 'badge-danger';
+              
+              html += `<tr>
+                  <td><code>${row.id}</code></td>
+                  <td>${row.nombre || '—'}</td>
+                  <td>${tipoBadge}</td>
+                  <td>${fecha}</td>
+                  <td><span class="${estadoClass}">${row.estado}</span></td>
+                  <td>${row.estado === 'pendiente' ? `<button class="btn btn-sm btn-outline-danger cancelar-prog" data-id="${row.id}"><i class="fas fa-times"></i></button>` : ''}</td>
+              </tr>`;
+          });
+          
+          html += '</tbody></table>';
+          container.innerHTML = html;
+          
+          container.querySelectorAll('.cancelar-prog').forEach(btn => {
+              btn.addEventListener('click', async () => {
+                  if (!confirm('¿Cancelar programación?')) return;
+                  await fetch(`/api/wolkvox/cancelar/${btn.dataset.id}`, { method: 'POST' });
+                  cargarProgramaciones();
+              });
+          });
+      } catch (e) {
+          container.innerHTML = '<div class="alert alert-danger">Error al cargar programaciones</div>';
+      }
+  }
+
+  // Llamar al cargar
+  cargarProgramaciones();
+
 
 })();
 </script>
