@@ -56,14 +56,13 @@ from api_runner import (
 )
 from server_apis import load_assignment_matrix, set_server_api_active
 from dashboard import get_dashboard_data, refresh_dashboard_from_wolkvox
-from auto_campaigns import (
-    create_auto_campaign, delete_auto_campaign, get_auto_campaign,
-    list_auto_campaigns, list_execution_logs, parse_auto_campaign_id,
-    update_auto_campaign,
-)
 from auto_campaign_executor import (
-    is_auto_campaign_running, request_stop_auto_campaign,
+    is_auto_campaign_running,
+    request_stop_auto_campaign,
     start_auto_campaign_async,
+    fetch_data_from_bigquery,
+    _get_token,
+    _get_base_url_wolkvox,
 )
 from services.email_client import EmailClient, EmailClientError
 from services.email_service import (

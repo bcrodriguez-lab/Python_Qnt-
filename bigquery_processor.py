@@ -481,9 +481,9 @@ def procesar_datos(
 
     # Normalizar tipos
     if "DATE" in df.columns:
-        if df["DATE"].dtype == "object":
+        if not pd.api.types.is_datetime64_any_dtype(df["DATE"]):
             df["DATE"] = pd.to_datetime(df["DATE"], errors="coerce")
-    
+
     if "Contacto__c" in df.columns:
 
         df["Contacto__c"] = df["Contacto__c"].astype(str).str.strip()
