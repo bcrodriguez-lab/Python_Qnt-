@@ -2352,10 +2352,6 @@ def auto_campaigns_validate_query_fields():
 
 
 @app.route("/auto-campaigns/<int:campaign_id>/clear-wkv", methods=["DELETE"])
-
-#==================Funciones Reutilizables Wolkbox=======================================#
-
-
 def auto_campaigns_clear_wkv(campaign_id):
     from database import AutoCampaign
     from auto_campaign_executor import _get_token, _get_base_url_wolkvox
@@ -2485,7 +2481,7 @@ def Cargue_Wolkvox(campaign, token):
     # 4. Construir URL de Wolkvox
     server_mapping = {
         "operacion-interna": "https://wv0016.wolkvox.com",
-        "qnt_digital": "https://wv0016.wolkvox.com",
+        "qnt_digital": "https://wv0010.wolkvox.com/",
         "qnt_juridico_blaster": "https://wv0016.wolkvox.com",
         "qnt_cobro_blaster": "https://wv0016.wolkvox.com",
         "Qnt_RBK_blaster": "https://wv0016.wolkvox.com",
@@ -2628,7 +2624,6 @@ def campaigns_schedule_simple():
             execute_wolkvox_schedule,
             trigger="date",
             run_date=run_date,
-            args=[nueva.id],
             id=f"wolkvox_simple_{nueva.id}",
             replace_existing=True
         )
@@ -2698,8 +2693,7 @@ def campaigns_schedule_recurrent():
         scheduler.add_job(
             execute_wolkvox_schedule,
             trigger="interval",
-            minutes=60,
-            args=[nueva.id],
+            minutes=1,
             id=f"wolkvox_recurrente_{nueva.id}",
             replace_existing=True
         )
@@ -2710,87 +2704,87 @@ def campaigns_schedule_recurrent():
         return jsonify({"success": False, "message": str(exc)}), 500
 
 # ==================== SCHEDULER ====================
-def execute_wolkvox_schedule(programacion_id):
+def execute_wolkvox_schedule():
+    """Busca y ejecuta todas las programaciones pendientes de Wolkvox."""
     from database import ProgramacionCampana, db
 
     with app.app_context():
         try:
-            # 1. Buscar programación
-            prog = ProgramacionCampana.query.get(programacion_id)
-
-            if not prog:
-                logger.warning(f"Programación {programacion_id} no encontrada")
+            # 1. Buscar TODAS las programaciones pendientes
+            pendientes = ProgramacionCampana.query.filter_by(estado='pendiente').all()
+            
+            if not pendientes:
                 return
-            if prog.estado != 'pendiente':
-                return
-
-            # 2. Verificar condiciones (solo recurrente)
+            
             ahora = datetime.now(COLOMBIA_TZ)
-
-            if prog.tipo_programacion == 'recurrente':
-                hora_actual = ahora.strftime("%H:%M")
-
-                if hora_actual < prog.hora_inicio:
-                    logger.info(f"⏰ {prog.id}: Aún no es la hora ({hora_actual} < {prog.hora_inicio})")
-                    return
-
-                if prog.fecha_ejecucion:
-                    fe_ejec = prog.fecha_ejecucion.strftime("%Y-%m-%d")
-                    if fe_ejec == ahora.strftime("%Y-%m-%d"):
-                        logger.info(f"✅ {prog.id}: Ya se ejecutó hoy")
-                        return
-
-                if prog.fecha_fin and ahora.strftime("%Y-%m-%d") > prog.fecha_fin:
-                    prog.estado = 'completado'
-                    db.session.commit()
-                    logger.info(f"🛑 {prog.id}: Pasó fecha fin")
-                    return
-
-            # 3. Obtener token desde server_name
-            token = _get_token_desde_server(prog.server_name)
-            if not token:
-                prog.estado = 'fallido'
-                db.session.commit()
-                return
-
-            # 4. Crear objeto temporal para Cargue_Wolkvox
-            class CampaignWrapper:
-                pass
-
-            campaign = CampaignWrapper()
-            campaign.bigquery_query = prog.bigquery_query
-            campaign.wolkvox_campaign_id = prog.wolkvox_campaign_id
-            campaign.server_name = prog.server_name
-            campaign.campaign_type = 'predictive'
-
-            # 5. Ejecutar carga
-            logger.info(f"📤 Ejecutando programación Wolkvox: {prog.id}")
-            resultado = Cargue_Wolkvox(campaign, token)
-
-            # 6. Actualizar estado
-            prog.fecha_ejecucion = ahora
-            prog.total_destinatarios = resultado.get("records_sent", 0)
-            prog.fecha_actualizacion = datetime.now(COLOMBIA_TZ)
-
-            if prog.tipo_programacion == 'simple':
-                prog.estado = 'enviado' if resultado.get("success") else 'fallido'
+            hoy_str = ahora.strftime("%Y-%m-%d")
+            hora_actual = ahora.strftime("%H:%M")
+            
+            for prog in pendientes:
                 try:
-                    scheduler.remove_job(f"wolkvox_simple_{prog.id}")
-                except:
-                    pass
-
-            db.session.commit()
-            logger.info(f"✅ Programación {prog.id} ejecutada: {resultado.get('records_sent', 0)} registros")
-
-        except Exception as exc:
-            logger.exception(f"Error ejecutando programación {programacion_id}")
-            try:
-                prog = ProgramacionCampana.query.get(programacion_id)
-                if prog:
+                    # 2. Verificar condiciones según tipo
+                    if prog.tipo_programacion == 'recurrente':
+                        # COND 1: ¿Ya llegó la hora?
+                        if hora_actual < prog.hora_inicio:
+                            continue
+                        
+                        # COND 2: ¿Ya se ejecutó hoy?
+                        if prog.fecha_ejecucion:
+                            fe_ejec = prog.fecha_ejecucion.strftime("%Y-%m-%d")
+                            if fe_ejec == hoy_str:
+                                continue
+                        
+                        # COND 3: ¿Pasó fecha fin?
+                        if prog.fecha_fin and hoy_str > prog.fecha_fin:
+                            prog.estado = 'completado'
+                            db.session.commit()
+                            continue
+                    
+                    # 3. Obtener token
+                    token = _get_token_desde_server(prog.server_name)
+                    if not token:
+                        prog.estado = 'fallido'
+                        db.session.commit()
+                        continue
+                    
+                    # 4. Crear objeto temporal
+                    class CampaignWrapper:
+                        pass
+                    
+                    campaign = CampaignWrapper()
+                    campaign.bigquery_query = prog.bigquery_query
+                    campaign.wolkvox_campaign_id = prog.wolkvox_campaign_id
+                    campaign.server_name = prog.server_name
+                    campaign.campaign_type = 'predictive'
+                    
+                    # 5. Ejecutar carga
+                    logger.info(f"📤 Ejecutando programación {prog.id}: {prog.nombre}")
+                    resultado = Cargue_Wolkvox(campaign, token)
+                    
+                    # 6. Actualizar estado
+                    prog.fecha_ejecucion = ahora
+                    prog.total_destinatarios = resultado.get("records_sent", 0)
+                    prog.fecha_actualizacion = datetime.now(COLOMBIA_TZ)
+                    
+                    if prog.tipo_programacion == 'simple':
+                        prog.estado = 'enviado' if resultado.get("success") else 'fallido'
+                        try:
+                            scheduler.remove_job(f"wolkvox_simple_{prog.id}")
+                        except:
+                            pass
+                    
+                    db.session.commit()
+                    logger.info(f"✅ Programación {prog.id} ejecutada: {resultado.get('records_sent', 0)} registros")
+                    
+                except Exception as e:
+                    logger.exception(f"Error con programación {prog.id}")
                     prog.estado = 'fallido'
                     db.session.commit()
-            except:
-                pass
+                    
+        except Exception as exc:
+            logger.exception("Error en scheduler Wolkvox")
+
+
 
 @app.route("/auto-campaigns/<int:campaign_id>/start-wkv", methods=["POST"])
 def auto_campaigns_start_wkv(campaign_id):

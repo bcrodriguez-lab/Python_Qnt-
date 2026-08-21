@@ -893,7 +893,7 @@
           
           try {
               setLoading(btnProgramarSimple, true);
-              const resp = await fetch(`/api/wolkvox/programar`, {
+              const resp = await fetch(`/auto-campaigns/programar`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
@@ -944,7 +944,7 @@
           
           try {
               setLoading(btnProgramarRecurrente, true);
-              const resp = await fetch('/api/wolkvox/programar-recurrente', {
+              const resp = await fetch('/auto-campaigns/programar-recurrente', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({

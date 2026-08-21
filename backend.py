@@ -201,7 +201,10 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 init_db(app)
 scheduler = BackgroundScheduler()
 scheduler.start()
-
+for job in scheduler.get_jobs():
+    if job.id.startswith('wolkvox_'):
+        scheduler.remove_job(job.id)
+        print(f"🗑️ Job viejo eliminado: {job.id}")
 UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 DOWNLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 load_config()
