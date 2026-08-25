@@ -2351,6 +2351,107 @@ def auto_campaigns_validate_query_fields():
         return jsonify({"success": False, "message": str(exc)}), 500
 
 
+
+def validar_consulta_wolkvox(query):
+    """
+    Ejecuta BigQuery, filtra lista negra, valida teléfonos.
+    Devuelve registros válidos + estadísticas.
+    """
+    # 1. Ejecutar BigQuery
+    rows = fetch_data_from_bigquery(query)
+    if not rows:
+        raise ValueError("La consulta no retornó registros.")
+    
+    # 2. Detectar columna de teléfono
+    columnas = list(rows[0].keys())
+    telefono_col = None
+    for candidata in ['tel1', 'telefono', 'celular', 'Celular', 'movil', 'phone']:
+        if candidata in columnas:
+            telefono_col = candidata
+            break
+    
+    if not telefono_col:
+        raise ValueError(f"No se encontró columna de teléfono. Columnas: {columnas}")
+    
+    # 3. Filtrar lista negra y validar
+    blacklist = get_blacklist_phones()
+    registros_validos = []
+    registros_bloqueados = []
+    registros_invalidos = 0
+    
+    for row in rows:
+        telefono_raw = str(row.get(telefono_col, '')).strip()
+        telefono_limpio = re.sub(r'[^0-9]', '', telefono_raw)
+        
+        # Validar longitud mínima
+        if len(telefono_limpio) < 10:
+            registros_invalidos += 1
+            continue
+        
+        # Limpiar prefijo 57
+        if telefono_limpio.startswith('57') and len(telefono_limpio) == 12:
+            telefono_limpio = telefono_limpio[2:]
+        
+        # Lista negra
+        if telefono_limpio in blacklist:
+            registros_bloqueados.append({
+                'telefono': telefono_limpio,
+                'motivo': 'Lista negra'
+            })
+            continue
+        
+        registros_validos.append(row)
+    
+    # 4. Duplicados del día (compara con WolkvoxLog)
+    duplicados = 0
+    if registros_validos:
+        telefonos_validos = [
+            str(row.get(telefono_col, '')).strip() 
+            for row in registros_validos
+        ]
+        telefonos_limpios = []
+        for t in telefonos_validos:
+            t_limpio = re.sub(r'[^0-9]', '', t)
+            if t_limpio.startswith('57') and len(t_limpio) == 12:
+                t_limpio = t_limpio[2:]
+            telefonos_limpios.append(t_limpio)
+        
+        hoy = datetime.now(COLOMBIA_TZ).strftime("%Y-%m-%d")
+        telefonos_str = "', '".join(telefonos_limpios)
+        
+        query_dup = f"""
+            SELECT DISTINCT telefono
+            FROM `capable-arbor-209819.Temporal.WolkvoxLog`
+            WHERE DATE(fecha_carga) = '{hoy}'
+            AND telefono IN ('{telefonos_str}')
+        """
+        
+        try:
+            df_dup = bq_client.query(query_dup).to_dataframe()
+            duplicados = len(df_dup) if not df_dup.empty else 0
+        except:
+            duplicados = 0
+    
+    total_consulta = len(rows)
+    validos = len(registros_validos)
+    invalidos = registros_invalidos
+    lista_negra = len(registros_bloqueados)
+    
+    return {
+        "success": True,
+        "rows": rows,
+        "telefono_col": telefono_col,
+        "registros_validos": registros_validos,
+        "registros_bloqueados": registros_bloqueados,
+        "total_consulta": total_consulta,
+        "validos": validos,
+        "invalidos": invalidos,
+        "duplicados": duplicados,
+        "lista_negra": lista_negra,
+        "a_enviar": validos - duplicados - lista_negra
+    }
+
+
 @app.route("/auto-campaigns/<int:campaign_id>/clear-wkv", methods=["DELETE"])
 def auto_campaigns_clear_wkv(campaign_id):
     from database import AutoCampaign
@@ -2380,40 +2481,19 @@ def auto_campaigns_clear_wkv(campaign_id):
         return jsonify({"success": False, "message": str(e)}), 500
 
 
-
 def Cargue_Wolkvox(campaign, token):
     """
-    Ejecuta BigQuery, filtra lista negra, formatea registros
-    y envía a Wolkvox en lotes.
+    Formatea registros y envía a Wolkvox en lotes.
+    Usa validar_consulta_wolkvox para obtener registros válidos.
     """
-    # 1. Ejecutar BigQuery
-    rows = fetch_data_from_bigquery(campaign.bigquery_query)
-    if not rows:
-        raise ValueError("La consulta no retornó registros.")
-    
-    # 2. Cargar lista negra
-    blacklist = get_blacklist_phones()
-    registros_validos = []
-    registros_bloqueados = []
-    
-    for row in rows:
-        telefono_raw = str(row.get('tel1', '')).strip()
-        telefono_limpio = re.sub(r'[^0-9]', '', telefono_raw)
-        if telefono_limpio.startswith('57'):
-            telefono_limpio = telefono_limpio[2:]
-        
-        if telefono_limpio in blacklist:
-            registros_bloqueados.append({
-                'telefono': telefono_limpio,
-                'motivo': 'Lista negra'
-            })
-        else:
-            registros_validos.append(row)
+    # 1. Validar consulta
+    validacion = validar_consulta_wolkvox(campaign.bigquery_query)
+    registros_validos = validacion["registros_validos"]
     
     if not registros_validos:
         raise ValueError("Todos los registros fueron bloqueados por lista negra.")
     
-    # 3. Formatear registros
+    # 2. Formatear registros
     records = []
     for idx, row in enumerate(registros_validos):
         
@@ -2478,7 +2558,7 @@ def Cargue_Wolkvox(campaign, token):
         }
         records.append(record)
     
-    # 4. Construir URL de Wolkvox
+    # 3. Construir URL de Wolkvox
     server_mapping = {
         "operacion-interna": "https://wv0016.wolkvox.com",
         "qnt_digital": "https://wv0010.wolkvox.com/",
@@ -2497,7 +2577,7 @@ def Cargue_Wolkvox(campaign, token):
         "campaign_status": "1"
     }
     
-    # 5. Enviar en lotes
+    # 4. Enviar en lotes
     headers = {"wolkvox-token": token, "Content-Type": "application/json"}
     batch_size = 100
     total_enviados = 0
@@ -2517,17 +2597,49 @@ def Cargue_Wolkvox(campaign, token):
         except Exception as e:
             errores.append({"error": str(e)})
     
+    # 5. Guardar en WolkvoxLog
+    if records:
+        try:
+            guardar_wolkvox_log(bq_client, records, campaign, usuario='sistema')
+        except Exception as e:
+            logger.warning(f"Error guardando WolkvoxLog: {e}")
+    
     # 6. Devolver resultado
     return {
         "success": len(errores) == 0,
         "records_sent": total_enviados,
-        "records_fetched": len(rows),
-        "records_blocked": len(registros_bloqueados),
+        "records_fetched": validacion["total_consulta"],
+        "records_blocked": validacion["lista_negra"],
         "records_failed": len(records) - total_enviados,
+        "duplicados": validacion["duplicados"],
+        "invalidos": validacion["invalidos"],
         "errors": errores,
-        "message": f"{total_enviados} registros cargados. {len(registros_bloqueados)} bloqueados."
+        "message": f"{total_enviados} registros cargados. {validacion['lista_negra']} bloqueados."
     }
 
+@app.route("/api/wolkvox/validar", methods=["POST"])
+def wolkvox_validar():
+    """Valida consulta y devuelve estadísticas."""
+    data = request.get_json(silent=True) or {}
+    query = (data.get("query") or "").strip()
+    
+    if not query:
+        return jsonify({"success": False, "message": "Consulta SQL requerida"}), 400
+    
+    try:
+        resultado = validar_consulta_wolkvox(query)
+        return jsonify({
+            "success": True,
+            "total_consulta": resultado["total_consulta"],
+            "validos": resultado["validos"],
+            "invalidos": resultado["invalidos"],
+            "duplicados": resultado["duplicados"],
+            "lista_negra": resultado["lista_negra"],
+            "a_enviar": resultado["a_enviar"]
+        })
+    except Exception as exc:
+        logger.exception("Error validando consulta Wolkvox")
+        return jsonify({"success": False, "message": str(exc)}), 500
 
 @app.route("/auto-campaigns/<int:campaign_id>/load-wkv", methods=["POST"])
 def auto_campaigns_load_wkv(campaign_id):
@@ -2569,6 +2681,8 @@ def auto_campaigns_load_wkv(campaign_id):
         log.error_message = str(e)
         db.session.commit()
         return jsonify({"success": False, "message": str(e)}), 500
+
+
 
 @app.route("/auto-campaigns/programar", methods=["POST"])
 def campaigns_schedule_simple():
@@ -2852,6 +2966,101 @@ def _get_token_desde_server(server_name):
     load_config()
     headers = get_authorization_headers(server_name or None)
     return headers.get("wolkvox-token") or ""
+
+
+
+# ==================== funcion para guardar logs en Wolkvox ====================
+def guardar_wolkvox_log(client, records, campaign, usuario='sistema', resultado='enviado'):
+    """Guarda cada registro enviado a Wolkvox en BigQuery."""
+    from google.cloud import bigquery
+    
+    if not records:
+        return
+    
+    now = datetime.now(COLOMBIA_TZ).isoformat()
+    batch_size = 500
+    total_guardados = 0
+    
+    for i in range(0, len(records), batch_size):
+        batch = records[i:i+batch_size]
+        
+        insert_sql = """
+        INSERT INTO `capable-arbor-209819.Temporal.WolkvoxLog`
+        (id, telefono, customer_id, customer_name, customer_last_name, email,
+         fecha_pago, fecha_pago_2, valor_pagar, valor_pagar_2,
+         valor_oferta_esp, valor_oferta_esp_2, cuotas, porcentaje, porcentaje_2,
+         segmento, link_pago, id_campana_origen, id_mensaje,
+         descripcion_campana, objetivo_campana, nombre_banco, nombre_campana,
+         canal_ley, ley_contacto, empresa, nit_empresa, direccion_cliente,
+         valor_capital, valor_total, campana_id, campana_nombre,
+         usuario, resultado, error, fecha_carga)
+        VALUES
+        """
+        
+        value_rows = []
+        parameters = []
+        
+        for idx, record in enumerate(batch):
+            value_rows.append(f"""
+                (@id_{idx}, @telefono_{idx}, @customer_id_{idx}, @customer_name_{idx},
+                 @customer_last_name_{idx}, @email_{idx}, @fecha_pago_{idx}, @fecha_pago_2_{idx},
+                 @valor_pagar_{idx}, @valor_pagar_2_{idx}, @valor_oferta_esp_{idx},
+                 @valor_oferta_esp_2_{idx}, @cuotas_{idx}, @porcentaje_{idx},
+                 @porcentaje_2_{idx}, @segmento_{idx}, @link_pago_{idx},
+                 @id_campana_origen_{idx}, @id_mensaje_{idx}, @descripcion_campana_{idx},
+                 @objetivo_campana_{idx}, @nombre_banco_{idx}, @nombre_campana_{idx},
+                 @canal_ley_{idx}, @ley_contacto_{idx}, @empresa_{idx},
+                 @nit_empresa_{idx}, @direccion_cliente_{idx}, @valor_capital_{idx},
+                 @valor_total_{idx}, @campana_id_{idx}, @campana_nombre_{idx},
+                 @usuario_{idx}, @resultado_{idx}, @error_{idx}, @fecha_carga_{idx})
+            """)
+            
+            parameters.extend([
+                bigquery.ScalarQueryParameter(f"id_{idx}", "STRING", str(uuid4())),
+                bigquery.ScalarQueryParameter(f"telefono_{idx}", "STRING", record.get('tel1', '')),
+                bigquery.ScalarQueryParameter(f"customer_id_{idx}", "STRING", record.get('customer_id', '')),
+                bigquery.ScalarQueryParameter(f"customer_name_{idx}", "STRING", record.get('customer_name', '')),
+                bigquery.ScalarQueryParameter(f"customer_last_name_{idx}", "STRING", record.get('customer_last_name', '')),
+                bigquery.ScalarQueryParameter(f"email_{idx}", "STRING", record.get('email', '')),
+                bigquery.ScalarQueryParameter(f"fecha_pago_{idx}", "STRING", record.get('opt1', '')),
+                bigquery.ScalarQueryParameter(f"fecha_pago_2_{idx}", "STRING", record.get('opt5', '')),
+                bigquery.ScalarQueryParameter(f"valor_pagar_{idx}", "STRING", record.get('opt2', '')),
+                bigquery.ScalarQueryParameter(f"valor_pagar_2_{idx}", "STRING", record.get('opt6', '')),
+                bigquery.ScalarQueryParameter(f"valor_oferta_esp_{idx}", "STRING", record.get('opt7', '')),
+                bigquery.ScalarQueryParameter(f"valor_oferta_esp_2_{idx}", "STRING", record.get('opt8', '')),
+                bigquery.ScalarQueryParameter(f"cuotas_{idx}", "STRING", record.get('opt9', '')),
+                bigquery.ScalarQueryParameter(f"porcentaje_{idx}", "STRING", record.get('opt10', '')),
+                bigquery.ScalarQueryParameter(f"porcentaje_2_{idx}", "STRING", record.get('opt11', '')),
+                bigquery.ScalarQueryParameter(f"segmento_{idx}", "STRING", record.get('opt3', '')),
+                bigquery.ScalarQueryParameter(f"link_pago_{idx}", "STRING", record.get('opt12', '')),
+                bigquery.ScalarQueryParameter(f"id_campana_origen_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"id_mensaje_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"descripcion_campana_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"objetivo_campana_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"nombre_banco_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"nombre_campana_{idx}", "STRING", campaign.name if campaign else ''),
+                bigquery.ScalarQueryParameter(f"canal_ley_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"ley_contacto_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"empresa_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"nit_empresa_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"direccion_cliente_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"valor_capital_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"valor_total_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"campana_id_{idx}", "STRING", str(campaign.id) if campaign else ''),
+                bigquery.ScalarQueryParameter(f"campana_nombre_{idx}", "STRING", campaign.name if campaign else ''),
+                bigquery.ScalarQueryParameter(f"usuario_{idx}", "STRING", usuario),
+                bigquery.ScalarQueryParameter(f"resultado_{idx}", "STRING", resultado),
+                bigquery.ScalarQueryParameter(f"error_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"fecha_carga_{idx}", "TIMESTAMP", now),
+            ])
+        
+        insert_sql += ", ".join(value_rows)
+        job_config = bigquery.QueryJobConfig(query_parameters=parameters)
+        
+        client.query(insert_sql, job_config=job_config).result()
+        total_guardados += len(batch)
+    
+    logger.info(f"✅ {total_guardados} registros guardados en WolkvoxLog")
 
 # ==================== DASHBOARD ====================
 

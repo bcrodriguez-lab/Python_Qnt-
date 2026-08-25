@@ -484,16 +484,7 @@
                 </div>
             </div>
 
-            <!-- TABLA DE PROGRAMACIONES -->
-            <div class="table-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-list"></i> Programaciones guardadas</h3>
-                </div>
-                <div class="card-body table-responsive" id="progLista">
-                    <div class="text-center text-muted py-4">
-                        <i class="fas fa-spinner fa-spin"></i> Cargando programaciones...
-                    </div>
-                </div>
+           
           </div>
 
         </div>
@@ -650,45 +641,74 @@
 
   // ========== VALIDAR CONSULTA ==========
   document.getElementById('btnValidate').addEventListener('click', async () => {
-    const query = queryTextarea.value.trim();
-    if (!query) {
-      showToast('⚠️ Escribe una consulta SQL primero.', 'warning');
-      return;
-    }
-
-    const statusEl = document.getElementById('validateStatus');
-    statusEl.className = 'status-pill loading';
-    statusEl.innerHTML = '<span class="spinner-sm"></span> Validando...';
-
-    try {
-      const resp = await fetch('/auto-campaigns/validate-query-fields', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: query })
-      });
-      const data = await resp.json();
-
-      if (data.success) {
-        const columns = data.detected_columns || [];
-        statusEl.className = 'status-pill ok';
-        statusEl.innerHTML = '✅ ' + columns.length + ' columnas: ' + columns.join(', ');
-
-        document.getElementById('columnsInfo').style.display = 'block';
-        document.getElementById('detectedColumns').textContent = columns.join(', ');
-
-        showToast('✅ Consulta válida: ' + columns.length + ' columnas detectadas', 'success');
-      } else {
-        statusEl.className = 'status-pill err';
-        statusEl.innerHTML = '❌ ' + data.message;
-        document.getElementById('columnsInfo').style.display = 'none';
-        document.getElementById('validationDetail').style.display = 'none';
-        showToast('❌ ' + data.message, 'danger');
+      const query = queryTextarea.value.trim();
+      if (!query) {
+          showToast('⚠️ Escribe una consulta SQL primero.', 'warning');
+          return;
       }
-    } catch (e) {
-      statusEl.className = 'status-pill err';
-      statusEl.innerHTML = '❌ Error';
-      showToast('❌ Error: ' + e.message, 'danger');
-    }
+
+      const statusEl = document.getElementById('validateStatus');
+      statusEl.className = 'status-pill loading';
+      statusEl.innerHTML = '<span class="spinner-sm"></span> Validando...';
+
+      try {
+          // 1. Validar columnas
+          const respColumns = await fetch('/auto-campaigns/validate-query-fields', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ query: query })
+          });
+          const dataColumns = await respColumns.json();
+
+          if (!dataColumns.success) {
+              statusEl.className = 'status-pill err';
+              statusEl.innerHTML = '❌ ' + dataColumns.message;
+              document.getElementById('columnsInfo').style.display = 'none';
+              document.getElementById('validationDetail').style.display = 'none';
+              showToast('❌ ' + dataColumns.message, 'danger');
+              return;
+          }
+
+          const columns = dataColumns.detected_columns || [];
+          statusEl.className = 'status-pill ok';
+          statusEl.innerHTML = '✅ ' + columns.length + ' columnas';
+          document.getElementById('columnsInfo').style.display = 'block';
+          document.getElementById('detectedColumns').textContent = columns.join(', ');
+
+          // 2. Validar estadísticas (lista negra, duplicados)
+          const respStats = await fetch('/api/wolkvox/validar', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ query: query })
+          });
+          const dataStats = await respStats.json();
+
+          if (dataStats.success) {
+              document.getElementById('statTotal').textContent = dataStats.total_consulta || 0;
+              document.getElementById('statValidos').textContent = dataStats.validos || 0;
+              document.getElementById('statInvalidos').textContent = dataStats.invalidos || 0;
+              document.getElementById('statDuplicados').textContent = dataStats.duplicados || 0;
+              document.getElementById('statBlacklist').textContent = dataStats.lista_negra || 0;
+              document.getElementById('statAEnviar').textContent = dataStats.a_enviar || 0;
+
+              document.getElementById('valTotalConsulta').textContent = dataStats.total_consulta || 0;
+              document.getElementById('valValidos').textContent = dataStats.validos || 0;
+              document.getElementById('valInvalidos').textContent = dataStats.invalidos || 0;
+              document.getElementById('valDuplicados').textContent = dataStats.duplicados || 0;
+              document.getElementById('valBlacklist').textContent = dataStats.lista_negra || 0;
+              document.getElementById('valAEnviar').textContent = dataStats.a_enviar || 0;
+
+              document.getElementById('validationDetail').style.display = 'block';
+              showToast('✅ Validación completa: ' + dataStats.a_enviar + ' a enviar', 'success');
+          } else {
+              showToast('❌ ' + dataStats.message, 'danger');
+          }
+      } catch (e) {
+          statusEl.className = 'status-pill err';
+          statusEl.innerHTML = '❌ Error';
+          document.getElementById('validationDetail').style.display = 'none';
+          showToast('❌ Error: ' + e.message, 'danger');
+      }
   });
   
 
