@@ -204,7 +204,7 @@ class ProgramacionCampana(db.Model):
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nombre = db.Column(db.String(255), nullable=False)
-    campana_id = db.Column(db.Integer, nullable=False)
+    campana_id = db.Column(db.Integer, nullable=True)
     bigquery_query = db.Column(db.Text, nullable=False)
     wolkvox_campaign_id = db.Column(db.String(100), nullable=False)
     server_name = db.Column(db.String(255), nullable=False)

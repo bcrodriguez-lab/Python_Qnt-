@@ -1084,7 +1084,7 @@ def sms_schedule_recurrent():
         scheduler.add_job(
             execute_sms_schedule,
             trigger="interval",
-            minutes=1,
+            hours=10,
             args=[schedule_id],
             id=f"sms_recurrente_{schedule_id}",
             replace_existing=True
@@ -2557,7 +2557,47 @@ def Cargue_Wolkvox(campaign, token):
             "recall_telephone": ""
         }
         records.append(record)
-    
+        # 2.1 COONSTRUIR SEÑUELOS
+
+    senuelos_data_ = [
+        ("Sara", "3023592469","10000000000"),
+        ("Camilo", "3015007868","10000000000"),
+        ]
+    logger.info(f"Agregando {len(senuelos_data_)} señuelos a la campaña {campaign.name} (ID: {campaign.id})")
+    start_id = len(records) + 1
+    for i, (nombre, telefono, customer_id) in enumerate(senuelos_data_, start=start_id):
+
+            telefono_formateado = formatear_telefono(telefono)
+            Señuelos = {
+                "customer_name": nombre,
+                "customer_last_name": apellido,
+                "id_type": "CC",
+                "customer_id": customer_id,
+                "tel1": telefono_formateado,
+                "tel2": "", "tel3": "", "tel4": "", "tel5": "",
+                "tel6": "", "tel7": "", "tel8": "", "tel9": "", "tel10": "",
+                "tel_extra": "",
+                "email": email,
+                "age": "", "gender": "", "country": "", "state": "",
+                "city": "", "zone": "", "address": "",
+                "opt1": str(row.get('fecha_pago', '')),
+                "opt2": str(row.get('valor_pagar', '')),
+                "opt3": str(row.get('segmento', '')),
+                "opt4": str(row.get('empresa', '')),
+                "opt5": str(row.get('fecha_pago_2', '')),
+                "opt6": str(row.get('valor_pagar_2', '')),
+                "opt7": str(row.get('valor_oferta_esp', '')),
+                "opt8": str(row.get('valor_oferta_esp_2', '')),
+                "opt9": str(row.get('cuotas', '')),
+                "opt10": str(row.get('porcentaje', '')),
+                "opt11": str(row.get('porcentaje_2', '')),
+                "opt12": str(row.get('link_pago', '')),
+                "recall_date": "",
+                "recall_telephone": ""
+            }
+            records.append(Señuelos)
+            logger.info(f"Señuelo agregado: {nombre}, {telefono_formateado}, {customer_id}")
+        
     # 3. Construir URL de Wolkvox
     server_mapping = {
         "operacion-interna": "https://wv0016.wolkvox.com",
@@ -2807,7 +2847,7 @@ def campaigns_schedule_recurrent():
         scheduler.add_job(
             execute_wolkvox_schedule,
             trigger="interval",
-            minutes=1,
+            hour=10,
             id=f"wolkvox_recurrente_{nueva.id}",
             replace_existing=True
         )
@@ -2978,7 +3018,7 @@ def guardar_wolkvox_log(client, records, campaign, usuario='sistema', resultado=
         return
     
     now = datetime.now(COLOMBIA_TZ).isoformat()
-    batch_size = 500
+    batch_size = 200
     total_guardados = 0
     
     for i in range(0, len(records), batch_size):
