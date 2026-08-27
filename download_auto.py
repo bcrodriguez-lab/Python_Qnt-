@@ -303,21 +303,6 @@ def iniciar_scheduler():
             return False
 
 
-def detener_scheduler():
-    global _scheduler_running
-    with _scheduler_lock:
-        _scheduler_running = False
-        schedule.clear()                        # <-- también limpiar al detener
-    logger.info("⏹️ Scheduler CDR detenido")
-    return True
-
-def detener_scheduler(): 
-    """Detiene el scheduler de CDR"""
-    global _scheduler_running
-    _scheduler_running = False
-    logger.info("⏹️ Scheduler CDR detenido")
-    return True
-
 def estado_scheduler():  
     """Retorna el estado actual del scheduler"""
     try:
@@ -347,7 +332,17 @@ def estado_scheduler():
             'modo': MODO_DESCARGA
         }
 
-def init_auto_download():  # ← Este es el nombre que espera backend.py
+
+def detener_scheduler(): 
+    """Detiene el scheduler de CDR"""
+    global _scheduler_running
+    _scheduler_running = False
+    logger.info("⏹️ Scheduler CDR detenido")
+    return True
+
+
+
+def init_auto_download():  
     """Inicializa el sistema de descargas automáticas"""
     return iniciar_scheduler()
 

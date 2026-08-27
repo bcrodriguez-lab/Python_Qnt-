@@ -2437,6 +2437,9 @@ def validar_consulta_wolkvox(query):
     invalidos = registros_invalidos
     lista_negra = len(registros_bloqueados)
     
+    # 🆕 CORRECCIÓN: a_enviar = validos - duplicados (lista negra ya se excluyó de validos)
+    a_enviar = validos - duplicados
+    
     return {
         "success": True,
         "rows": rows,
@@ -2448,9 +2451,8 @@ def validar_consulta_wolkvox(query):
         "invalidos": invalidos,
         "duplicados": duplicados,
         "lista_negra": lista_negra,
-        "a_enviar": validos - duplicados - lista_negra
+        "a_enviar": a_enviar
     }
-
 
 @app.route("/auto-campaigns/<int:campaign_id>/clear-wkv", methods=["DELETE"])
 def auto_campaigns_clear_wkv(campaign_id):
@@ -2660,6 +2662,12 @@ def Cargue_Wolkvox(campaign, token):
 @app.route("/api/wolkvox/validar", methods=["POST"])
 def wolkvox_validar():
     """Valida consulta y devuelve estadísticas."""
+    global bq_client
+    if bq_client is None:
+        init_bigquery()
+    if bq_client is None:
+        return jsonify({"success": False, "message": "No se pudo inicializar BigQuery."}), 500
+    
     data = request.get_json(silent=True) or {}
     query = (data.get("query") or "").strip()
     
