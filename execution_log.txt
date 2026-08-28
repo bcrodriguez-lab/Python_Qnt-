@@ -103,3 +103,7 @@
 2026-08-26 18:06:35 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-08-26
 2026-08-26 18:06:37 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-08-26
 2026-08-27 09:38:28 - INFO - [SMS] Campaña='' Usuario='' Total=3 Enviados=0 Fallidos=500 Estado=parcial
+2026-08-28 10:46:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-08-28...
+2026-08-28 10:46:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-08-28...
+2026-08-28 10:46:10 - ERROR - ❌ bigquery_processor.py falló con código 3221225786
+2026-08-28 10:46:10 - ERROR - ❌ bigquery_processor.py falló con código 3221225786

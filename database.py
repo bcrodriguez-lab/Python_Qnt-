@@ -211,12 +211,14 @@ class ProgramacionCampana(db.Model):
     tipo_programacion = db.Column(db.String(20), default='simple')  
     fecha_programada = db.Column(db.DateTime)  # 🆕 Para simple
     hora_inicio = db.Column(db.String(5), default='08:00')
+    hora_fin = db.Column(db.String(5), nullable=True)
     fecha_fin = db.Column(db.String(10))
     estado = db.Column(db.String(20), default='pendiente')
     fecha_ejecucion = db.Column(db.DateTime)
     total_destinatarios = db.Column(db.Integer, default=0)
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
     fecha_actualizacion = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
 class MensajeOperacion(db.Model):
     __tablename__ = 'Mensajes_'
     

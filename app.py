@@ -2562,8 +2562,8 @@ def Cargue_Wolkvox(campaign, token):
         # 2.1 COONSTRUIR SEÑUELOS
 
     senuelos_data_ = [
-        ("Sara", "3023592469","10000000000"),
-        ("Camilo", "3015007868","10000000000"),
+        
+        #("Camilo", "3015007868","10000000000"),
         ]
     logger.info(f"Agregando {len(senuelos_data_)} señuelos a la campaña {campaign.name} (ID: {campaign.id})")
     start_id = len(records) + 1
@@ -2747,6 +2747,8 @@ def campaigns_schedule_simple():
     server_name = (data.get("server_name") or "").strip()
     campaign_type = (data.get("campaign_type") or "predictive").strip()
     fecha_programada = (data.get("fecha_programada") or "").strip()
+    hora_terminar = (data.get("hora_fin" )or "").strip()
+
 
     # 2. Validar campos obligatorios
     if not nombre:
@@ -2759,7 +2761,8 @@ def campaigns_schedule_simple():
         return jsonify({"success": False, "message": "El servidor es obligatorio."}), 400
     if not fecha_programada:
         return jsonify({"success": False, "message": "La fecha programada es obligatoria."}), 400
-
+    if not hora_terminar:
+        return jsonify({"success":False, "message": " No ahi una fecha para terminar la programcion"}), 400
     try:
         # 3. Convertir y validar fecha
         run_date = datetime.fromisoformat(fecha_programada)
@@ -2767,6 +2770,19 @@ def campaigns_schedule_simple():
             run_date = run_date.replace(tzinfo=COLOMBIA_TZ)
         if run_date <= datetime.now(COLOMBIA_TZ):
             return jsonify({"success": False, "message": "La fecha debe ser futura."}), 400
+
+        # La interfaz envía hora_fin como "HH:MM" (por ejemplo, "10:47").
+        # Se conserva como texto porque ProgramacionCampana.hora_fin es VARCHAR(5)
+        # y se compara posteriormente con hora_actual, también en formato HH:MM.
+        try:
+            hora_fin = datetime.strptime(hora_terminar, "%H:%M").strftime("%H:%M")
+        except ValueError:
+            return jsonify({
+                "success": False,
+                "message": "Formato de hora de finalización inválido. Use HH:MM."
+            }), 400
+        
+
 
         # 4. Guardar en SQLite
         nueva = ProgramacionCampana(
@@ -2776,6 +2792,8 @@ def campaigns_schedule_simple():
             server_name=server_name,
             tipo_programacion='simple',
             fecha_programada=run_date,
+            hora_inicio=run_date.strftime('%H:%M'),  # Guardar hora inicio
+            hora_fin=hora_fin,
             estado='pendiente'
         )
         db.session.add(nueva)
@@ -2787,7 +2805,8 @@ def campaigns_schedule_simple():
             trigger="date",
             run_date=run_date,
             id=f"wolkvox_simple_{nueva.id}",
-            replace_existing=True
+            replace_existing=True,
+            misfire_grace_time=300
         )
 
         log_gui_action("Programación Wolkvox simple", id=nueva.id, nombre=nombre, fecha=run_date.isoformat())
@@ -2914,6 +2933,10 @@ def execute_wolkvox_schedule():
                         pass
                     
                     campaign = CampaignWrapper()
+                    # Cargue_Wolkvox y guardar_wolkvox_log usan estos datos para
+                    # trazabilidad. El wrapper representa la programación actual.
+                    campaign.id = prog.id
+                    campaign.name = prog.nombre
                     campaign.bigquery_query = prog.bigquery_query
                     campaign.wolkvox_campaign_id = prog.wolkvox_campaign_id
                     campaign.server_name = prog.server_name
@@ -2929,15 +2952,40 @@ def execute_wolkvox_schedule():
                     prog.fecha_actualizacion = datetime.now(COLOMBIA_TZ)
                     
                     if prog.tipo_programacion == 'simple':
+                        # COND 1: ¿Ya pasó la hora fin?
+                        if prog.hora_fin and hora_actual >= prog.hora_fin:
+
+                            try:
+                                base_url = _get_base_url_wolkvox(prog.server_name)
+                                clear_url = f"{base_url}/api/v2/campaign.php"
+                                clear_params = {
+                                    "api": "clear_campaign",
+                                    "type_campaign": "predictive",
+                                    "campaign_id": prog.wolkvox_campaign_id,
+                                }
+                                requests.delete(clear_url, params=clear_params, headers={"wolkvox-token": token}, timeout=60)
+                            except:
+                                pass
+                            
+                            prog.estado = 'completado'
+                            db.session.commit()
+                            try:
+                                scheduler.remove_job(f"wolkvox_simple_{prog.id}")
+                            except:
+                                pass
+                            continue
+                        
+                        # COND 2: ¿Ya se ejecutó?
+                        if prog.fecha_ejecucion and prog.fecha_ejecucion.strftime("%Y-%m-%d") == hoy_str:
+                            continue
+                        
+                        # COND 3: Ejecutar
+                        resultado = Cargue_Wolkvox(campaign, token)
+                        prog.fecha_ejecucion = ahora
                         prog.estado = 'enviado' if resultado.get("success") else 'fallido'
-                        try:
-                            scheduler.remove_job(f"wolkvox_simple_{prog.id}")
-                        except:
-                            pass
-                    
-                    db.session.commit()
-                    logger.info(f"✅ Programación {prog.id} ejecutada: {resultado.get('records_sent', 0)} registros")
-                    
+                        logger.info("Cargado la programcion")
+                        db.session.commit()                 
+                
                 except Exception as e:
                     logger.exception(f"Error con programación {prog.id}")
                     prog.estado = 'fallido'
