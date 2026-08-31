@@ -267,13 +267,13 @@ _scheduler_lock = threading.Lock()  # nuevo, arriba del archivo junto a _schedul
 def iniciar_scheduler():
     global _scheduler_running, _scheduler_thread
 
-    with _scheduler_lock:                      # evita condición de carrera
+    with _scheduler_lock:                     
         if _scheduler_running:
             logger.info("⚠️ El scheduler CDR ya está en ejecución")
             return True
 
         try:
-            schedule.clear()                    # <-- CLAVE: limpia jobs previos/huérfanos
+            schedule.clear()                   
 
             def ejecutar_descarga():
                 logger.info(f"\n⏰ Ejecución programada CDR a las {datetime.now().strftime('%H:%M')}")
@@ -281,15 +281,21 @@ def iniciar_scheduler():
                     descargar_segun_configuracion()
                 except Exception as e:
                     logger.error(f"❌ Error en descarga programada: {e}")
-
-            schedule.every(10).hours.do(ejecutar_descarga)
+            schedule.every(10).minutes.do(ejecutar_descarga)
             logger.info(f"Jobs activos antes de registrar: {len(schedule.jobs)}")
-            schedule.clear() 
+            
             _scheduler_running = True
 
             def run_scheduler():
                 while _scheduler_running:
-                    schedule.run_pending()
+                    try:
+                        schedule.run_pending()
+                    except Exception as e:
+                        logger.error(
+                            f"❌ Error en scheduler CDR: {e}",
+                            exc_info=True
+                        )
+
                     time.sleep(30)
 
             _scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)

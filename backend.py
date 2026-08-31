@@ -22,6 +22,9 @@ from general_params import (
     get_console_message_interval_seconds,
     get_log_retention_hours,
 )
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from servers import get_server
 
 # - ScheduledCSV: Modelo para tareas CSV programadas
@@ -668,14 +671,7 @@ def limpiar_campanas_wolkvox_diario():
                 logger.warning(f"❌ Error en {servidor}: {e}")
 
         logger.info(f"🏁 Limpieza diaria Wolkvox finalizada. Total limpiadas: {total_limpiadas}")
-
-
-def total_campañas_hoy():
-    from auto_campaign_executor import _get_base_url_wolkvox
-    
-    logger = logging.getLogger(__name__)
-    
-    servidores = [
+servidores = [
         "operacion-interna",
         "qnt_digital",
         "qnt_juridico_blaster",
@@ -683,45 +679,55 @@ def total_campañas_hoy():
         "Qnt_RBK_blaster",
         "Qnt_recaudo_blaster",
     ]
-    
+
+def _fetch_servidor(servidor, app):
+    """Trae las campañas de UN servidor. Corre en un hilo del pool."""
+    from auto_campaign_executor import _get_base_url_wolkvox
+    with app.app_context():
+        try:
+            token = _obtener_token_servidor(servidor)
+            if not token:
+                logger.warning(f"⚠️ Sin token para {servidor}")
+                return servidor, []
+
+            base_url = _get_base_url_wolkvox(servidor)
+            url = f"{base_url}/api/v2/real_time.php?api=campaigns"
+            resp = requests.get(url, headers={"wolkvox-token": token}, timeout=20)
+
+            if not resp.ok:
+                logger.warning(f"⚠️ {servidor}: HTTP {resp.status_code}")
+                return servidor, []
+
+            campanas = resp.json().get("data", [])
+            for c in campanas:
+                c["servidor"] = servidor
+            logger.info(f"✅ {servidor}: {len(campanas)} campañas")
+            return servidor, campanas
+        except Exception as e:
+            logger.warning(f"❌ Error en {servidor}: {e}")
+            return servidor, []
+
+
+def total_campañas_hoy(app=None):
+    """Versión CONCURRENTE: consulta todos los servidores al mismo tiempo."""
+    app = app or current_app._get_current_object()
+
     todas_las_campañas = []
     servidores_activos = []
 
-    with current_app.app_context():
-        for servidor in servidores:
-            try:
-                token = _obtener_token_servidor(servidor)
-                if not token:
-                    logger.warning(f"⚠️ Sin token para {servidor}")
-                    continue
-
-                base_url = _get_base_url_wolkvox(servidor)
-                url = f"{base_url}/api/v2/real_time.php?api=campaigns"
-
-                resp = requests.get(url, headers={"wolkvox-token": token}, timeout=60)
-
-                if not resp.ok:
-                    logger.warning(f"⚠️ {servidor}: HTTP {resp.status_code}")
-                    continue
-
-                campanas = resp.json().get("data", [])
-                
-                for c in campanas:
-                    c["servidor"] = servidor
-                    todas_las_campañas.append(c)
-                
+    with ThreadPoolExecutor(max_workers=len(servidores)) as executor:
+        futures = {executor.submit(_fetch_servidor, s, app): s for s in servidores}
+        for future in as_completed(futures):
+            servidor, campanas = future.result()
+            if campanas:
+                todas_las_campañas.extend(campanas)
                 servidores_activos.append(servidor)
-                logger.info(f"✅ {servidor}: {len(campanas)} campañas")
 
-            except Exception as e:
-                logger.warning(f"❌ Error en {servidor}: {e}")
-
-        logger.info(f"📊 Total campañas: {len(todas_las_campañas)}")
-    
+    logger.info(f"📊 Total campañas: {len(todas_las_campañas)}")
     return {
         "campañas": todas_las_campañas,
         "servidores": servidores_activos,
-        "total": len(todas_las_campañas)
+        "total": len(todas_las_campañas),
     }
 
 #============Toker de wokvox

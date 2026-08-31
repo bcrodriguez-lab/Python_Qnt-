@@ -180,3 +180,97 @@
 2026-08-19 08:02:35,586 - INFO - =================================================================
 2026-08-19 08:02:35,587 - INFO - EXITO  |  fecha=2026-08-18
 2026-08-19 08:02:35,587 - INFO - =================================================================
+2026-08-31 09:38:26,400 - INFO - ✅ Configuración cargada desde config.py
+2026-08-31 09:38:26,400 - INFO - 📅 Procesando fecha actual: 2026-08-31
+2026-08-31 09:38:26,401 - INFO - 
+============================================================
+2026-08-31 09:38:26,401 - INFO - 📥 INICIANDO DESCARGA DE REPORTES (CDR)
+2026-08-31 09:38:26,401 - INFO - 📅 Fecha: 2026-08-31
+2026-08-31 09:38:26,401 - INFO - ============================================================
+2026-08-31 09:38:26,401 - INFO - 
+📂 Procesando servidor: qnt_digital
+2026-08-31 09:38:26,402 - INFO -    📡 Descargando qnt_digital para 2026-08-31
+2026-08-31 09:38:33,044 - INFO -       ✅ Guardado: qnt_digital_2026-08-31.xlsx
+2026-08-31 09:38:35,045 - INFO - 
+📂 Procesando servidor: operacion-interna
+2026-08-31 09:38:35,046 - INFO -    📡 Descargando operacion-interna para 2026-08-31
+2026-08-31 09:38:41,005 - INFO -       ✅ Guardado: operacion-interna_2026-08-31.xlsx
+2026-08-31 09:38:43,006 - INFO - ⏭️ Servidor Prueba no está en el mapeo de cortes
+2026-08-31 09:38:43,007 - INFO - 
+📂 Procesando servidor: qnt_juridico_blaster
+2026-08-31 09:38:43,020 - INFO -    📡 Descargando qnt_juridico_blaster para 2026-08-31
+2026-08-31 09:39:04,139 - ERROR -    ❌ Error descargando qnt_juridico_blaster: HTTPSConnectionPool(host='wv0051.wolkvox.com', port=443): Max retries exceeded with url: /api/v2/reports_manager.php?api=cdr_1&date_ini=20260831000000&date_end=20260831235959 (Caused by ConnectTimeoutError(<HTTPSConnection(host='wv0051.wolkvox.com', port=443) at 0x260ac937ed0>, 'Connection to wv0051.wolkvox.com timed out. (connect timeout=60)'))
+2026-08-31 09:39:04,142 - INFO - 
+📂 Procesando servidor: qnt_cobro_blaster
+2026-08-31 09:39:04,143 - INFO -    📡 Descargando qnt_cobro_blaster para 2026-08-31
+2026-08-31 09:39:25,266 - ERROR -    ❌ Error descargando qnt_cobro_blaster: HTTPSConnectionPool(host='wv0038.wolkvox.com', port=443): Max retries exceeded with url: /api/v2/reports_manager.php?api=cdr_1&date_ini=20260831000000&date_end=20260831235959 (Caused by ConnectTimeoutError(<HTTPSConnection(host='wv0038.wolkvox.com', port=443) at 0x260ac937890>, 'Connection to wv0038.wolkvox.com timed out. (connect timeout=60)'))
+2026-08-31 09:39:25,267 - INFO - 
+📂 Procesando servidor: Qnt_RBK_blaster
+2026-08-31 09:39:25,267 - INFO -    📡 Descargando Qnt_RBK_blaster para 2026-08-31
+2026-08-31 09:39:46,392 - ERROR -    ❌ Error descargando Qnt_RBK_blaster: HTTPSConnectionPool(host='wv0022.wolkvox.com', port=443): Max retries exceeded with url: /api/v2/reports_manager.php?api=cdr_1&date_ini=20260831000000&date_end=20260831235959 (Caused by ConnectTimeoutError(<HTTPSConnection(host='wv0022.wolkvox.com', port=443) at 0x260ac937610>, 'Connection to wv0022.wolkvox.com timed out. (connect timeout=60)'))
+2026-08-31 09:39:46,392 - INFO - 
+📂 Procesando servidor: Qnt_recaudo_blaster
+2026-08-31 09:39:46,393 - INFO -    📡 Descargando Qnt_recaudo_blaster para 2026-08-31
+2026-08-31 09:40:07,423 - ERROR -    ❌ Error descargando Qnt_recaudo_blaster: HTTPSConnectionPool(host='wv0017.wolkvox.com', port=443): Max retries exceeded with url: /api/v2/reports_manager.php?api=cdr_1&date_ini=20260831000000&date_end=20260831235959 (Caused by ConnectTimeoutError(<HTTPSConnection(host='wv0017.wolkvox.com', port=443) at 0x260ac9374d0>, 'Connection to wv0017.wolkvox.com timed out. (connect timeout=60)'))
+2026-08-31 09:40:07,423 - INFO - 
+============================================================
+2026-08-31 09:40:07,424 - INFO - 📊 RESUMEN CDR: 2 descargados, 4 fallidos
+2026-08-31 09:40:07,424 - INFO - ============================================================
+2026-08-31 09:40:08,089 - INFO - 
+🔄 Procesando BigQuery para 2026-08-31...
+2026-08-31 09:40:08,090 - INFO - =================================================================
+2026-08-31 09:40:08,090 - INFO - 🚀 INICIO -- PROCESAMIENTO CDR (v10.12 - Embudos_Robot_Advanced) | fecha=2026-08-31
+2026-08-31 09:40:08,090 - INFO - =================================================================
+2026-08-31 09:40:08,127 - INFO - ✅ Credenciales cargadas desde: C:\Users\bcrodriguez\Python_Qnt-\config\google_key.json
+2026-08-31 09:40:08,127 - INFO - ─ Paso 1/5: Leer CDR desde Excel...
+2026-08-31 09:40:08,132 - INFO -    📁 Encontrados 2 archivos CDR
+2026-08-31 09:40:09,593 - INFO -       ✅ qnt_digital_2026-08-31.xlsx: 6580 registros
+2026-08-31 09:40:10,466 - INFO -       ✅ operacion-interna_2026-08-31.xlsx: 4475 registros
+2026-08-31 09:40:10,481 - INFO -    📊 CDR consolidado: 11,055 registros
+2026-08-31 09:40:10,481 - INFO -    📋 Columnas CDR: ['DATE', 'TELEPHONE', 'COD_ACT', 'Contacto__c', 'campaign_id', 'CONN_ID', 'agent_id', 'SERVIDOR', 'servidor', 'Fecha_dia']
+2026-08-31 09:40:10,485 - INFO -    ✅ servidor: 2 únicos
+2026-08-31 09:40:10,485 - INFO - ─ Paso 2/5: Leer campañas desde Excel...
+2026-08-31 09:40:10,488 - INFO -    📁 Encontrados 2 archivos de campañas
+2026-08-31 09:40:11,100 - INFO -       ✅ qnt_digital_campaign_ALL_2026-08-31.xlsx: 7331 registros
+2026-08-31 09:40:11,530 - INFO -       ✅ operacion-interna_campaign_ALL_2026-08-31.xlsx: 5200 registros
+2026-08-31 09:40:11,531 - INFO -    📋 Columnas en campañas: ['CUSTOMER_ID', 'CAMPAIGN_ID', 'FILE_NAME', 'TELEPHONE', 'RESULT', 'DATE']
+2026-08-31 09:40:12,369 - INFO -    📋 Campañas únicas por customer: 12042
+2026-08-31 09:40:12,374 - INFO -    📋 Ejemplo: [{'campaign_id': '7918', 'customer_id': '0036e00004Ij0e4AAB', 'campaign_name': nan, 'Nombre_Campana': nan}, {'campaign_id': '7918', 'customer_id': '0036e00004BWQX6AAP', 'campaign_name': nan, 'Nombre_Campana': nan}, {'campaign_id': '7918', 'customer_id': '0036e00004BWHSbAAP', 'campaign_name': nan, 'Nombre_Campana': nan}]
+2026-08-31 09:40:12,374 - INFO -    ✅ 12042 campañas únicas cargadas
+2026-08-31 09:40:12,374 - INFO - ─ Paso 3/5: Consultar auxiliares BigQuery...
+2026-08-31 09:40:34,183 - INFO -    📋 Auxiliar intradia: 620,066 registros
+2026-08-31 09:40:35,739 - INFO -    📋 Auxiliar campanas_desarollo: 273 registros
+2026-08-31 09:40:39,717 - INFO -    📋 Auxiliar contacto: 41,905 registros
+2026-08-31 09:40:52,035 - INFO -    📋 Auxiliar gestion: 268,758 registros
+2026-08-31 09:40:53,433 - INFO -    📋 Auxiliar venta: 1,559 registros
+2026-08-31 09:40:53,434 - INFO - ─ Paso 4/5: Calcular métricas...
+2026-08-31 09:40:53,477 - INFO -    📋 Hora calculada: 7 - 9
+2026-08-31 09:40:53,478 - INFO -    📋 Rangos: ['8-10 AM', '6-8 PM']
+2026-08-31 09:40:54,302 - INFO -    📋 Diccionario de campañas: 12042 customer_ids mapeados
+2026-08-31 09:40:54,325 - INFO -    📋 campaign_id (Excel): 11,055 con dato
+2026-08-31 09:40:54,326 - INFO -    📋 campaign_name (Excel): 0 con dato
+2026-08-31 09:40:54,328 - INFO -    📋 CDR campaign_id normalizados: 11,055 con dato
+2026-08-31 09:40:54,329 - INFO -    📋 Campañas en campanas_desarollo: 273 IDs
+2026-08-31 09:40:54,337 - INFO -    📋 campaign_name enriquecido desde campanas_desarollo: 0 con dato
+2026-08-31 09:40:54,539 - INFO -    📋 Operado_Por__c desde Intradia: 11,055 con dato
+2026-08-31 09:40:54,539 - INFO -    📋 Entidad_principal desde Intradia: 11,055 con dato
+2026-08-31 09:40:54,547 - INFO -    📋 Grupo_Operador: {'DIGITAL': 5184, 'MANTENIMIENTO': 3535, 'RBK': 2336}
+2026-08-31 09:40:54,619 - INFO -    📋 Auxiliares aplicados | Contacto: 41 | Gestion: 308 | Venta: 0
+2026-08-31 09:40:54,625 - INFO -    📊 Procesamiento: 11,055 registros | Robot: 3,980 | Gestion: 159 | Contacto: 18 | Venta: 0
+2026-08-31 09:40:54,626 - INFO - ─ Paso 5/5: Enriquecer y subir a Embudos_Robot_Advanced...
+2026-08-31 09:41:14,694 - INFO -    📋 Ultimo_Contacto: 9,484
+2026-08-31 09:41:17,368 - INFO -    📋 Gestion_Marcador: 452
+2026-08-31 09:41:17,407 - INFO -    📋 localizado_historico: LOCALIZADO=5,812 | PERDIDO=3,672 | NO_LOCALIZADO=1,571
+2026-08-31 09:41:17,409 - INFO -    📤 Subiendo 11,055 registros a capable-arbor-209819.Operacion_Analitica.Embudos_Robot_Advanced
+2026-08-31 09:41:17,782 - INFO -    📋 Columnas en destino: 24
+2026-08-31 09:41:17,783 - WARNING -    ⚠️ Eliminando 4 columnas no existentes
+2026-08-31 09:41:17,783 - WARNING -       - DATE
+2026-08-31 09:41:17,783 - WARNING -       - SERVIDOR
+2026-08-31 09:41:17,783 - WARNING -       - HORA_VENTA
+2026-08-31 09:41:17,783 - WARNING -       - Hora_Venta
+2026-08-31 09:41:17,800 - INFO -    🗑️ Eliminando registros de 2026-08-31...
+2026-08-31 09:41:20,487 - INFO -    DELETE: 0 filas afectadas.
+2026-08-31 09:41:24,978 - INFO -    ✅ Upload OK. Filas: 11,055. Job ID: 355f9f65-2e07-43fa-8d05-5f21706ca996
+2026-08-31 09:41:24,978 - INFO - =================================================================
+2026-08-31 09:41:24,978 - INFO - EXITO  |  fecha=2026-08-31
+2026-08-31 09:41:24,979 - INFO - =================================================================
