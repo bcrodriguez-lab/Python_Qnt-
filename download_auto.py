@@ -282,9 +282,9 @@ def iniciar_scheduler():
                 except Exception as e:
                     logger.error(f"❌ Error en descarga programada: {e}")
 
-            schedule.every(10).minutes.do(ejecutar_descarga)
-            logger.info("CDR programada cada 10 minutos")
-
+            schedule.every(10).hours.do(ejecutar_descarga)
+            logger.info(f"Jobs activos antes de registrar: {len(schedule.jobs)}")
+            schedule.clear() 
             _scheduler_running = True
 
             def run_scheduler():

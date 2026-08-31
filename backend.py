@@ -8,7 +8,7 @@ from collections import deque
 import requests
 from datetime import datetime
 from pathlib import Path
-from flask import Flask
+from flask import Flask, current_app
 from database import db, init_db, Campaign, ScheduledCSV, APIEndpoint, ScheduledQuery
 from auto_campaigns import check_auto_campaigns_schedule
 from werkzeug.utils import secure_filename
@@ -669,6 +669,60 @@ def limpiar_campanas_wolkvox_diario():
 
         logger.info(f"🏁 Limpieza diaria Wolkvox finalizada. Total limpiadas: {total_limpiadas}")
 
+
+def total_campañas_hoy():
+    from auto_campaign_executor import _get_base_url_wolkvox
+    
+    logger = logging.getLogger(__name__)
+    
+    servidores = [
+        "operacion-interna",
+        "qnt_digital",
+        "qnt_juridico_blaster",
+        "qnt_cobro_blaster",
+        "Qnt_RBK_blaster",
+        "Qnt_recaudo_blaster",
+    ]
+    
+    todas_las_campañas = []
+    servidores_activos = []
+
+    with current_app.app_context():
+        for servidor in servidores:
+            try:
+                token = _obtener_token_servidor(servidor)
+                if not token:
+                    logger.warning(f"⚠️ Sin token para {servidor}")
+                    continue
+
+                base_url = _get_base_url_wolkvox(servidor)
+                url = f"{base_url}/api/v2/real_time.php?api=campaigns"
+
+                resp = requests.get(url, headers={"wolkvox-token": token}, timeout=60)
+
+                if not resp.ok:
+                    logger.warning(f"⚠️ {servidor}: HTTP {resp.status_code}")
+                    continue
+
+                campanas = resp.json().get("data", [])
+                
+                for c in campanas:
+                    c["servidor"] = servidor
+                    todas_las_campañas.append(c)
+                
+                servidores_activos.append(servidor)
+                logger.info(f"✅ {servidor}: {len(campanas)} campañas")
+
+            except Exception as e:
+                logger.warning(f"❌ Error en {servidor}: {e}")
+
+        logger.info(f"📊 Total campañas: {len(todas_las_campañas)}")
+    
+    return {
+        "campañas": todas_las_campañas,
+        "servidores": servidores_activos,
+        "total": len(todas_las_campañas)
+    }
 
 #============Toker de wokvox
 def _obtener_token_servidor(server_name):

@@ -3043,6 +3043,11 @@ def auto_campaigns_stop_wkv(campaign_id):
 #===========================Programacion Robot=========================================#
 
 
+
+#=========Informacion Campañas Wolkvox=======================#
+
+
+
 @app.route("/api/servers/<server_name>/url", methods=["GET"])
 def get_server_url(server_name):
     try:
@@ -3165,15 +3170,88 @@ def api_dashboard():
     return jsonify({"success": True, **get_dashboard_data()})
 
 
+#https://wv0016.wolkvox.com/api/v2/real_time.php?api=campaigns
+# == Listar informacion de las campañas de wolkvox=====#
 @app.route("/api/dashboard/refresh", methods=["POST"])
 def api_dashboard_refresh():
+    from backend import total_campañas_hoy
+
+      
     try:
-        payload = refresh_dashboard_from_wolkvox()
-        return jsonify({"success": True, **payload})
+        # Ejecutar la función (¡no olvides los paréntesis!)
+        datos_campañas = total_campañas_hoy()
+        campañas = datos_campañas.get("campañas", [])
+        
+        # Calcular estadísticas
+        total_campanas = len(campañas)
+        total_clientes = sum(int(c.get("records", 0) ) for c in campañas)
+        total_llamados = sum(int(c.get("dial", 0) ) for c in campañas)
+        total_contactados = sum(int(c.get("answer", 0) ) for c in campañas)
+        total_pendientes = total_clientes - total_contactados
+        llamadas_x_minuto = sum(int(c.get("calls_x_min",0))for c in campañas)
+        
+        # Calcular porcentaje de progreso
+        porcentaje = 0
+        if total_clientes > 0:
+            porcentaje = round((total_contactados / total_clientes) * 100, 1)
+        
+        # Procesar campañas para la tabla
+        campañas_procesadas = []
+        for c in campañas:
+            # Extraer ID del nombre (ej: "20717 - Digital_hostil_2")
+            nombre_completo = c.get("campaign", "Sin nombre")
+            camp_id = nombre_completo.split("-")[0].strip() if "-" in nombre_completo else nombre_completo
+            
+            estado = c.get("status", "desconocido")
+            estado_label = {
+                "started": "En curso",
+                "stopped": "Detenida",
+                "paused": "Pausada",
+                "finished": "Terminada"
+            }.get(estado, estado.capitalize())
+            
+            campañas_procesadas.append({
+                "nombre": nombre_completo,
+                "id": camp_id,
+                "servidor": c.get("servidor", "No asignado"),
+                "tipo": "Predictivo",
+                "estado": estado,
+                "estado_label": estado_label,
+                "records": int(c.get("records", 0) or 0),
+                "dial": int(c.get("dial", 0) or 0),
+                "answer": int(c.get("answer", 0) or 0),
+                "clean": int(c.get("clean", 0) or 0),
+                "clientes": int(c.get("records", 0) or 0),
+                "llamados": int(c.get("dial", 0) or 0),
+                "contactados": int(c.get("answer", 0) or 0),
+                "faltantes": int(c.get("records", 0) or 0) - int(c.get("answer", 0) or 0)
+            })
+        
+        # Estructurar datos para el frontend
+        data = {
+            "campañas": campañas_procesadas,
+            "servidores_count": len(datos_campañas.get("servidores", [])),
+            "porcentaje_progreso": f"{porcentaje}%",
+            "clientes_contactados": total_contactados,
+            "clientes_pendientes": total_pendientes,
+            "total_campanas": total_campanas,
+            "total_clientes": total_clientes,
+            "total_llamados": total_llamados,
+            "llamadas_x_minuto": llamadas_x_minuto
+        }
+        
+        return jsonify({
+            "success": True,
+            "data": data,
+            "timestamp": datetime.now().isoformat()
+        })
+
     except Exception as exc:
+        import traceback
+        traceback.print_exc()
         return jsonify({"success": False, "message": str(exc)}), 500
 
-
+    
 @app.route("/api/recent_logs", methods=["GET"])
 def api_recent_logs():
     return jsonify(read_recent_log_lines(50))
