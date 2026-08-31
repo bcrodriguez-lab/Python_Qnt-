@@ -62,6 +62,7 @@ except ImportError as e:
     
     MODO_DESCARGA = "hoy"
     DESCARGAR_CDR = True
+    HORARIOS_EJECUCION = ["08:00", "12:00", "18:00"]
 
 # Mapeo de servidores
 CORTE_A_SERVIDOR = {
@@ -75,6 +76,7 @@ CORTE_A_SERVIDOR = {
 
 _scheduler_running = False
 _scheduler_thread = None
+_scheduler_cdr = schedule.Scheduler()
 
 # ========== FUNCIONES DE UTILIDAD ==========
 
@@ -273,7 +275,6 @@ def iniciar_scheduler():
             return True
 
         try:
-            schedule.clear()                   
 
             def ejecutar_descarga():
                 logger.info(f"\n⏰ Ejecución programada CDR a las {datetime.now().strftime('%H:%M')}")
@@ -281,15 +282,15 @@ def iniciar_scheduler():
                     descargar_segun_configuracion()
                 except Exception as e:
                     logger.error(f"❌ Error en descarga programada: {e}")
-            schedule.every(10).minutes.do(ejecutar_descarga)
-            logger.info(f"Jobs activos antes de registrar: {len(schedule.jobs)}")
+            _scheduler_cdr.every(10).minutes.do(ejecutar_descarga)
+            logger.info( f"CDR programada cad1 minuto{_scheduler_cdr}")
             
             _scheduler_running = True
 
             def run_scheduler():
                 while _scheduler_running:
                     try:
-                        schedule.run_pending()
+                        _scheduler_cdr.run_pending()
                     except Exception as e:
                         logger.error(
                             f"❌ Error en scheduler CDR: {e}",
@@ -312,7 +313,7 @@ def iniciar_scheduler():
 def estado_scheduler():  
     """Retorna el estado actual del scheduler"""
     try:
-        trabajos = schedule.get_jobs()
+        trabajos = _scheduler_cdr.get_jobs()
         proximos = []
         for job in trabajos:
             if hasattr(job, 'next_run') and job.next_run:
@@ -323,7 +324,7 @@ def estado_scheduler():
         
         return {
             'running': _scheduler_running,
-            'INTERVALO_MINUTOS': INTERVALO_MINUTOS,
+            'horarios': HORARIOS_EJECUCION,
             'proximos': proximos,
             'modo': MODO_DESCARGA,
             'base_dir': str(BASE_DIR),

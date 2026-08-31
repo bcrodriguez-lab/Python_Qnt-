@@ -70,6 +70,7 @@ SERVIDORES = [
 _scheduler_running_amd = False
 _scheduler_thread_amd = None
 _descarga_lock_amd = threading.Lock()
+_scheduler_amd = schedule.Scheduler()
 
 # ========== FUNCIONES ==========
 
@@ -109,13 +110,13 @@ def obtener_nombre_campana_especifica(servidor, campaign_id):
         return None
 
 def iniciar_scheduler():
-    schedule.clear()
-    schedule.every(10).minutes.do(ejecutar_descarga)
+    _scheduler_amd.clear()
+    _scheduler_amd.every(10).minutes.do(ejecutar_descarga)
     logger.info("Scheduler iniciado para descargar campañas cada 15 minutos")
-    logger.info(f"Jobs activos antes de registrar: {len(schedule.jobs)}")
+    logger.info(f"Jobs activos antes de registrar: {len(_scheduler_amd.jobs)}")
      
     while True: 
-        schedule.run_pending()
+        _scheduler_amd.run_pending()
         time.sleep(30) 
 
 
@@ -188,15 +189,15 @@ def iniciar_scheduler_amd():
         return True
 
     try:
-        schedule.clear()
-        schedule.every(10).minutes.do(ejecutar_descarga)  
+        _scheduler_amd.clear()
+        _scheduler_amd.every(10).minutes.do(ejecutar_descarga)  
         logger.info("Scheduler Funciona cada 10 Minutos archvio download_campaign")
-        logger.info(f"Jobs activos antes de registrar: {len(schedule.jobs)}")
+        logger.info(f"Jobs activos antes de registrar: {len(_scheduler_amd.jobs)}")
         _scheduler_running_amd = True
         
         def run_scheduler_amd():
             while _scheduler_running_amd:
-                schedule.run_pending()
+                _scheduler_amd.run_pending()
                 time.sleep(30)
         
         _scheduler_thread_amd = threading.Thread(target=run_scheduler_amd, daemon=True)
@@ -269,7 +270,7 @@ def detener_scheduler_amd():  #
 
 def estado_scheduler_amd():  #
     try:
-        trabajos = schedule.get_jobs()
+        trabajos = _scheduler_amd.get_jobs()
         proximos = []
         for job in trabajos:
             if hasattr(job, 'next_run') and job.next_run:
