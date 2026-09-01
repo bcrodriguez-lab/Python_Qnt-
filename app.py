@@ -2738,7 +2738,7 @@ def campaigns_schedule_simple():
     from database import ProgramacionCampana, db
 
     data = request.get_json(silent=True) or {}
-
+    logger.info(f"Datos recibidos para programación simple: {data}")
     # 1. Leer TODOS los datos del formulario
     nombre = (data.get("nombre") or "").strip()
     bigquery_query = (data.get("bigquery_query") or "").strip()
@@ -2780,7 +2780,7 @@ def campaigns_schedule_simple():
             }), 400
         ahora = datetime.now(COLOMBIA_TZ)
 
-
+        logger.info(f"Programando Wolkvox simple: nombre={nombre}, fecha_programada={run_date.isoformat()}, hora_fin={hora_fin}, campaign_id={wolkvox_campaign_id}, server_name={server_name}")
         # 4. Guardar en SQLite
         nueva = ProgramacionCampana(
             nombre=nombre,
@@ -2797,6 +2797,7 @@ def campaigns_schedule_simple():
         db.session.add(nueva)
         db.session.commit()
 
+        logger.info(f"Programación simple guardada en DB con ID: {nueva.id}")
         # 5. Crear job UNA vez
         scheduler.add_job(
             execute_wolkvox_schedule,
@@ -2804,7 +2805,7 @@ def campaigns_schedule_simple():
             run_date=run_date,
             id=f"wolkvox_simple_{nueva.id}",
             replace_existing=True,
-            misfire_grace_time=300
+            logging_level="INFO",
         )
 
         log_gui_action("Programación Wolkvox simple", id=nueva.id, nombre=nombre, fecha=run_date.isoformat())
@@ -2823,6 +2824,141 @@ def campaigns_schedule_simple():
         return jsonify({"success": False, "message": str(exc)}), 500
 
 # ==================== PROGRAMAR RECURRENTE ====================
+# ==================== SCHEDULER ====================
+def execute_wolkvox_schedule():
+    """Busca y ejecuta todas las programaciones pendientes de Wolkvox."""
+    from database import ProgramacionCampana, db
+
+    with app.app_context():
+        try:
+            pendientes = ProgramacionCampana.query.filter_by(estado='pendiente').all()
+
+            if not pendientes:
+                return
+
+            ahora = datetime.now(COLOMBIA_TZ)
+            hoy_str = ahora.strftime("%Y-%m-%d")
+            hora_actual = ahora.strftime("%H:%M")
+
+            for prog in pendientes:
+                try:
+                    # ================== RECURRENTE ==================
+                    if prog.tipo_programacion == 'recurrente':
+                        if hora_actual < prog.hora_inicio:
+                            continue
+
+                        if prog.fecha_ejecucion:
+                            fe_ejec = prog.fecha_ejecucion.strftime("%Y-%m-%d")
+                            if fe_ejec == hoy_str:
+                                continue
+
+                        if prog.fecha_fin and hoy_str > prog.fecha_fin:
+                            prog.estado = 'completado'
+                            db.session.commit()
+                            continue
+
+                        logger.info(f"Procesando programación {prog.id}: {prog.nombre} (tipo: {prog.tipo_programacion})")
+
+                    # ==================== SIMPLE ====================
+                    elif prog.tipo_programacion == 'simple':
+
+                        # COND 1: ¿Ya pasó la hora fin? -> limpiar SIEMPRE,
+                        # se haya ejecutado o no.
+                        if prog.hora_fin and hora_actual >= prog.hora_fin:
+                            token_clear = _get_token_desde_server(prog.server_name)
+                            if token_clear:
+                                try:
+                                    base_url = _get_base_url_wolkvox(prog.server_name)
+                                    clear_url = f"{base_url}/api/v2/campaign.php"
+                                    clear_params = {
+                                        "api": "clear_campaign",
+                                        "type_campaign": "predictive",
+                                        "campaign_id": prog.wolkvox_campaign_id,
+                                    }
+                                    clear_resp = requests.delete(
+                                        clear_url, params=clear_params,
+                                        headers={"wolkvox-token": token_clear},
+                                        timeout=60,
+                                    )
+                                    if not clear_resp.ok:
+                                        logger.warning(
+                                            f"No se pudo limpiar campaña {prog.wolkvox_campaign_id} "
+                                            f"(prog {prog.id}): HTTP {clear_resp.status_code}"
+                                        )
+                                except Exception:
+                                    logger.exception(
+                                        f"Error limpiando campaña de programación {prog.id}"
+                                    )
+                            else:
+                                logger.warning(f"Sin token para limpiar programación {prog.id}")
+
+                            prog.estado = 'completado'
+                            db.session.commit()
+
+                            try:
+                                scheduler.remove_job(f"wolkvox_simple_{prog.id}")
+                            except Exception:
+                                pass
+                            continue
+
+                        # COND 2: ¿Ya se ejecutó? -> no volver a ejecutar,
+                        # solo esperar a que llegue hora_fin para limpiar.
+                        if prog.fecha_ejecucion:
+                            logger.info(f"Programación simple {prog.id} ya ejecutada a las {prog.fecha_ejecucion}")
+                            continue
+                        logger.info(f"Programación simple {prog.id}: hora_inicio={prog.hora_inicio}, hora_fin={prog.hora_fin}, hora_actual={hora_actual}, fecha_ejecucion={prog.fecha_ejecucion}")
+                        # COND 3: ¿Ya llegó la hora de inicio?
+                        if hora_actual < prog.hora_inicio:
+                            continue
+                        logger.info(f"Programación simple {prog.id} lista para ejecutar: hora_inicio={prog.hora_inicio}, hora_fin={prog.hora_fin}, hora_actual={hora_actual}")
+                    else:
+                        logger.info(f"Procesando programación {prog.id}: {prog.nombre} (tipo: {prog.tipo_programacion})")
+
+                    logger.info(f"Ejecutando programación {prog.id}: {prog.nombre} (tipo: {prog.tipo_programacion})")
+
+                     
+                    # 3. Obtener token
+                    token = _get_token_desde_server(prog.server_name)
+                    if not token:
+                        logger.warning(f"Sin token para ejecutar programación {prog.id}")
+                        continue  # reintenta en el próximo barrido
+
+                    # 4. Crear objeto temporal
+                    class CampaignWrapper:
+                        pass
+
+                    campaign = CampaignWrapper()
+                    campaign.id = prog.id
+                    campaign.name = prog.nombre
+                    campaign.bigquery_query = prog.bigquery_query
+                    campaign.wolkvox_campaign_id = prog.wolkvox_campaign_id
+                    campaign.server_name = prog.server_name
+                    campaign.campaign_type = 'predictive'
+
+                    # 5. Ejecutar carga (UNA sola vez, para ambos tipos)
+                    logger.info(f"📤 Ejecutando programación {prog.id}: {prog.nombre}")
+                    resultado = Cargue_Wolkvox(campaign, token)
+
+                    # 6. Actualizar registro
+                    prog.fecha_ejecucion = ahora
+                    prog.total_destinatarios = resultado.get("records_sent", 0)
+                    prog.fecha_actualizacion = datetime.now(COLOMBIA_TZ)
+
+                    if prog.tipo_programacion == 'recurrente':
+                        
+                        prog.estado = 'enviado' if resultado.get("success") else 'fallido'
+                  
+                    db.session.commit()
+
+                except Exception as e:
+                    logger.exception(f"Error con programación {prog.id}")
+                    if prog.tipo_programacion == 'recurrente':
+                        prog.estado = 'fallido'
+                        db.session.commit()
+                    
+        except Exception as exc:
+            logger.exception("Error en scheduler Wolkvox")
+
 
 @app.route("/auto-campaigns/programar-recurrente", methods=["POST"])
 def campaigns_schedule_recurrent():
@@ -2872,7 +3008,7 @@ def campaigns_schedule_recurrent():
         scheduler.add_job(
             execute_wolkvox_schedule,
             trigger="interval",
-            hour=10,
+            hours=10,
             id=f"wolkvox_recurrente_{nueva.id}",
             replace_existing=True
         )
@@ -2881,133 +3017,6 @@ def campaigns_schedule_recurrent():
     except Exception as exc:
         db.session.rollback()
         return jsonify({"success": False, "message": str(exc)}), 500
-
-# ==================== SCHEDULER ====================
-def execute_wolkvox_schedule():
-    """Busca y ejecuta todas las programaciones pendientes de Wolkvox."""
-    from database import ProgramacionCampana, db
-
-    with app.app_context():
-        try:
-            pendientes = ProgramacionCampana.query.filter_by(estado='pendiente').all()
-
-            if not pendientes:
-                return
-
-            ahora = datetime.now(COLOMBIA_TZ)
-            hoy_str = ahora.strftime("%Y-%m-%d")
-            hora_actual = ahora.strftime("%H:%M")
-
-            for prog in pendientes:
-                try:
-                    # ================== RECURRENTE ==================
-                    if prog.tipo_programacion == 'recurrente':
-                        if hora_actual < prog.hora_inicio:
-                            continue
-
-                        if prog.fecha_ejecucion:
-                            fe_ejec = prog.fecha_ejecucion.strftime("%Y-%m-%d")
-                            if fe_ejec == hoy_str:
-                                continue
-
-                        if prog.fecha_fin and hoy_str > prog.fecha_fin:
-                            prog.estado = 'completado'
-                            db.session.commit()
-                            continue
-
-                    # ==================== SIMPLE ====================
-                    elif prog.tipo_programacion == 'simple':
-
-                        # COND 1: ¿Ya pasó la hora fin? -> limpiar SIEMPRE,
-                        # se haya ejecutado o no.
-                        if prog.hora_fin and hora_actual >= prog.hora_fin:
-                            token_clear = _get_token_desde_server(prog.server_name)
-                            if token_clear:
-                                try:
-                                    base_url = _get_base_url_wolkvox(prog.server_name)
-                                    clear_url = f"{base_url}/api/v2/campaign.php"
-                                    clear_params = {
-                                        "api": "clear_campaign",
-                                        "type_campaign": "predictive",
-                                        "campaign_id": prog.wolkvox_campaign_id,
-                                    }
-                                    clear_resp = requests.delete(
-                                        clear_url, params=clear_params,
-                                        headers={"wolkvox-token": token_clear},
-                                        timeout=60,
-                                    )
-                                    if not clear_resp.ok:
-                                        logger.warning(
-                                            f"No se pudo limpiar campaña {prog.wolkvox_campaign_id} "
-                                            f"(prog {prog.id}): HTTP {clear_resp.status_code}"
-                                        )
-                                except Exception:
-                                    logger.exception(
-                                        f"Error limpiando campaña de programación {prog.id}"
-                                    )
-                            else:
-                                logger.warning(f"Sin token para limpiar programación {prog.id}")
-
-                            prog.estado = 'completado'
-                            db.session.commit()
-
-                            try:
-                                scheduler.remove_job(f"wolkvox_simple_{prog.id}")
-                            except Exception:
-                                pass
-                            continue
-
-                        # COND 2: ¿Ya se ejecutó? -> no volver a ejecutar,
-                        # solo esperar a que llegue hora_fin para limpiar.
-                        if prog.fecha_ejecucion:
-                            continue
-
-                        # COND 3: ¿Ya llegó la hora de inicio?
-                        if hora_actual < prog.hora_inicio:
-                            continue
-
-                     
-                    # 3. Obtener token
-                    token = _get_token_desde_server(prog.server_name)
-                    if not token:
-                        logger.warning(f"Sin token para ejecutar programación {prog.id}")
-                        continue  # reintenta en el próximo barrido
-
-                    # 4. Crear objeto temporal
-                    class CampaignWrapper:
-                        pass
-
-                    campaign = CampaignWrapper()
-                    campaign.id = prog.id
-                    campaign.name = prog.nombre
-                    campaign.bigquery_query = prog.bigquery_query
-                    campaign.wolkvox_campaign_id = prog.wolkvox_campaign_id
-                    campaign.server_name = prog.server_name
-                    campaign.campaign_type = 'predictive'
-
-                    # 5. Ejecutar carga (UNA sola vez, para ambos tipos)
-                    logger.info(f"📤 Ejecutando programación {prog.id}: {prog.nombre}")
-                    resultado = Cargue_Wolkvox(campaign, token)
-
-                    # 6. Actualizar registro
-                    prog.fecha_ejecucion = ahora
-                    prog.total_destinatarios = resultado.get("records_sent", 0)
-                    prog.fecha_actualizacion = datetime.now(COLOMBIA_TZ)
-
-                    if prog.tipo_programacion == 'recurrente':
-                        
-                        prog.estado = 'enviado' if resultado.get("success") else 'fallido'
-                  
-                    db.session.commit()
-
-                except Exception as e:
-                    logger.exception(f"Error con programación {prog.id}")
-                    if prog.tipo_programacion == 'recurrente':
-                        prog.estado = 'fallido'
-                        db.session.commit()
-                    
-        except Exception as exc:
-            logger.exception("Error en scheduler Wolkvox")
 
 
 @app.route("/auto-campaigns/<int:campaign_id>/start-wkv", methods=["POST"])
@@ -3056,12 +3065,225 @@ def auto_campaigns_stop_wkv(campaign_id):
         return jsonify({"success": False, "message": str(e)}), 500
 #===========================Programacion Robot=========================================#
 
+import logging
+logger = logging.getLogger(__name__)
+
+# ================== LISTAR PROGRAMACIONES ==================
+
+# ================== LISTAR PROGRAMACIONES (API) ==================
+@app.route("/api/programaciones", methods=["GET"])
+def list_programacion():
+    from database import ProgramacionCampana, db
+
+    query = ProgramacionCampana.query
+
+    estado = request.args.get("estado")
+    if estado:
+        query = query.filter_by(estado=estado)
+
+    tipo = request.args.get("tipo_programacion")
+    if tipo:
+        query = query.filter_by(tipo_programacion=tipo)
+
+    programaciones = query.order_by(ProgramacionCampana.id.desc()).all()
+
+    data = []
+    for prog in programaciones:
+        data.append({
+            'id': prog.id,
+            'nombre': prog.nombre,
+            'campana_id': prog.campana_id,
+            'bigquery_query': prog.bigquery_query,
+            'wolkvox_campaign_id': prog.wolkvox_campaign_id,
+            'server_name': prog.server_name,
+            'tipo_programacion': prog.tipo_programacion,
+            'fecha_programada': prog.fecha_programada.isoformat() if prog.fecha_programada else None,
+            'hora_inicio': prog.hora_inicio,
+            'hora_fin': prog.hora_fin,
+            'fecha_fin': prog.fecha_fin,
+            'estado': prog.estado,
+            'fecha_ejecucion': prog.fecha_ejecucion.isoformat() if prog.fecha_ejecucion else None,
+            'total_destinatarios': prog.total_destinatarios,
+            'fecha_creacion': prog.fecha_creacion.isoformat() if prog.fecha_creacion else None,
+            'fecha_actualizacion': prog.fecha_actualizacion.isoformat() if prog.fecha_actualizacion else None,
+        })
+
+    return jsonify({
+        "success": True,
+        "total": len(data),
+        "data": data
+    }), 200
+# ================== VER UNA ==================
+
+@app.route("/auto-campaigns/programaciones/<int:prog_id>", methods=["GET"])
+def get_programacion(prog_id):
+    from database import ProgramacionCampana
+
+    prog = ProgramacionCampana.query.get(prog_id)
+    if not prog:
+        return jsonify({"success": False, "error": "Programación no encontrada"}), 404
+
+    # ✅ Serializar a diccionario según tu modelo
+    return jsonify({
+        "success": True,
+        "data": {
+            'id': prog.id,
+            'nombre': prog.nombre,
+            'campana_id': prog.campana_id,
+            'bigquery_query': prog.bigquery_query,
+            'wolkvox_campaign_id': prog.wolkvox_campaign_id,
+            'server_name': prog.server_name,
+            'tipo_programacion': prog.tipo_programacion,
+            'fecha_programada': prog.fecha_programada.isoformat() if prog.fecha_programada else None,
+            'hora_inicio': prog.hora_inicio,
+            'hora_fin': prog.hora_fin,
+            'fecha_fin': prog.fecha_fin,
+            'estado': prog.estado,
+            'fecha_ejecucion': prog.fecha_ejecucion.isoformat() if prog.fecha_ejecucion else None,
+            'total_destinatarios': prog.total_destinatarios,
+            'fecha_creacion': prog.fecha_creacion.isoformat() if prog.fecha_creacion else None,
+            'fecha_actualizacion': prog.fecha_actualizacion.isoformat() if prog.fecha_actualizacion else None,
+        }
+    }), 200
+
+
+# ================== EDITAR ==================
+
+@app.route("/auto-campaigns/programaciones/<int:prog_id>", methods=["PATCH"])
+def editar_programacion(prog_id):
+    from database import ProgramacionCampana, db
+    from datetime import datetime
+    import re
+
+    prog = ProgramacionCampana.query.get(prog_id)
+    if not prog:
+        return jsonify({"success": False, "error": "Programación no encontrada"}), 404
+
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({"success": False, "error": "JSON inválido o vacío"}), 400
+
+    # Columnas válidas de tu modelo
+    columnas_validas = {
+        'nombre', 'campana_id', 'bigquery_query', 'wolkvox_campaign_id',
+        'server_name', 'tipo_programacion', 'fecha_programada', 'hora_inicio',
+        'hora_fin', 'fecha_fin', 'estado', 'total_destinatarios'
+    }
+
+    campos_ignorados = []
+    campos_actualizados = []
+
+    for campo, valor in body.items():
+        if campo not in columnas_validas:
+            campos_ignorados.append(campo)
+            continue
+        
+        # 🔥 CONVERTIR fecha_programada de string a datetime
+        if campo == 'fecha_programada' and valor:
+            try:
+                if isinstance(valor, str):
+                    # Intentar formato ISO (2026-09-01T16:51)
+                    if 'T' in valor:
+                        valor = datetime.fromisoformat(valor)
+                    else:
+                        valor = datetime.strptime(valor, "%Y-%m-%d %H:%M:%S")
+                # Si ya es datetime, usarlo tal cual
+            except (ValueError, TypeError) as e:
+                return jsonify({
+                    "success": False, 
+                    "error": f"Formato de fecha inválido: {valor}. Use formato ISO (YYYY-MM-DDTHH:MM)"
+                }), 400
+        elif campo == 'fecha_programada' and not valor:
+            # Si viene vacío o null, mantenerlo como None
+            valor = None
+        
+        # Validar formato de hora_fin (HH:MM)
+        if campo == 'hora_fin' and valor:
+            if not re.match(r'^\d{2}:\d{2}$', valor):
+                return jsonify({
+                    "success": False, 
+                    "error": f"Formato de hora inválido: {valor}. Use HH:MM"
+                }), 400
+        
+        setattr(prog, campo, valor)
+        campos_actualizados.append(campo)
+
+    if not campos_actualizados:
+        return jsonify({
+            "success": False,
+            "error": "No se envió ningún campo válido para actualizar",
+            "campos_ignorados": campos_ignorados,
+        }), 400
+
+    try:
+        # Actualizar fecha_actualizacion
+        prog.fecha_actualizacion = datetime.utcnow()
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.exception(f"Error editando programación {prog_id}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+    logger.info(f"✏️ Programación {prog_id} actualizada: {campos_actualizados}")
+
+    return jsonify({
+        "success": True,
+        "campos_actualizados": campos_actualizados,
+        "campos_ignorados": campos_ignorados,
+        "data": {
+            'id': prog.id,
+            'nombre': prog.nombre,
+            'campana_id': prog.campana_id,
+            'bigquery_query': prog.bigquery_query,
+            'wolkvox_campaign_id': prog.wolkvox_campaign_id,
+            'server_name': prog.server_name,
+            'tipo_programacion': prog.tipo_programacion,
+            'fecha_programada': prog.fecha_programada.isoformat() if prog.fecha_programada else None,
+            'hora_inicio': prog.hora_inicio,
+            'hora_fin': prog.hora_fin,
+            'fecha_fin': prog.fecha_fin,
+            'estado': prog.estado,
+            'fecha_ejecucion': prog.fecha_ejecucion.isoformat() if prog.fecha_ejecucion else None,
+            'total_destinatarios': prog.total_destinatarios,
+            'fecha_creacion': prog.fecha_creacion.isoformat() if prog.fecha_creacion else None,
+            'fecha_actualizacion': prog.fecha_actualizacion.isoformat() if prog.fecha_actualizacion else None,
+        }
+    }), 200
+
+@app.route("/auto-campaigns/programaciones/<int:prog_id>", methods=["DELETE"])
+def eliminar_programacion(prog_id):
+    from database import ProgramacionCampana, db
+
+    prog = ProgramacionCampana.query.get(prog_id)
+    if not prog:
+        return jsonify({"success": False, "error": "Programación no encontrada"}), 404
+
+    # Si tiene job en scheduler, lo removemos
+    try:
+        scheduler.remove_job(f"wolkvox_simple_{prog.id}")
+    except Exception:
+        pass
+    try:
+        scheduler.remove_job(f"wolkvox_recurrente_{prog.id}")
+    except Exception:
+        pass
+
+    try:
+        db.session.delete(prog)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.exception(f"Error eliminando programación {prog_id}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+    logger.info(f"🗑️ Programación {prog_id} eliminada")
+
+    return jsonify({"success": True, "message": f"Programación {prog_id} eliminada"}), 200
+
+
 
 
 #=========Informacion Campañas Wolkvox=======================#
-
-
-
 @app.route("/api/servers/<server_name>/url", methods=["GET"])
 def get_server_url(server_name):
     try:
@@ -3238,6 +3460,7 @@ def api_dashboard_refresh():
                 "clientes": int(c.get("records", 0) or 0),
                 "llamados": int(c.get("dial", 0) or 0),
                 "contactados": int(c.get("answer", 0) or 0),
+                "llamadas_x_minuto": int(c.get("calls_x_min", 0) or 0),
                 "faltantes": int(c.get("records", 0) or 0) - int(c.get("answer", 0) or 0)
             })
         
@@ -3279,7 +3502,79 @@ def download_file(filename):
         return jsonify({"error": "Archivo no encontrado"}), 404
 
 
+# ================== RUTAS PARA LOS NUEVOS TEMPLATES ==================
+
+@app.route("/auto-campaigns/form")
+def auto_campaigns_form():
+    """Página para crear/editar campaña"""
+    campaign_id = request.args.get("id")
+    campaign = None
+    if campaign_id:
+        from database import AutoCampaign
+        campaign = AutoCampaign.query.get(int(campaign_id))
+
+    result = load_servers()
+    servers = result.get("servers", []) if result.get("success") else []
+    return render_template("auto_campaigns/form.html", campaign=campaign, servers=servers)
+
+@app.route("/auto-campaigns/programar")
+def auto_campaigns_programar():
+    """Página para programar envíos"""
+    result = load_servers()
+    servers = result.get("servers", []) if result.get("success") else []
+    return render_template("auto_campaigns/programar.html", servers=servers)
+
+@app.route("/auto-campaigns/ver_programaciones")
+def auto_campaigns_programaciones():
+    """Página para ver todas las programaciones"""
+    result = load_servers()
+    servers = result.get("servers", []) if result.get("success") else []
+    return render_template("auto_campaigns/programaciones.html", servers=servers)
 # ==================== MAIN ====================
+# ================== API PROGRAMACIONES ==================
+@app.route("/api/programaciones", methods=["GET"])
+def api_list_programaciones():
+    """API para listar programaciones (JSON)"""
+    from database import ProgramacionCampana
+
+    query = ProgramacionCampana.query
+
+    estado = request.args.get("estado")
+    if estado:
+        query = query.filter_by(estado=estado)
+
+    tipo = request.args.get("tipo_programacion")
+    if tipo:
+        query = query.filter_by(tipo_programacion=tipo)
+
+    programaciones = query.order_by(ProgramacionCampana.id.desc()).all()
+
+    data = []
+    for prog in programaciones:
+        data.append({
+            'id': prog.id,
+            'nombre': prog.nombre,
+            'campana_id': prog.campana_id,
+            'bigquery_query': prog.bigquery_query,
+            'wolkvox_campaign_id': prog.wolkvox_campaign_id,
+            'server_name': prog.server_name,
+            'tipo_programacion': prog.tipo_programacion,
+            'fecha_programada': prog.fecha_programada.isoformat() if prog.fecha_programada else None,
+            'hora_inicio': prog.hora_inicio,
+            'hora_fin': prog.hora_fin,
+            'fecha_fin': prog.fecha_fin,
+            'estado': prog.estado,
+            'fecha_ejecucion': prog.fecha_ejecucion.isoformat() if prog.fecha_ejecucion else None,
+            'total_destinatarios': prog.total_destinatarios,
+            'fecha_creacion': prog.fecha_creacion.isoformat() if prog.fecha_creacion else None,
+            'fecha_actualizacion': prog.fecha_actualizacion.isoformat() if prog.fecha_actualizacion else None,
+        })
+
+    return jsonify({
+        "success": True,
+        "total": len(data),
+        "data": data
+    }), 200
 
 if __name__ == "__main__":
     with app.app_context():

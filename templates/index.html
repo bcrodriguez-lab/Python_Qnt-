@@ -220,12 +220,10 @@
       <thead>
         <tr>
           <th>Campaña</th>
-          <th>Tipo</th>
           <th class="text-right">Clientes</th>
           <th class="text-right">Llamados</th>
           <th class="text-right">Faltantes</th>
-          <th class="text-right">Contactados</th>
-          <th>Estado</th>
+          <th class="text-right">Llamadas/min</th>
           <th class="text-center">Acción</th>
         </tr>
       </thead>
@@ -321,7 +319,7 @@ function actualizarDashboard() {
                 if (statClientesLlamados) statClientesLlamados.textContent = (datos.clientes_contactados || 0).toLocaleString();
                 if (statClientesTotal) statClientesTotal.textContent = (datos.total_clientes || 0).toLocaleString();
                 if (statProgressPercent) statProgressPercent.textContent = datos.porcentaje_progreso || '0';
-                if (statClientsContacted) statClientsContacted.textContent = (datos.llamadas_x_minuto || 0).toLocaleString();
+                if (statClientsContacted) statClientsContacted.textContent = (datos.clientes_contactados || 0).toLocaleString();
                 if (statClientsPending) statClientsPending.textContent = (datos.clientes_pendientes || 0).toLocaleString();
                 if (statLlamadasXMin) statLlamadasXMin.textContent = datos.llamadas_x_minuto || '0';
                 if (statTimestamp) statTimestamp.textContent = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : '---';
@@ -349,24 +347,22 @@ function actualizarDashboard() {
                                 badgeClass = 'badge-info';
                                 estadoLabel = 'Programada';
                             }
-                            
+                            //#statLlamadasXMin
                             const clientes = parseInt(camp.clientes || camp.records || 0);
                             const llamados = parseInt(camp.llamados || camp.dial || 0);
                             const contactados = parseInt(camp.contactados || camp.answer || 0);
                             const faltantes = clientes - contactados;
-                            
+                            const llamadasXMin = Number(camp.llamadas_x_minuto) || 0;
                             return `
                                 <tr>
                                     <td>
                                         <strong>${escapeHtml(camp.nombre || camp.campaign || 'Sin nombre')}</strong>
                                         ${camp.servidor ? `<br><small class="text-muted">${escapeHtml(camp.servidor)}</small>` : ''}
                                     </td>
-                                    <td>${escapeHtml(camp.tipo || camp.tipo_campana || 'Predictivo')}</td>
                                     <td class="text-right">${clientes.toLocaleString()}</td>
                                     <td class="text-right">${llamados.toLocaleString()}</td>
                                     <td class="text-right">${faltantes.toLocaleString()}</td>
-                                    <td class="text-right">${contactados.toLocaleString()}</td>
-                                    <td><span class="badge ${badgeClass}">${escapeHtml(estadoLabel)}</span></td>
+                                    <td class="text-right">${llamadasXMin}</td>
                                     <td class="text-center">
                                         <a href="/config-bigquery" class="btn btn-outline-primary btn-sm">Gestionar</a>
                                     </td>

@@ -125,6 +125,8 @@
   .btn-danger { background: var(--sms-danger); color: #fff; box-shadow: 0 6px 16px rgba(226, 76, 75, 0.25); }
   .btn-danger:hover { background: #C0392B; }
   .btn-sm { padding: 0.35rem 0.8rem; font-size: 0.78rem; }
+  .btn-warning { background: var(--sms-warning); color: #fff; }
+  .btn-warning:hover { background: #A06700; }
 
   .sms-side { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 16px; }
 
@@ -195,31 +197,7 @@
   .result-box.error { background: var(--sms-danger-bg); border-color: #FBD6D7; }
   .result-box .result-content { font-size: 0.9rem; }
 
-  .table-card {
-    background: #ffffff; border: 1px solid var(--sms-border);
-    border-radius: var(--sms-radius); box-shadow: var(--sms-shadow);
-    overflow: hidden; margin-top: 20px;
-  }
-  .table-card .card-header {
-    padding: 16px 20px; border-bottom: 1px solid var(--sms-border);
-  }
-  .table-card .card-header h3 {
-    margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--sms-text);
-  }
-  .table-card .card-body { padding: 0; }
-  .table-card table { width: 100%; font-size: 0.85rem; }
-  .table-card table th {
-    background: #F8FAFC; font-weight: 600; color: var(--sms-muted);
-    padding: 12px 16px; border-bottom: 1px solid var(--sms-border);
-  }
-  .table-card table td { padding: 10px 16px; border-bottom: 1px solid var(--sms-border); }
-
-  .badge-success { background: var(--sms-success-bg); color: var(--sms-success); padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
-  .badge-danger { background: var(--sms-danger-bg); color: var(--sms-danger); padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
-  .badge-warning { background: var(--sms-warning-bg); color: var(--sms-warning); padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
-
   .form-actions { display: flex; gap: 10px; flex-wrap: wrap; padding-top: 8px; margin-top: 20px; }
-  .action-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
 
   .switch-sm {
     position: relative; display: inline-block; width: 44px; height: 24px;
@@ -236,8 +214,11 @@
   input:checked + .slider-sm { background-color: var(--sms-primary); }
   input:checked + .slider-sm:before { transform: translateX(20px); }
 
+  #columnsInfo { display:none;padding:10px;background:var(--sms-primary-light);border-radius:10px;margin:12px 0; }
+
   @media (max-width: 768px) {
     .sms-card-body { padding: 16px; }
+    .sms-side { position: relative; }
   }
 </style>
 {% endblock %}
@@ -247,14 +228,13 @@
 <div id="smsToastArea"></div>
 
 <div class="sms-container">
-
   <div class="sms-card">
     <div class="sms-card-body">
 
       <div class="sms-tabs" id="smsTabs">
-        <button class="tab active" data-tab="send"><i class="fas fa-paper-plane"></i> Enviar</button>
-        <button class="tab" data-tab="history"><i class="fas fa-history"></i> Historial</button>
-        <button class="tab" data-tab="scheduled"><i class="fas fa-clock"></i> Programados</button>
+          <button class="tab active" data-tab="send"><i class="fas fa-paper-plane"></i> Enviar</button>
+          <a href="/auto-campaigns/programar" class="tab"><i class="fas fa-clock"></i> Programar</a>
+          <a href="/auto-campaigns/ver_programaciones" class="tab"><i class="fas fa-clock-history"></i> Programaciones</a>
       </div>
 
       <!-- PANEL ENVIAR -->
@@ -297,7 +277,7 @@
           <!-- CONSULTA SQL -->
           <div class="sms-field">
             <label for="query">Consulta SQL <span class="badge-required">requerido</span></label>
-            <textarea id="query" name="bigquery_query" class="form-control textarea-code" placeholder="SELECT celular, nombre, monto FROM ..." rows="4" required>{{ campaign.bigquery_query if is_edit else "SELECT  * FROM Temporal.sms_campaign_data where customer_id  = " }}</textarea>
+            <textarea id="query" name="bigquery_query" class="form-control textarea-code" placeholder="SELECT celular, nombre, monto FROM ..." rows="4" required>{{ campaign.bigquery_query if is_edit else "SELECT * FROM Temporal.sms_campaign_data where customer_id = " }}</textarea>
             <div class="sms-help">
               <span>Incluye columna de teléfono: <code>telefono</code>, <code>celular</code>, <code>movil</code>, <code>phone</code>.</span>
               <span id="rowCount" style="font-weight:600;color:var(--sms-primary);">0 filas</span>
@@ -314,7 +294,7 @@
             </span>
           </div>
 
-          <div id="columnsInfo" style="display:none;padding:10px;background:var(--sms-primary-light);border-radius:10px;margin:12px 0;">
+          <div id="columnsInfo">
             <small><i class="fas fa-table"></i> Columnas detectadas: <span id="detectedColumns"></span></small>
           </div>
 
@@ -348,153 +328,10 @@
         </form>
       </div>
 
-      <!-- PANEL HISTORIAL -->
-      <div class="sms-tab-panel" id="panel-history">
-        {% if is_edit %}
-        <div class="table-card">
-          <div class="card-header">
-            <h3><i class="fas fa-history"></i> Historial de cargas</h3>
-          </div>
-          <div class="card-body table-responsive">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Fecha</th>
-                  <th>Registros</th>
-                  <th>Bloqueados</th>
-                  <th>Estado</th>
-                  <th>Error</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for log in logs %}
-                <tr>
-                  <td><code>{{ log.id }}</code></td>
-                  <td>{{ log.start_time }}</td>
-                  <td><span class="badge-success">{{ log.records_sent }}</span></td>
-                  <td><span class="badge-danger">{{ log.records_blocked or 0 }}</span></td>
-                  <td><span class="{{ 'badge-success' if log.records_failed == 0 else 'badge-danger' }}">{{ 'Éxito' if log.records_failed == 0 else 'Error' }}</span></td>
-                  <td>{{ log.error_message or '—' }}</td>
-                </tr>
-                {% else %}
-                <tr><td colspan="6" class="text-center" style="padding:30px;color:var(--sms-muted);">Sin cargas registradas.</td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        {% else %}
-        <div style="text-align:center;padding:60px 20px;color:var(--sms-muted);">
-          <i class="fas fa-inbox" style="font-size:3rem;display:block;margin-bottom:16px;opacity:0.3;"></i>
-          <p style="font-size:0.95rem;">Guarda la campaña para ver el historial de cargas.</p>
-        </div>
-        {% endif %}
-      </div>
+    </div>
+  </div>
 
-          <!-- PANEL PROGRAMADOS -->
-        <div class="sms-tab-panel" id="panel-scheduled">
-            
-            <!-- FORMULARIO DE PROGRAMACIÓN INDEPENDIENTE -->
-            <div class="sms-auto-section" style="margin-bottom:16px;">
-                <div class="section-title">
-                    <i class="fas fa-clock"></i> Programar envío a Wolkvox
-                </div>
-
-                <!-- DATOS DE LA PROGRAMACIÓN -->
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
-                    <div class="sms-field" style="margin-bottom:0;">
-                        <label>Nombre <span class="text-danger">*</span></label>
-                        <input class="form-control form-control-sm" id="progNombre" placeholder="Ej: Cobro Septiembre">
-                    </div>
-                    <div class="sms-field" style="margin-bottom:0;">
-                        <label>Campaign ID <span class="text-danger">*</span></label>
-                        <input class="form-control form-control-sm" id="progCampaignId" placeholder="Ej: 20213">
-                    </div>
-                    <div class="sms-field" style="margin-bottom:0;">
-                        <label>Servidor <span class="text-danger">*</span></label>
-                        <select class="form-control form-control-sm" id="progServerName">
-                            <option value="">Seleccionar servidor</option>
-                            {% for server in servers %}
-                                <option value="{{ server.name }}">{{ server.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="sms-field" style="margin-bottom:0;">
-                        <label>Tipo <span class="text-danger">*</span></label>
-                        <select class="form-control form-control-sm" id="progCampaignType">
-                            <option value="predictive">Predictivo</option>
-                            <option value="preview">Vista previa</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- CONSULTA SQL -->
-                <div class="sms-field" style="margin-top:12px;">
-                    <label for="progQuery">Consulta SQL <span class="badge-required">requerido</span></label>
-                    <textarea id="progQuery" class="form-control textarea-code" placeholder="SELECT telefono, nombre FROM..." rows="4"></textarea>
-                    <div class="sms-help">
-                        <span>Incluye columna de teléfono.</span>
-                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnProgValidar">
-                            <i class="fas fa-check-circle"></i> Validar
-                        </button>
-                    </div>
-                </div>
-
-                <!-- FECHA/HORA SIMPLE -->
-                <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-top:12px;">
-                    <div style="flex:1;min-width:140px;">
-                        <label style="font-size:0.72rem;">📅 Fecha</label>
-                        <input type="date" id="progFecha" class="form-control form-control-sm">
-                    </div>
-                    <div style="flex:1;min-width:120px;">
-                        <label style="font-size:0.72rem;">⏰ Hora</label>
-                        <input type="time" id="progHora" class="form-control form-control-sm" value="08:00">
-                    </div>
-                    <div style="flex:1;min-width:120px;">
-                        <label style="font-size:0.72rem;">hora de terminar</label>
-                        <input type="time" id="progHorater" class="form-control form-control-sm"  placeholder="HH:MM">
-                    </div>
-                    <button type="button" class="btn btn-outline-primary btn-sm" id="btnProgramarSimple">
-                        <i class="fas fa-clock"></i> Programar
-                    </button>
-                </div>
-
-                <!-- RECURRENTE -->
-                <div style="margin-top:16px;">
-                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-                        <label class="switch-sm">
-                            <input type="checkbox" id="progEsRecurrente">
-                            <span class="slider-sm"></span>
-                        </label>
-                        <span style="font-size:0.8rem;font-weight:600;">Programación recurrente diaria</span>
-                    </div>
-
-                    <div id="progRecurrenteOpciones" style="display:none;">
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                            <div>
-                                <label style="font-size:0.72rem;">⏰ Hora de envío</label>
-                                <input type="time" id="progHoraRecurrente" class="form-control form-control-sm" value="08:00">
-                            </div>
-                            <div>
-                                <label style="font-size:0.72rem;">📅 Fecha fin (opcional)</label>
-                                <input type="date" id="progFechaFin" class="form-control form-control-sm">
-                            </div>
-                        </div>
-                        <button type="button" class="btn btn-primary btn-sm" id="btnProgramarRecurrente" style="margin-top:12px;">
-                            <i class="fas fa-sync-alt"></i> Programar recurrente
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-           
-          </div>
-
-        </div>
-
-      </div>
-      <!-- COLUMNA DERECHA: ESTADÍSTICAS -->
+  <!-- COLUMNA DERECHA: ESTADÍSTICAS -->
   <div class="sms-side">
     <div class="sms-stats">
       <div class="row"><span class="label"><i class="fas fa-users"></i> Total destinatarios</span><span class="value" id="statTotal">—</span></div>
@@ -508,25 +345,8 @@
       </div>
     </div>
 
-    <div class="sms-stats" id="validationDetail" style="display:none;">
-      <div style="font-weight:700;font-size:0.9rem;margin-bottom:10px;color:var(--sms-primary);">
-        <i class="fas fa-shield-alt"></i> Detalle de validación
-      </div>
-      <div class="row"><span class="label">📊 Total consulta</span><span class="value" id="valTotalConsulta">—</span></div>
-      <div class="row"><span class="label"><i class="fas fa-check-circle" style="color:var(--sms-success);"></i> Válidos</span><span class="value success" id="valValidos">—</span></div>
-      <div class="row"><span class="label"><i class="fas fa-times-circle" style="color:var(--sms-danger);"></i> Inválidos</span><span class="value danger" id="valInvalidos">—</span></div>
-      <div class="row"><span class="label"><i class="fas fa-copy" style="color:var(--sms-warning);"></i> Duplicados hoy</span><span class="value warning" id="valDuplicados">—</span></div>
-      <div class="row"><span class="label"><i class="fas fa-ban" style="color:var(--sms-danger);"></i> Lista negra</span><span class="value danger" id="valBlacklist">—</span></div>
-      <div class="row" style="border-top:2px solid var(--sms-primary);padding-top:8px;margin-top:4px;">
-        <span class="label" style="font-weight:700;font-size:0.9rem;">📤 A ENVIAR</span>
-        <span class="value primary" id="valAEnviar" style="font-size:1.2rem;color:var(--sms-primary);font-weight:700;">—</span>
-      </div>
-    </div>
+    
   </div>
-    </div>
-
-  
-
 </div>
 
 {% endblock %}
@@ -541,24 +361,6 @@
   const isEdit = !!campaignId;
   const resultBox = document.getElementById('resultBox');
   const resultContent = document.getElementById('resultContent');
-
-  // ========== TABS ==========
-  document.querySelectorAll('.sms-tabs .tab').forEach(tab => {
-    tab.addEventListener('click', function() {
-      document.querySelectorAll('.sms-tabs .tab').forEach(t => t.classList.remove('active'));
-      this.classList.add('active');
-
-      const target = this.dataset.tab;
-      document.querySelectorAll('.sms-tab-panel').forEach(p => p.classList.remove('active'));
-
-      const panelMap = {
-        'send': 'panel-send',
-        'history': 'panel-history',
-        'scheduled': 'panel-scheduled'
-      };
-      document.getElementById(panelMap[target]).classList.add('active');
-    });
-  });
 
   // ========== CONTADOR DE FILAS SQL ==========
   const queryTextarea = document.getElementById('query');
@@ -678,10 +480,9 @@
             }
         } catch (e) {
             console.log('⚠️ Error validando columnas:', e);
-            // No bloquea — continúa con stats
         }
 
-        // Paso 2: Validar estadísticas (SIEMPRE se ejecuta)
+        // Paso 2: Validar estadísticas
         const respStats = await fetch('/api/wolkvox/validar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -690,9 +491,6 @@
         const dataStats = await respStats.json();
 
         if (dataStats.success) {
-            console.log('📊 Stats recibidas:', dataStats);
-
-            // Stats principales
             document.getElementById('statTotal').textContent = dataStats.total_consulta || 0;
             document.getElementById('statValidos').textContent = dataStats.validos || 0;
             document.getElementById('statInvalidos').textContent = dataStats.invalidos || 0;
@@ -700,7 +498,6 @@
             document.getElementById('statBlacklist').textContent = dataStats.lista_negra || 0;
             document.getElementById('statAEnviar').textContent = dataStats.a_enviar || 0;
 
-            // Detalle de validación
             document.getElementById('valTotalConsulta').textContent = dataStats.total_consulta || 0;
             document.getElementById('valValidos').textContent = dataStats.validos || 0;
             document.getElementById('valInvalidos').textContent = dataStats.invalidos || 0;
@@ -858,221 +655,6 @@
       showToast('❌ Error: ' + e.message, 'danger');
     }
   });
-  // ========== PROGRAMACIONES ==========
-  const btnProgValidar = document.getElementById('btnProgValidar');
-  const btnProgramarSimple = document.getElementById('btnProgramarSimple');
-  const btnProgramarRecurrente = document.getElementById('btnProgramarRecurrente');
-  const progEsRecurrente = document.getElementById('progEsRecurrente');
-  const progRecurrenteOpciones = document.getElementById('progRecurrenteOpciones');
-
-  if (progEsRecurrente) {
-      progEsRecurrente.addEventListener('change', function() {
-          progRecurrenteOpciones.style.display = this.checked ? 'block' : 'none';
-      });
-  }
-
-  // Validar consulta de programación
-  if (btnProgValidar) {
-      btnProgValidar.addEventListener('click', async () => {
-          const query = document.getElementById('progQuery').value.trim();
-          if (!query) {
-              showToast('⚠️ Escribe una consulta SQL', 'warning');
-              return;
-          }
-          
-          try {
-              setLoading(btnProgValidar, true);
-              const resp = await fetch('/auto-campaigns/validate-query-fields', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ query: query })
-              });
-              const data = await resp.json();
-              
-              if (data.success) {
-                  showToast(`✅ ${data.detected_columns.length} columnas: ${data.detected_columns.join(', ')}`, 'success');
-              } else {
-                  showToast('❌ ' + data.message, 'danger');
-              }
-          } catch (e) {
-              showToast('❌ Error: ' + e.message, 'danger');
-          } finally {
-              setLoading(btnProgValidar, false);
-          }
-      });
-  }
-
-  // Programar simple
-  if (btnProgramarSimple) {
-      btnProgramarSimple.addEventListener('click', async () => {
-          const nombre = document.getElementById('progNombre').value.trim();
-          const campaignId = document.getElementById('progCampaignId').value.trim();
-          const serverName = document.getElementById('progServerName').value;
-          const campaignType = document.getElementById('progCampaignType').value;
-          const query = document.getElementById('progQuery').value.trim();
-          const fecha = document.getElementById('progFecha').value;
-          const hora = document.getElementById('progHora').value || '08:00';
-          const hora_terminar = document.getElementById('progHorater').value;
-          if (!nombre || !campaignId || !serverName || !query || !fecha) {
-              showToast('⚠️ Completa todos los campos obligatorios', 'warning');
-              return;
-          }
-          
-          const fechaCompleta = `${fecha}T${hora}`;
-          
-          try {
-              setLoading(btnProgramarSimple, true);
-              const resp = await fetch(`/auto-campaigns/programar`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                      nombre: nombre,
-                      bigquery_query: query,
-                      wolkvox_campaign_id: campaignId,
-                      server_name: serverName,
-                      campaign_type: campaignType,
-                      fecha_programada: fechaCompleta,
-                      hora_fin:hora_terminar 
-                  })
-              });
-              const data = await resp.json();
-              
-              if (data.success) {
-                  showToast(`✅ Programado (ID: ${data.id})`, 'success');
-                  document.getElementById('progNombre').value = '';
-                  document.getElementById('progCampaignId').value = '';
-                  document.getElementById('progQuery').value = '';
-                  document.getElementById('progFecha').value = '';
-                  document.getElementById('progHora').value = '08:00';
-                  document.getElementById('progHorater').value = '';
-                  cargarProgramaciones();
-              } else {
-                  showToast('❌ ' + data.message, 'danger');
-              }
-          } catch (e) {
-              showToast('❌ Error: ' + e.message, 'danger');
-          } finally {
-              setLoading(btnProgramarSimple, false);
-          }
-      });
-  }
-
-  // Programar recurrente
-  if (btnProgramarRecurrente) {
-      btnProgramarRecurrente.addEventListener('click', async () => {
-          const nombre = document.getElementById('progNombre').value.trim();
-          const campaignId = document.getElementById('progCampaignId').value.trim();
-          const serverName = document.getElementById('progServerName').value;
-          const campaignType = document.getElementById('progCampaignType').value;
-          const query = document.getElementById('progQuery').value.trim();
-          const hora = document.getElementById('progHoraRecurrente').value;
-          const fechaFin = document.getElementById('progFechaFin').value;
-          
-          if (!nombre || !campaignId || !serverName || !query || !hora) {
-              showToast('⚠️ Completa todos los campos obligatorios', 'warning');
-              return;
-          }
-          
-          try {
-              setLoading(btnProgramarRecurrente, true);
-              const resp = await fetch('/auto-campaigns/programar-recurrente', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                      nombre: nombre,
-                      bigquery_query: query,
-                      wolkvox_campaign_id: campaignId,
-                      server_name: serverName,
-                      campaign_type: campaignType,
-                      hora_inicio: hora,
-                      fecha_fin: fechaFin || null
-                  })
-              });
-              const data = await resp.json();
-              
-              if (data.success) {
-                  showToast(`✅ Recurrente creada (ID: ${data.id})`, 'success');
-                  document.getElementById('progNombre').value = '';
-                  document.getElementById('progCampaignId').value = '';
-                  document.getElementById('progQuery').value = '';
-                  document.getElementById('progHoraRecurrente').value = '08:00';
-                  document.getElementById('progFechaFin').value = '';
-                  progEsRecurrente.checked = false;
-                  progRecurrenteOpciones.style.display = 'none';
-                  cargarProgramaciones();
-              } else {
-                  showToast('❌ ' + data.message, 'danger');
-              }
-          } catch (e) {
-              showToast('❌ Error: ' + e.message, 'danger');
-          } finally {
-              setLoading(btnProgramarRecurrente, false);
-          }
-      });
-  }
-
-  // Cargar lista de programaciones
-  async function cargarProgramaciones() {
-      const container = document.getElementById('progLista');
-      if (!container) return;
-      
-      container.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
-      
-      try {
-          const resp = await fetch('/api/wolkvox/programaciones');
-          const data = await resp.json();
-          
-          if (!data.items || data.items.length === 0) {
-              container.innerHTML = '<div class="text-center text-muted py-4">Sin programaciones</div>';
-              return;
-          }
-          
-          let html = `<table class="table table-sm">
-              <thead>
-                  <tr><th>ID</th><th>Nombre</th><th>Tipo</th><th>Fecha/Hora</th><th>Estado</th><th></th></tr>
-              </thead>
-              <tbody>`;
-          
-          data.items.forEach(row => {
-              const tipoBadge = row.tipo_programacion === 'recurrente'
-                  ? '<span class="badge-warning">🔄 Recurrente</span>'
-                  : '<span class="badge-success">📅 Simple</span>';
-              
-              const fecha = row.fecha_programada 
-                  ? new Date(row.fecha_programada).toLocaleString()
-                  : (row.hora_inicio || '—');
-              
-              const estadoClass = row.estado === 'pendiente' ? 'badge-warning' :
-                  row.estado === 'enviado' ? 'badge-success' : 'badge-danger';
-              
-              html += `<tr>
-                  <td><code>${row.id}</code></td>
-                  <td>${row.nombre || '—'}</td>
-                  <td>${tipoBadge}</td>
-                  <td>${fecha}</td>
-                  <td><span class="${estadoClass}">${row.estado}</span></td>
-                  <td>${row.estado === 'pendiente' ? `<button class="btn btn-sm btn-outline-danger cancelar-prog" data-id="${row.id}"><i class="fas fa-times"></i></button>` : ''}</td>
-              </tr>`;
-          });
-          
-          html += '</tbody></table>';
-          container.innerHTML = html;
-          
-          container.querySelectorAll('.cancelar-prog').forEach(btn => {
-              btn.addEventListener('click', async () => {
-                  if (!confirm('¿Cancelar programación?')) return;
-                  await fetch(`/api/wolkvox/cancelar/${btn.dataset.id}`, { method: 'POST' });
-                  cargarProgramaciones();
-              });
-          });
-      } catch (e) {
-          container.innerHTML = '<div class="alert alert-danger">Error al cargar programaciones</div>';
-      }
-  }
-
-  // Llamar al cargar
-  cargarProgramaciones();
-
 
 })();
 </script>
