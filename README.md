@@ -337,6 +337,7 @@ Los handlers se ubican en `api_handlers/` y son cargados dinámicamente por `api
 | `config_apis.html` | `/config-apis` | Registro de APIs (archivo, método HTTP, URL, frecuencia). |
 | `config_server_apis.html` | `/config-server-apis` | Tabla con checkboxes servidor × API. |
 | `config_flujos_proceso.html` | `/config-flujos-proceso` | Gestión de flujos de proceso. |
+| `programar.html` | `/auto-campaigns/programar` | Programación y validación de campañas automáticas con consulta SQL. Incluye caché de estado en localStorage. |
 | `reportes.html` | `/reportes` | Vista para descarga de reportes XLSX. |
 
 ---
@@ -518,6 +519,26 @@ gunicorn -w 4 -b 0.0.0.0:5000 backend:app
 - Console output: Información en tiempo real
 - Base de datos: Histórico de campañas y ejecuciones
 - Alertas: Disponibles para configurar por error
+
+---
+
+### Persistencia de Página (Caché en localStorage) — `/auto-campaigns/programar`
+
+El formulario de programación de campañas (`<templates/auto_campaigns/programar.html>`) implementa una estrategia de **stale-while-revalidate** usando `localStorage` del navegador:
+
+- **Campos del formulario** se guardan automáticamente en cada evento `input`/`change` de los 11 campos.
+- **Resultados de validación** (estadísticas, columnas detectadas, contenido del recuadro de resultados, estadísticas laterales) se guardan en caché tras cada ejecución de validación.
+- Al **cargar la página**, los valores en caché y los resultados de validación se restauran inmediatamente, brindando respuesta instantánea.
+- Si la caché es válida (TTL de 30 minutos) y contiene una consulta previamente validada, se ejecuta una **revalidación en segundo plano** en modo silencioso para actualizar los datos.
+- La caché se **borra automáticamente** al programar correctamente una campaña (simple o recurrente).
+- Clave de caché: `programar_cache_v1`. TTL: 30 minutos.
+
+| Función | Descripción |
+|----------|-------------|
+| `saveFormState()` | Lee los valores actuales del DOM y escribe el estado completo en `localStorage`. |
+| `restoreFormState()` | Lee el estado en caché, aplica los valores de los campos y la pantalla de validación. Respeto el TTL de 30 minutos. |
+| `clearFormCache()` | Elimina la clave de caché (se llama tras programar correctamente). |
+| `validarConsulta(silent)` | Función unificada de validación. Cuando `silent=true`, suprime notificaciones (toasts) mientras actualiza los datos en caché en segundo plano. |
 
 ---
 

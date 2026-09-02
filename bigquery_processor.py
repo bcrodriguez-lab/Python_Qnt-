@@ -689,6 +689,10 @@ def procesar_datos(
             df_venta["HORA_VENTA"] = 0
 
 
+
+#=================== VENTAS =====================
+
+
         df = df.merge(
             df_venta[["Contacto__c", "Fecha_dia", "Venta_Humano_aux","HORA_VENTA"]],
             on=["Contacto__c", "Fecha_dia"],

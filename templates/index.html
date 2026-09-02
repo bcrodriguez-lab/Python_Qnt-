@@ -419,7 +419,7 @@ function cargarLogs() {
 
 // Cargar datos al iniciar
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 DOM cargado, iniciando dashboard...');  // 👈 Debug
+    console.log('🚀 DOM cargado, iniciando dashboard...');  
     
     // ✅ Agregar event listener al botón
     const btn = document.getElementById('btnRefreshCampaigns');
@@ -435,8 +435,8 @@ document.addEventListener('DOMContentLoaded', function() {
     cargarLogs();
 });
 
-// Actualizar cada 30 segundos
-setInterval(actualizarDashboard, 60000);
+// Actualizar cada 6 minutos
+setInterval(actualizarDashboard, 360000);
 setInterval(cargarLogs, 60000);
 </script>
 {% endblock %}

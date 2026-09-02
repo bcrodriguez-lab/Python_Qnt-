@@ -111,8 +111,8 @@ def obtener_nombre_campana_especifica(servidor, campaign_id):
 
 def iniciar_scheduler():
     _scheduler_amd.clear()
-    _scheduler_amd.every(10).minutes.do(ejecutar_descarga)
-    logger.info("Scheduler iniciado para descargar campañas cada 15 minutos")
+    _scheduler_amd.every(10).hours.do(ejecutar_descarga)
+    logger.info("Scheduler iniciado para descargar campañas cada 10 horas")
     logger.info(f"Jobs activos antes de registrar: {len(_scheduler_amd.jobs)}")
      
     while True: 
@@ -190,8 +190,8 @@ def iniciar_scheduler_amd():
 
     try:
         _scheduler_amd.clear()
-        _scheduler_amd.every(10).minutes.do(ejecutar_descarga)  
-        logger.info("Scheduler Funciona cada 10 Minutos archvio download_campaign")
+        _scheduler_amd.every(10).hours.do(ejecutar_descarga)  
+        logger.info("Scheduler Funciona cada 10 horas archvio download_campaign")
         logger.info(f"Jobs activos antes de registrar: {len(_scheduler_amd.jobs)}")
         _scheduler_running_amd = True
         
