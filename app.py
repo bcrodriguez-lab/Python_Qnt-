@@ -2965,7 +2965,7 @@ def execute_wolkvox_schedule():
                                         headers={"wolkvox-token": token_clear},
                                         timeout=60,
                                     )
-                                    logger.info(f"Campaña {prog.wolkvox_campaign_id} limpiada: HTTP {clear_resp.status_code}")
+                                    logger_programacion.info(f"Campaña {prog.wolkvox_campaign_id} limpiada: HTTP {clear_resp.status_code}")
                                     if not clear_resp.ok:
                                         logger.warning(
                                             f"No se pudo limpiar campaña {prog.wolkvox_campaign_id} "
@@ -2990,7 +2990,7 @@ def execute_wolkvox_schedule():
                         # COND 2: ¿Ya se ejecutó? -> no volver a ejecutar,
                         # solo esperar a que llegue hora_fin para limpiar.
                         if prog.fecha_ejecucion:
-                            logger.info(f"Campaña simple {prog.id} ya ejecutada a las {prog.fecha_ejecucion}")
+                            logger_programacion.info(f"Campaña simple {prog.id} ya ejecutada a las {prog.fecha_ejecucion}")
 
                             continue
                         logger_programacion.info(f"Campaña simple {prog.id}: hora_inicio={prog.hora_inicio}, hora_fin={prog.hora_fin}, hora_actual={hora_actual}, fecha_ejecucion={prog.fecha_ejecucion}")
@@ -3030,6 +3030,7 @@ def execute_wolkvox_schedule():
                     prog.fecha_ejecucion = ahora
                     prog.total_destinatarios = resultado.get("records_sent", 0)
                     prog.fecha_actualizacion = datetime.now(COLOMBIA_TZ)
+                    logger_programacion.info(f"📊 Campaña simple {prog.id} actualizada: {prog.total_destinatarios} destinatarios")
 
                     if prog.tipo_programacion == 'recurrente':
                         

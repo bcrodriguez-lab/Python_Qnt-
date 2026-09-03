@@ -199,7 +199,7 @@ def descargar_todos_los_reportes(fecha: str = None):
         fecha = datetime.now().strftime("%Y-%m-%d")
     
     logger.info("\n" + "="*60)
-    logger.info("📥 INICIANDO DESCARGA DE REPORTES (CDR)")
+    logger.info("📥 INICIANDO DESCARGA DE REPORTES (Llamadas)")
     logger.info(f"📅 Fecha: {fecha}")
     logger.info("="*60)
     

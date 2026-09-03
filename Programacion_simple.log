@@ -48,3 +48,67 @@
 2026-09-02 11:24:00 - INFO - Campaña simple 18 lista para ejecutar: hora_inicio=11:24, hora_fin=11:25, hora_actual=11:24
 2026-09-02 11:24:00 - INFO - Ejecutando campaña simple 18: prueba (tipo: simple)
 2026-09-02 11:24:00 - INFO - 📤 Ejecutando campaña simple 18: prueba
+2026-09-03 08:48:29 - INFO - Datos recibidos para programación simple: {'nombre': 'prueba', 'bigquery_query': 'SELECT * FROM Temporal.sms_campaign_data where tel1 = "3144051619"', 'wolkvox_campaign_id': '20213', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-03T08:50', 'hora_fin': '08:51'}
+2026-09-03 08:48:29 - INFO - Programando Wolkvox simple: nombre=prueba, fecha_programada=2026-09-03T08:50:00-05:00, hora_fin=08:51, campaign_id=20213, server_name=operacion-interna
+2026-09-03 08:48:29 - INFO - Campaña de programación simple guardada en DB con ID: 1
+2026-09-03 08:48:29 - INFO -  ✅ campaña programada creada para ID: 1 y se va a ejecutarse en 2026-09-03T08:50:00-05:00
+2026-09-03 08:48:52 - INFO - Datos recibidos para programación simple: {'nombre': 'prueba', 'bigquery_query': 'SELECT * FROM Temporal.sms_campaign_data', 'wolkvox_campaign_id': '20213', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-03T08:53', 'hora_fin': '08:55'}
+2026-09-03 08:48:52 - INFO - Programando Wolkvox simple: nombre=prueba, fecha_programada=2026-09-03T08:53:00-05:00, hora_fin=08:55, campaign_id=20213, server_name=operacion-interna
+2026-09-03 08:48:52 - INFO - Campaña de programación simple guardada en DB con ID: 2
+2026-09-03 08:48:52 - INFO -  ✅ campaña programada creada para ID: 2 y se va a ejecutarse en 2026-09-03T08:53:00-05:00
+2026-09-03 08:49:19 - INFO - Datos recibidos para programación simple: {'nombre': 'prueba', 'bigquery_query': 'SELECT * FROM Temporal.sms_campaign_data where tel1 = "3144051619"', 'wolkvox_campaign_id': '20213', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-03T08:57', 'hora_fin': '08:58'}
+2026-09-03 08:49:19 - INFO - Programando Wolkvox simple: nombre=prueba, fecha_programada=2026-09-03T08:57:00-05:00, hora_fin=08:58, campaign_id=20213, server_name=operacion-interna
+2026-09-03 08:49:19 - INFO - Campaña de programación simple guardada en DB con ID: 3
+2026-09-03 08:49:19 - INFO -  ✅ campaña programada creada para ID: 3 y se va a ejecutarse en 2026-09-03T08:57:00-05:00
+2026-09-03 08:49:45 - INFO - Datos recibidos para programación simple: {'nombre': 'prueba', 'bigquery_query': 'SELECT * FROM Temporal.sms_campaign_data', 'wolkvox_campaign_id': '20213', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-03T09:00', 'hora_fin': '09:01'}
+2026-09-03 08:49:45 - INFO - Programando Wolkvox simple: nombre=prueba, fecha_programada=2026-09-03T09:00:00-05:00, hora_fin=09:01, campaign_id=20213, server_name=operacion-interna
+2026-09-03 08:49:45 - INFO - Campaña de programación simple guardada en DB con ID: 4
+2026-09-03 08:49:45 - INFO -  ✅ campaña programada creada para ID: 4 y se va a ejecutarse en 2026-09-03T09:00:00-05:00
+2026-09-03 08:50:00 - INFO - Procesando campaña simple 1: prueba
+2026-09-03 08:50:00 - INFO - Campaña simple 1: hora_inicio=08:50, hora_fin=08:51, hora_actual=08:50, fecha_ejecucion=None
+2026-09-03 08:50:00 - INFO - Campaña simple 1 lista para ejecutar: hora_inicio=08:50, hora_fin=08:51, hora_actual=08:50
+2026-09-03 08:50:00 - INFO - Ejecutando campaña simple 1: prueba (tipo: simple)
+2026-09-03 08:50:00 - INFO - 📤 Ejecutando campaña simple 1: prueba
+2026-09-03 08:50:11 - INFO - Procesando campaña simple 2: prueba
+2026-09-03 08:50:11 - INFO - Campaña simple 2: hora_inicio=08:53, hora_fin=08:55, hora_actual=08:50, fecha_ejecucion=None
+2026-09-03 08:50:11 - INFO - Procesando campaña simple 3: prueba
+2026-09-03 08:50:11 - INFO - Campaña simple 3: hora_inicio=08:57, hora_fin=08:58, hora_actual=08:50, fecha_ejecucion=None
+2026-09-03 08:50:11 - INFO - Procesando campaña simple 4: prueba
+2026-09-03 08:50:11 - INFO - Campaña simple 4: hora_inicio=09:00, hora_fin=09:01, hora_actual=08:50, fecha_ejecucion=None
+2026-09-03 08:53:00 - INFO - Procesando campaña simple 1: prueba
+2026-09-03 08:53:00 - INFO - Procesando campaña simple 2: prueba
+2026-09-03 08:53:00 - INFO - Campaña simple 2: hora_inicio=08:53, hora_fin=08:55, hora_actual=08:53, fecha_ejecucion=None
+2026-09-03 08:53:00 - INFO - Campaña simple 2 lista para ejecutar: hora_inicio=08:53, hora_fin=08:55, hora_actual=08:53
+2026-09-03 08:53:00 - INFO - Ejecutando campaña simple 2: prueba (tipo: simple)
+2026-09-03 08:53:00 - INFO - 📤 Ejecutando campaña simple 2: prueba
+2026-09-03 08:53:12 - INFO - Procesando campaña simple 3: prueba
+2026-09-03 08:53:12 - INFO - Campaña simple 3: hora_inicio=08:57, hora_fin=08:58, hora_actual=08:53, fecha_ejecucion=None
+2026-09-03 08:53:12 - INFO - Procesando campaña simple 4: prueba
+2026-09-03 08:53:12 - INFO - Campaña simple 4: hora_inicio=09:00, hora_fin=09:01, hora_actual=08:53, fecha_ejecucion=None
+2026-09-03 08:57:00 - INFO - Procesando campaña simple 2: prueba
+2026-09-03 08:57:00 - INFO - Procesando campaña simple 3: prueba
+2026-09-03 08:57:00 - INFO - Campaña simple 3: hora_inicio=08:57, hora_fin=08:58, hora_actual=08:57, fecha_ejecucion=None
+2026-09-03 08:57:00 - INFO - Campaña simple 3 lista para ejecutar: hora_inicio=08:57, hora_fin=08:58, hora_actual=08:57
+2026-09-03 08:57:00 - INFO - Ejecutando campaña simple 3: prueba (tipo: simple)
+2026-09-03 08:57:00 - INFO - 📤 Ejecutando campaña simple 3: prueba
+2026-09-03 08:57:11 - INFO - Procesando campaña simple 4: prueba
+2026-09-03 08:57:11 - INFO - Campaña simple 4: hora_inicio=09:00, hora_fin=09:01, hora_actual=08:57, fecha_ejecucion=None
+2026-09-03 09:00:00 - INFO - Procesando campaña simple 3: prueba
+2026-09-03 09:00:00 - INFO - Procesando campaña simple 4: prueba
+2026-09-03 09:00:00 - INFO - Campaña simple 4: hora_inicio=09:00, hora_fin=09:01, hora_actual=09:00, fecha_ejecucion=None
+2026-09-03 09:00:00 - INFO - Campaña simple 4 lista para ejecutar: hora_inicio=09:00, hora_fin=09:01, hora_actual=09:00
+2026-09-03 09:00:00 - INFO - Ejecutando campaña simple 4: prueba (tipo: simple)
+2026-09-03 09:00:00 - INFO - 📤 Ejecutando campaña simple 4: prueba
+2026-09-03 09:14:25 - INFO - Datos recibidos para programación simple: {'nombre': 'prueba', 'bigquery_query': 'SELECT * FROM Temporal.sms_campaign_data where tel1  = "3144051619"', 'wolkvox_campaign_id': '20213', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-03T09:16', 'hora_fin': '09:17'}
+2026-09-03 09:14:25 - INFO - Programando Wolkvox simple: nombre=prueba, fecha_programada=2026-09-03T09:16:00-05:00, hora_fin=09:17, campaign_id=20213, server_name=operacion-interna
+2026-09-03 09:14:25 - INFO - Campaña de programación simple guardada en DB con ID: 5
+2026-09-03 09:14:25 - INFO -  ✅ campaña programada creada para ID: 5 y se va a ejecutarse en 2026-09-03T09:16:00-05:00
+2026-09-03 09:16:00 - INFO - Procesando campaña simple 4: prueba
+2026-09-03 09:16:00 - INFO - Campaña 20213 limpiada: HTTP 202
+2026-09-03 09:16:00 - INFO - Procesando campaña simple 5: prueba
+2026-09-03 09:16:00 - INFO - Campaña simple 5: hora_inicio=09:16, hora_fin=09:17, hora_actual=09:16, fecha_ejecucion=None
+2026-09-03 09:16:00 - INFO - Campaña simple 5 lista para ejecutar: hora_inicio=09:16, hora_fin=09:17, hora_actual=09:16
+2026-09-03 09:16:00 - INFO - Ejecutando campaña simple 5: prueba (tipo: simple)
+2026-09-03 09:16:00 - INFO - 📤 Ejecutando campaña simple 5: prueba
+2026-09-03 09:16:14 - INFO - 📊 Campaña simple 5 actualizada: 2 destinatarios
+<

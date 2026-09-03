@@ -276,7 +276,7 @@
           <!-- CONSULTA SQL -->
           <div class="sms-field">
             <label for="query">Consulta SQL <span class="badge-required">requerido</span></label>
-            <textarea id="query" name="bigquery_query" class="form-control textarea-code" placeholder="SELECT celular, nombre, monto FROM ..." rows="4" required>{{ campaign.bigquery_query if is_edit else "SELECT * FROM Temporal.sms_campaign_data where customer_id = " }}</textarea>
+            <textarea id="query" name="bigquery_query" class="form-control textarea-code" placeholder="SELECT celular, nombre, monto FROM ..." rows="4" required>{{ campaign.bigquery_query if is_edit else "SELECT * FROM Temporal.sms_campaign_data where tel1  = " }}</textarea>
             <div class="sms-help">
               <span>Incluye columna de teléfono: <code>telefono</code>, <code>celular</code>, <code>movil</code>, <code>phone</code>.</span>
               <span id="rowCount" style="font-weight:600;color:var(--sms-primary);">0 filas</span>
@@ -437,12 +437,6 @@
     document.getElementById('statValidos').textContent = data.records_sent || '—';
     document.getElementById('statBlacklist').textContent = data.records_blocked || '—';
     document.getElementById('statAEnviar').textContent = (data.records_sent || 0) - (data.records_blocked || 0) || '—';
-    
-    document.getElementById('valTotalConsulta').textContent = data.records_fetched || '—';
-    document.getElementById('valValidos').textContent = data.records_sent || '—';
-    document.getElementById('valBlacklist').textContent = data.records_blocked || '—';
-    document.getElementById('valAEnviar').textContent = (data.records_sent || 0) - (data.records_blocked || 0) || '—';
-    document.getElementById('validationDetail').style.display = 'block';
   }
 
   // ========== VALIDAR CONSULTA ==========
@@ -497,14 +491,6 @@
             document.getElementById('statBlacklist').textContent = dataStats.lista_negra || 0;
             document.getElementById('statAEnviar').textContent = dataStats.a_enviar || 0;
 
-            document.getElementById('valTotalConsulta').textContent = dataStats.total_consulta || 0;
-            document.getElementById('valValidos').textContent = dataStats.validos || 0;
-            document.getElementById('valInvalidos').textContent = dataStats.invalidos || 0;
-            document.getElementById('valDuplicados').textContent = dataStats.duplicados || 0;
-            document.getElementById('valBlacklist').textContent = dataStats.lista_negra || 0;
-            document.getElementById('valAEnviar').textContent = dataStats.a_enviar || 0;
-
-            document.getElementById('validationDetail').style.display = 'block';
             showToast('✅ Validación completa: ' + dataStats.a_enviar + ' a enviar', 'success');
         } else {
             showToast('❌ ' + dataStats.message, 'danger');
@@ -512,7 +498,6 @@
     } catch (e) {
         statusEl.className = 'status-pill err';
         statusEl.innerHTML = '❌ Error';
-        document.getElementById('validationDetail').style.display = 'none';
         showToast('❌ Error: ' + e.message, 'danger');
     }
   });
@@ -531,7 +516,6 @@
         document.getElementById('statValidos').textContent = '—';
         document.getElementById('statBlacklist').textContent = '—';
         document.getElementById('statAEnviar').textContent = '—';
-        document.getElementById('validationDetail').style.display = 'none';
       }
     } catch (e) {
       showResult(false, '❌ Error: ' + e.message);
