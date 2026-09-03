@@ -1,4 +1,4 @@
-﻿from datetime import datetime, date, timezone
+﻿from datetime import datetime, date, timezone,timedelta
 from flask import jsonify, render_template, request, send_from_directory, send_file
 from uuid import uuid4
 import io
@@ -12,6 +12,7 @@ import json
 import requests
 import re
 import pandas as pd
+COLOMBIA_TZ = timezone(timedelta(hours=-5))
 
 from backend import (
     app, db, scheduler, execute_pending_tasks, LOG_FILE,
@@ -55,25 +56,56 @@ from api_runner import (
 )
 from server_apis import load_assignment_matrix, set_server_api_active
 from dashboard import get_dashboard_data, refresh_dashboard_from_wolkvox
-from auto_campaigns import (
-    create_auto_campaign, delete_auto_campaign, get_auto_campaign,
-    list_auto_campaigns, list_execution_logs, parse_auto_campaign_id,
-    update_auto_campaign,
-)
 from auto_campaign_executor import (
-    is_auto_campaign_running, request_stop_auto_campaign,
+    is_auto_campaign_running,
+    request_stop_auto_campaign,
     start_auto_campaign_async,
+    fetch_data_from_bigquery,
+    _get_token,
+    _get_base_url_wolkvox,
+)
+from auto_campaigns import (
+    create_auto_campaign,
+    delete_auto_campaign,
+    get_auto_campaign,
+    list_auto_campaigns,
+    list_execution_logs,
+    parse_auto_campaign_id,
+    update_auto_campaign,
 )
 from services.email_client import EmailClient, EmailClientError
 from services.email_service import (
     EMAIL_LOG_TABLE, EmailServiceError, detectar_columna_email,
     construir_contenido, preview_email, guardar_email_log, extraer_variables,
 )
-
+import logging
 # ==================== CONFIGURACIÓN GLOBAL ====================
 PROJECT_ID = "capable-arbor-209819"
 bq_client = None
+import os
 
+
+ruta_log = os.path.abspath("Programacion_simple.log")
+
+logger_programacion = logging.getLogger("programacion_simple")
+
+logger_programacion.setLevel(logging.INFO)
+
+handler_programacion = logging.FileHandler(
+    ruta_log,
+    encoding="utf-8"
+)
+
+formatter_programacion = logging.Formatter(
+    '%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+handler_programacion.setFormatter(formatter_programacion)
+
+logger_programacion.addHandler(handler_programacion)
+
+logger_programacion.propagate = False
 
  #==================== PÁGINAS PRINCIPALES ====================
 
@@ -615,6 +647,51 @@ def _get_sms_rows(query):
     return result["rows"], None
 
 
+#--------------------------Normalizar telefnos ------------------------------------------------#
+def normalizar_telefono(telefono):
+    """
+    Normaliza un teléfono para comparación en lista negra
+    - Elimina caracteres no numéricos
+    - Elimina prefijo 57 y +57
+    - Maneja diferentes formatos (celulares, fijos, etc.)
+    """
+    import re
+    
+    if not telefono:
+        return ""
+    
+    # 1. Eliminar caracteres no numéricos
+    limpio = re.sub(r'[^0-9]', '', str(telefono))
+    
+    if not limpio:
+        return ""
+    
+    # 2. Eliminar prefijo 57 (si existe)
+    if limpio.startswith('57'):
+        limpio = limpio[2:]
+    
+    # 3. Eliminar prefijo +57 (por si acaso, después de limpiar)
+    if limpio.startswith('57'):
+        limpio = limpio[2:]
+    
+    # 4. Si tiene 9 al inicio y más de 10 dígitos, quitar el 9
+    if len(limpio) > 10 and limpio.startswith('9'):
+        limpio = limpio[1:]
+    
+    # 5. Si tiene 10 dígitos, es celular colombiano
+    if len(limpio) == 10:
+        return limpio
+    
+    # 6. Si tiene 7 dígitos, es fijo (asumimos Bogotá, código 1)
+    if len(limpio) == 7:
+        return f"1{limpio}"
+    
+    # 7. Si tiene 8 dígitos, es fijo con código de ciudad
+    if len(limpio) == 8:
+        return limpio
+    
+    # 8. Otros casos, devolver el número limpio sin modificar
+    return limpio
 
 #------------------------ Listas Negras --------------------------------------------#
 
@@ -901,121 +978,168 @@ def sms_validar():
         return jsonify({"success": False, "message": str(exc)}), 500
 
 
-# ==================== SMS - PROGRAMAR ====================
+# ==================== SMS - PROGRAMAR (SIMPLE) ====================
 
 @app.route("/api/sms/programar", methods=["POST"])
 def sms_schedule():
-    from datetime import timezone
+    """Programa un envío UNA sola vez a una fecha y hora específica."""
 
+    """ JSON  q se recibe del js de lo q envia el usuario """
     data = request.get_json(silent=True) or {}
     query = (data.get("query") or "").strip()
     plantilla = (data.get("plantilla") or "").strip()
-    when = (data.get("fecha_programada") or "").strip()
     campaign = (data.get("campana") or "").strip()
     usuario = (data.get("usuario") or "").strip()
     allow_resend = bool(data.get("confirmar_reenvio", False))
+    fecha_programada = (data.get("fecha_programada") or "").strip()
 
-    es_recurrente = bool(data.get("es_recurrente", False))
-    frecuencia_tipo = data.get("frecuencia_tipo") if es_recurrente else None
-    franja_horaria = data.get("franja_horaria") if es_recurrente else None
-    fecha_limite = data.get("fecha_limite") if es_recurrente else None
-    repeticiones_max = data.get("repeticiones_max") if es_recurrente else None
-
-    hora_inicio = None
-    hora_fin = None
-    frecuencia_valor = None
-    frecuencia_unidad = None
-
-    if es_recurrente:
-        if franja_horaria == 'mañana':
-            hora_inicio, hora_fin = '07:00', '12:00'
-        elif franja_horaria == 'tarde':
-            hora_inicio, hora_fin = '15:00', '18:00'
-        elif franja_horaria == 'noche':
-            hora_inicio, hora_fin = '18:00', '21:00'
-
-        if frecuencia_tipo == 'diario':
-            frecuencia_valor = 1
-            frecuencia_unidad = 'dias'
-        elif frecuencia_tipo == 'semanal':
-            frecuencia_valor = 7
-            frecuencia_unidad = 'dias'
-        elif frecuencia_tipo == 'mensual':
-            frecuencia_valor = 30
-            frecuencia_unidad = 'dias'
-
-    if not query or not plantilla or not when:
+    if not query or not plantilla or not fecha_programada:
         return jsonify({"success": False, "message": "Consulta, plantilla y fecha programada son obligatorias."}), 400
 
     try:
-        run_date = datetime.fromisoformat(when)
-        ahora_utc = datetime.now(timezone.utc)
+        # Convertir a datetime UTC
+        run_date = datetime.fromisoformat(fecha_programada)
         if run_date.tzinfo is None:
-            run_date = run_date.replace(tzinfo=timezone.utc)
-        if run_date <= ahora_utc:
-            raise SmsServiceError("La fecha programada debe ser futura.")
-        if es_recurrente and not fecha_limite and not repeticiones_max:
-            raise SmsServiceError("Define una fecha límite o máximo de repeticiones.")
+            run_date = run_date.replace(tzinfo=COLOMBIA_TZ)
+        
+        ahora_colombia = datetime.now(COLOMBIA_TZ)
 
+        # Validar que sea futura
+        if run_date <= ahora_colombia:
+            raise SmsServiceError("La fecha programada debe ser futura.")
+
+        # Ejecutar consulta y validar
         rows, error_response = _get_sms_rows(query)
         if error_response:
             return error_response
+
         mensajes_validos, _ = aplicar_validaciones(rows, plantilla, bq_client, allow_resend=allow_resend)
         if not mensajes_validos:
             raise SmsServiceError("La programación no tiene destinatarios válidos.")
 
+        # Guardar en BigQuery como SIMPLE
         schedule_id = guardar_programacion(
-            bq_client, query=query, plantilla=plantilla,
-            campaign=campaign, usuario=usuario,
-            scheduled_at=run_date.isoformat(), allow_resend=allow_resend,
+            bq_client,
+            query=query,
+            plantilla=plantilla,
+            campaign=campaign,
+            usuario=usuario,
+            allow_resend=allow_resend,
             total_dest=len(mensajes_validos),
-            es_recurrente=es_recurrente, frecuencia_tipo=frecuencia_tipo,
-            frecuencia_valor=frecuencia_valor, frecuencia_unidad=frecuencia_unidad,
-            franja_horaria=franja_horaria, hora_inicio=hora_inicio,
-            hora_fin=hora_fin, fecha_limite=fecha_limite,
-            repeticiones_max=repeticiones_max,
+            tipo_programacion="simple",
+            fecha_programada=run_date.isoformat(),
         )
 
+        # Crear job UNA SOLA VEZ
         scheduler.add_job(
-            execute_sms_schedule, trigger="date", run_date=run_date,
-            args=[schedule_id], id=f"sms_programado_{schedule_id}", replace_existing=True
+            execute_sms_schedule,
+            trigger="date",
+            run_date=run_date,
+            args=[schedule_id],
+            id=f"sms_simple_{schedule_id}",
+            replace_existing=True
         )
 
-        tipo = "recurrente" if es_recurrente else "simple"
-        response = {
-            "success": True, "id": schedule_id,
+        log_gui_action("SMS programado (simple)", programacion=schedule_id, fecha=run_date.isoformat())
+
+        return jsonify({
+            "success": True,
+            "id": schedule_id,
+            "tipo_programacion": "simple",
             "fecha_programada": run_date.isoformat(),
             "total_destinatarios": len(mensajes_validos),
-            "es_recurrente": es_recurrente,
-            "message": f"Envío SMS programado ({tipo})."
-        }
-        if es_recurrente:
-            response.update({
-                "frecuencia_tipo": frecuencia_tipo,
-                "franja_horaria": franja_horaria,
-                "fecha_limite": fecha_limite,
-                "repeticiones_max": repeticiones_max,
-            })
-        return jsonify(response)
+            "message": "SMS programado correctamente."
+        })
+
     except (ValueError, SmsServiceError) as exc:
         return jsonify({"success": False, "message": str(exc)}), 400
     except Exception as exc:
-        logger.exception("Error programando SMS")
+        logger.exception("Error programando SMS simple")
         return jsonify({"success": False, "message": str(exc)}), 500
 
 
-# ==================== SMS - EJECUTAR PROGRAMACIÓN ====================
+# ==================== SMS - PROGRAMAR (RECURRENTE) ====================
 
-def execute_sms_schedule(schedule_id: str):
-    """Job de APScheduler que ejecuta una programación y reprograma si es recurrente."""
+@app.route("/api/sms/programar-recurrente", methods=["POST"])
+def sms_schedule_recurrent():
+    """Programa un envío recurrente diario a una hora específica hasta fecha fin."""
+    data = request.get_json(silent=True) or {}
+    query = (data.get("query") or "").strip()
+    plantilla = (data.get("plantilla") or "").strip()
+    campaign = (data.get("campana") or "").strip()
+    usuario = (data.get("usuario") or "").strip()
+    allow_resend = bool(data.get("confirmar_reenvio", False))
+    hora_inicio = (data.get("hora_inicio") or "").strip()
+    fecha_fin = (data.get("fecha_fin") or "").strip() or None
+
+    if not query or not plantilla or not hora_inicio:
+        return jsonify({"success": False, "message": "Consulta, plantilla y hora son obligatorias."}), 400
+
+    # Validar formato de hora HH:MM
+    if not re.match(r'^\d{2}:\d{2}$', hora_inicio):
+        return jsonify({"success": False, "message": "Formato de hora inválido. Use HH:MM (ej: 08:00)."}), 400
+
     try:
-        from google.cloud import bigquery
-        from datetime import timedelta
+        # Ejecutar consulta y validar
+        rows, error_response = _get_sms_rows(query)
+        if error_response:
+            return error_response
 
+        mensajes_validos, _ = aplicar_validaciones(rows, plantilla, bq_client, allow_resend=allow_resend)
+        if not mensajes_validos:
+            raise SmsServiceError("La programación no tiene destinatarios válidos.")
+
+        # Guardar en BigQuery como RECURRENTE
+        schedule_id = guardar_programacion(
+            bq_client,
+            query=query,
+            plantilla=plantilla,
+            campaign=campaign,
+            usuario=usuario,
+            allow_resend=allow_resend,
+            total_dest=len(mensajes_validos),
+            tipo_programacion="recurrente",
+            hora_inicio=hora_inicio,
+            fecha_fin=fecha_fin,
+        )
+
+        # Crear job CADA HORA
+        scheduler.add_job(
+            execute_sms_schedule,
+            trigger="interval",
+            hours=10,
+            args=[schedule_id],
+            id=f"sms_recurrente_{schedule_id}",
+            replace_existing=True
+        )
+
+        log_gui_action("SMS programado (recurrente)", programacion=schedule_id, hora=hora_inicio, fecha_fin=fecha_fin)
+
+        return jsonify({
+            "success": True,
+            "id": schedule_id,
+            "tipo_programacion": "recurrente",
+            "hora_inicio": hora_inicio,
+            "fecha_fin": fecha_fin,
+            "total_destinatarios": len(mensajes_validos),
+            "message": f"SMS recurrente programado para las {hora_inicio}."
+        })
+
+    except (ValueError, SmsServiceError) as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+    except Exception as exc:
+        logger.exception("Error programando SMS recurrente")
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+#------------------Schedule de SMS --------------------------------
+def execute_sms_schedule(schedule_id: str):
+    """Job que ejecuta programaciones SIMPLES y RECURRENTES."""
+    try:
         client = bq_client or get_bigquery_client()
         if client is None:
             raise SmsServiceError("No se pudo conectar a BigQuery")
 
+        # 1. Obtener la programación
         query = f"""
             SELECT * FROM `{PROJECT_ID}.Temporal.ProgramacionSMS`
             WHERE id = '{schedule_id}' AND estado = 'pendiente'
@@ -1023,91 +1147,122 @@ def execute_sms_schedule(schedule_id: str):
         """
         df = client.query(query).to_dataframe()
         if df.empty:
-            logger.warning(f"Programación {schedule_id} no encontrada o ya ejecutada")
+            # Ya no está pendiente → eliminar job si existe
+            for prefix in ['sms_simple_', 'sms_recurrente_']:
+                try:
+                    scheduler.remove_job(f"{prefix}{schedule_id}")
+                except:
+                    pass
             return
 
         scheduled = df.iloc[0].to_dict()
-        infobip_config = (CONFIG or load_config()).get("infobip", {})
+        tipo = scheduled.get('tipo_programacion', 'simple')
+        ahora = datetime.now(COLOMBIA_TZ)
 
-        fetched = fetch_sms_query_rows(client, scheduled['consulta_sql'])
-        if not fetched.get("success"):
-            raise SmsServiceError(fetched.get("message", "Error en consulta"))
+        # 2. LÓGICA SEGÚN TIPO
+        if tipo == 'simple':
+            # ========== PROGRAMACIÓN SIMPLE ==========
+            logger.info(f"📤 Ejecutando programación SIMPLE: {schedule_id[:8]}")
+            
+            infobip_config = (CONFIG or load_config()).get("infobip", {})
+            fetched = fetch_sms_query_rows(client, scheduled['consulta_sql'])
+            if not fetched.get("success"):
+                raise SmsServiceError(fetched.get("message", "Error en consulta"))
 
-        enviar_sms_desde_filas(
-            fetched["rows"], scheduled['plantilla'], infobip_config,
-            client=client, usuario=scheduled.get('usuario', 'sistema'),
-            query_sql=scheduled['consulta_sql'],
-            allow_resend=bool(scheduled.get('confirmar_reenvio', False))
-        )
+            enviar_sms_desde_filas(
+                fetched["rows"], scheduled['plantilla'], infobip_config,
+                client=client, usuario=scheduled.get('usuario', 'sistema'),
+                query_sql=scheduled['consulta_sql'],
+                allow_resend=bool(scheduled.get('confirmar_reenvio', False))
+            )
 
-        es_recurrente = bool(scheduled.get('es_recurrente', False))
-        ahora = datetime.now(timezone.utc)
+            # Marcar como enviado
+            client.query(f"""
+                UPDATE `{PROJECT_ID}.Temporal.ProgramacionSMS`
+                SET estado = 'enviado', fecha_ejecucion = CURRENT_TIMESTAMP(),
+                    fecha_actualizacion = CURRENT_TIMESTAMP()
+                WHERE id = '{schedule_id}'
+            """).result()
 
-        if es_recurrente:
-            repeticiones_realizadas = int(scheduled.get('repeticiones_realizadas', 0) or 0) + 1
-            repeticiones_max = scheduled.get('repeticiones_max')
-            fecha_limite = scheduled.get('fecha_limite')
+            logger.info(f"✅ Simple enviado: {schedule_id[:8]}")
+
+        elif tipo == 'recurrente':
+            # ========== PROGRAMACIÓN RECURRENTE ==========
+            fecha_actual = ahora.strftime("%Y-%m-%d")
+            hora_actual = ahora.strftime("%H:%M")
             hora_inicio = scheduled.get('hora_inicio') or '08:00'
-            frecuencia_tipo = scheduled.get('frecuencia_tipo') or 'diario'
-            frecuencia_valor = int(scheduled.get('frecuencia_valor', 1) or 1)
+            fecha_fin = scheduled.get('fecha_fin')
+            fecha_ejecucion = scheduled.get('fecha_ejecucion')
 
-            limite_alcanzado = False
-            if repeticiones_max and repeticiones_realizadas >= int(repeticiones_max):
-                limite_alcanzado = True
-            if not limite_alcanzado and fecha_limite:
+            # CONDICIÓN 1: ¿Ya llegó la hora?
+            if hora_actual < hora_inicio:
+                logger.info(f"⏰ {schedule_id[:8]}: Aún no es la hora ({hora_actual} < {hora_inicio})")
+                return
+
+            # CONDICIÓN 2: ¿Ya se ejecutó HOY?
+            if fecha_ejecucion is not None:
                 try:
-                    fecha_lim = datetime.fromisoformat(str(fecha_limite))
-                    if fecha_lim.tzinfo is None:
-                        fecha_lim = fecha_lim.replace(tzinfo=timezone.utc)
-                    if ahora.date() >= fecha_lim.date():
-                        limite_alcanzado = True
+                    # Convertir a string seguro
+                    if hasattr(fecha_ejecucion, 'astimezone') and not pd.isna(fecha_ejecucion):
+                        fe_col = fecha_ejecucion.astimezone(COLOMBIA_TZ)
+                        fe_str = fe_col.strftime("%Y-%m-%d")
+                    elif hasattr(fecha_ejecucion, 'strftime') and not pd.isna(fecha_ejecucion):
+                        fe_str = fecha_ejecucion.strftime("%Y-%m-%d")
+                    else:
+                        fe_str = str(fecha_ejecucion)[:10]
+                    
+                    if fe_str == fecha_actual:
+                        logger.info(f"✅ {schedule_id[:8]}: Ya se ejecutó hoy ({fecha_actual})")
+                        return
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"⚠️ No se pudo parsear fecha_ejecucion: {e}")
+                    # Si no se puede parsear, asumir que NO se ha ejecutado
+                    pass
+
+            # CONDICIÓN 3: ¿Ya pasó la fecha fin?
+            if fecha_fin:
+                try:
+                    if fecha_actual > fecha_fin:
+                        logger.info(f"🛑 {schedule_id[:8]}: Ya pasó la fecha fin ({fecha_fin})")
+                        client.query(f"""
+                            UPDATE `{PROJECT_ID}.Temporal.ProgramacionSMS`
+                            SET estado = 'completado', fecha_actualizacion = CURRENT_TIMESTAMP()
+                            WHERE id = '{schedule_id}'
+                        """).result()
+                        try:
+                            scheduler.remove_job(f"sms_recurrente_{schedule_id}")
+                        except:
+                            pass
+                        return
                 except:
                     pass
 
-            if limite_alcanzado:
-                client.query(f"""
-                    UPDATE `{PROJECT_ID}.Temporal.ProgramacionSMS`
-                    SET estado = 'completado', repeticiones_realizadas = {repeticiones_realizadas},
-                        fecha_ejecucion = CURRENT_TIMESTAMP(), fecha_actualizacion = CURRENT_TIMESTAMP()
-                    WHERE id = '{schedule_id}'
-                """).result()
-            else:
-                hora, minuto = hora_inicio.split(':')
-                if frecuencia_tipo == 'diario':
-                    proxima_fecha = ahora + timedelta(days=1)
-                    if proxima_fecha.weekday() == 6:
-                        proxima_fecha += timedelta(days=1)
-                elif frecuencia_tipo == 'semanal':
-                    proxima_fecha = ahora + timedelta(days=7)
-                elif frecuencia_tipo == 'mensual':
-                    proxima_fecha = ahora + timedelta(days=30)
-                else:
-                    proxima_fecha = ahora + timedelta(days=frecuencia_valor)
+            # Si pasa todas las condiciones → ENVIAR
+            logger.info(f"📤 Ejecutando programación RECURRENTE: {schedule_id[:8]}")
+            infobip_config = (CONFIG or load_config()).get("infobip", {})
+            fetched = fetch_sms_query_rows(client, scheduled['consulta_sql'])
+            if not fetched.get("success"):
+                raise SmsServiceError(fetched.get("message", "Error en consulta"))
 
-                proxima_fecha = proxima_fecha.replace(hour=int(hora), minute=int(minuto), second=0, microsecond=0)
-                if proxima_fecha <= ahora:
-                    proxima_fecha += timedelta(days=1)
-                    if frecuencia_tipo == 'diario' and proxima_fecha.weekday() == 6:
-                        proxima_fecha += timedelta(days=1)
+            enviar_sms_desde_filas(
+                fetched["rows"], scheduled['plantilla'], infobip_config,
+                client=client, usuario=scheduled.get('usuario', 'sistema'),
+                query_sql=scheduled['consulta_sql'],
+                allow_resend=bool(scheduled.get('confirmar_reenvio', False))
+            )
 
-                client.query(f"""
-                    UPDATE `{PROJECT_ID}.Temporal.ProgramacionSMS`
-                    SET fecha_programada = '{proxima_fecha.strftime('%Y-%m-%d %H:%M:%S')}',
-                        repeticiones_realizadas = {repeticiones_realizadas},
-                        fecha_ejecucion = CURRENT_TIMESTAMP(), fecha_actualizacion = CURRENT_TIMESTAMP()
-                    WHERE id = '{schedule_id}'
-                """).result()
-
-                scheduler.add_job(
-                    execute_sms_schedule, trigger="date", run_date=proxima_fecha,
-                    args=[schedule_id], id=f"sms_programado_{schedule_id}", replace_existing=True
-                )
-        else:
+            # Actualizar fecha_ejecucion = hoy
             client.query(f"""
                 UPDATE `{PROJECT_ID}.Temporal.ProgramacionSMS`
-                SET estado = 'enviado', fecha_ejecucion = CURRENT_TIMESTAMP(), fecha_actualizacion = CURRENT_TIMESTAMP()
+                SET fecha_ejecucion = CURRENT_TIMESTAMP(),
+                    fecha_actualizacion = CURRENT_TIMESTAMP()
                 WHERE id = '{schedule_id}'
             """).result()
+
+            logger.info(f"✅ Recurrente enviado: {schedule_id[:8]}")
+
+        else:
+            logger.warning(f"⚠️ Tipo de programación desconocido: {tipo}")
 
         log_gui_action("SMS programado ejecutado", programacion=schedule_id)
 
@@ -1248,6 +1403,12 @@ def sms_blacklist():
         if "Not found" in str(exc):
             return jsonify({"success": True, "items": [], "read_only": True, "total": 0})
         return jsonify({"success": False, "message": str(exc)}), 500
+
+
+
+
+
+
 
 
 # ==================== SMS - OPERADORES / TIPOS / CATEGORÍAS ====================
@@ -2132,40 +2293,6 @@ def auto_campaigns_detail(campaign_id):
     return render_template("auto_campaigns/form.html", **_auto_campaign_form_context(campaign, logs))
 
 
-@app.route("/auto-campaigns/<int:campaign_id>", methods=["PUT", "POST"])
-def auto_campaigns_update(campaign_id):
-    data = request.get_json(silent=True) or request.form.to_dict()
-    result = update_auto_campaign(campaign_id, data)
-    if not result.get("success"):
-        return jsonify(result), 400
-    return jsonify(result)
-
-
-@app.route("/auto-campaigns/<int:campaign_id>", methods=["DELETE"])
-def auto_campaigns_delete(campaign_id):
-    result = delete_auto_campaign(campaign_id)
-    if not result.get("success"):
-        return jsonify(result), 400
-    return jsonify(result)
-
-
-@app.route("/auto-campaigns/<int:campaign_id>/run", methods=["POST"])
-def auto_campaigns_run(campaign_id):
-    if is_auto_campaign_running(campaign_id):
-        return jsonify({"success": False, "message": "La campaña ya está en ejecución."}), 409
-    started = start_auto_campaign_async(campaign_id, app)
-    if not started:
-        return jsonify({"success": False, "message": "La campaña ya está en ejecución."}), 409
-    return jsonify({"success": True, "message": "Ejecución iniciada."})
-
-
-@app.route("/auto-campaigns/<int:campaign_id>/stop", methods=["POST"])
-def auto_campaigns_stop(campaign_id):
-    stopped = request_stop_auto_campaign(campaign_id)
-    if not stopped:
-        return jsonify({"success": False, "message": "La campaña no está en ejecución."}), 404
-    return jsonify({"success": True, "message": "Solicitud de detención enviada."})
-
 
 @app.route("/auto-campaigns/<int:campaign_id>/report", methods=["GET"])
 def auto_campaigns_report(campaign_id):
@@ -2187,6 +2314,9 @@ def auto_campaigns_report(campaign_id):
     }
     bio = io.BytesIO(json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8"))
     return send_file(bio, as_attachment=True, download_name=f"auto_campaign_{campaign_id}_{log.id}.json", mimetype="application/json")
+
+
+
 
 
 @app.route("/auto-campaigns/validate-query-fields", methods=["POST"])
@@ -2244,6 +2374,109 @@ def auto_campaigns_validate_query_fields():
         return jsonify({"success": False, "message": str(exc)}), 500
 
 
+
+def validar_consulta_wolkvox(query):
+    """
+    Ejecuta BigQuery, filtra lista negra, valida teléfonos.
+    Devuelve registros válidos + estadísticas.
+    """
+    # 1. Ejecutar BigQuery
+    rows = fetch_data_from_bigquery(query)
+    if not rows:
+        raise ValueError("La consulta no retornó registros.")
+    
+    # 2. Detectar columna de teléfono
+    columnas = list(rows[0].keys())
+    telefono_col = None
+    for candidata in ['tel1', 'telefono', 'celular', 'Celular', 'movil', 'phone']:
+        if candidata in columnas:
+            telefono_col = candidata
+            break
+    
+    if not telefono_col:
+        raise ValueError(f"No se encontró columna de teléfono. Columnas: {columnas}")
+    
+    # 3. Filtrar lista negra y validar
+    blacklist = get_blacklist_phones()
+    registros_validos = []
+    registros_bloqueados = []
+    registros_invalidos = 0
+    
+    for row in rows:
+        telefono_raw = str(row.get(telefono_col, '')).strip()
+        telefono_limpio = re.sub(r'[^0-9]', '', telefono_raw)
+        
+        # Validar longitud mínima
+        if len(telefono_limpio) < 10:
+            registros_invalidos += 1
+            continue
+        
+        # Limpiar prefijo 57
+        if telefono_limpio.startswith('57') and len(telefono_limpio) == 12:
+            telefono_limpio = telefono_limpio[2:]
+        
+        # Lista negra
+        if telefono_limpio in blacklist:
+            registros_bloqueados.append({
+                'telefono': telefono_limpio,
+                'motivo': 'Lista negra'
+            })
+            continue
+        
+        registros_validos.append(row)
+    
+    # 4. Duplicados del día (compara con WolkvoxLog)
+    duplicados = 0
+    if registros_validos:
+        telefonos_validos = [
+            str(row.get(telefono_col, '')).strip() 
+            for row in registros_validos
+        ]
+        telefonos_limpios = []
+        for t in telefonos_validos:
+            t_limpio = re.sub(r'[^0-9]', '', t)
+            if t_limpio.startswith('57') and len(t_limpio) == 12:
+                t_limpio = t_limpio[2:]
+            telefonos_limpios.append(t_limpio)
+        
+        hoy = datetime.now(COLOMBIA_TZ).strftime("%Y-%m-%d")
+        telefonos_str = "', '".join(telefonos_limpios)
+        
+        query_dup = f"""
+            SELECT DISTINCT telefono
+            FROM `capable-arbor-209819.Temporal.WolkvoxLog`
+            WHERE DATE(fecha_carga) = '{hoy}'
+            AND telefono IN ('{telefonos_str}')
+        """
+        
+        try:
+            df_dup = bq_client.query(query_dup).to_dataframe()
+            duplicados = len(df_dup) if not df_dup.empty else 0
+        except:
+            duplicados = 0
+    
+    total_consulta = len(rows)
+    validos = len(registros_validos)
+    invalidos = registros_invalidos
+    lista_negra = len(registros_bloqueados)
+    
+    # 🆕 CORRECCIÓN: a_enviar = validos - duplicados (lista negra ya se excluyó de validos)
+    a_enviar = validos - duplicados
+    
+    return {
+        "success": True,
+        "rows": rows,
+        "telefono_col": telefono_col,
+        "registros_validos": registros_validos,
+        "registros_bloqueados": registros_bloqueados,
+        "total_consulta": total_consulta,
+        "validos": validos,
+        "invalidos": invalidos,
+        "duplicados": duplicados,
+        "lista_negra": lista_negra,
+        "a_enviar": a_enviar
+    }
+
 @app.route("/auto-campaigns/<int:campaign_id>/clear-wkv", methods=["DELETE"])
 def auto_campaigns_clear_wkv(campaign_id):
     from database import AutoCampaign
@@ -2273,10 +2506,217 @@ def auto_campaigns_clear_wkv(campaign_id):
         return jsonify({"success": False, "message": str(e)}), 500
 
 
+def Cargue_Wolkvox(campaign, token):
+    """
+    Formatea registros y envía a Wolkvox en lotes.
+    Usa validar_consulta_wolkvox para obtener registros válidos.
+    """
+    # 1. Validar consulta
+    validacion = validar_consulta_wolkvox(campaign.bigquery_query)
+    registros_validos = validacion["registros_validos"]
+    
+    if not registros_validos:
+        raise ValueError("Todos los registros fueron bloqueados por lista negra.")
+    
+    # 2. Formatear registros
+    records = []
+    for idx, row in enumerate(registros_validos):
+        
+        def formatear_telefono(telefono):
+            telefono = re.sub(r'[^0-9]', '', str(telefono))
+            if not telefono:
+                return "91570000000000"
+            if telefono.startswith('57'):
+                telefono = telefono[2:]
+            if telefono.startswith('+57'):
+                telefono = telefono[3:]
+            if telefono.startswith('9157'):
+                return telefono
+            return f"9157{telefono}"
+        
+        customer_id = str(row.get('customer_id', '')).strip()
+        if not customer_id or customer_id in ('nan', 'None'):
+            customer_id = str(row.get('tel1', f"CLI-{idx}")).strip()
+            if not customer_id or customer_id in ('nan', 'None'):
+                customer_id = f"CLI-{idx}"
+        
+        telefono_formateado = formatear_telefono(str(row.get('tel1', '')).strip())
+        
+        nombre = str(row.get('customer_name', '')).strip()
+        if not nombre or nombre in ('nan', 'None'):
+            nombre = 'Sin Nombre'
+        
+        apellido = str(row.get('customer_last_name', '')).strip()
+        if apellido in ('nan', 'None'):
+            apellido = ''
+        
+        email = str(row.get('email', '')).strip()
+        if email in ('nan', 'None'):
+            email = ''
+        
+        record = {
+            "customer_name": nombre,
+            "customer_last_name": apellido,
+            "id_type": "CC",
+            "customer_id": customer_id,
+            "tel1": telefono_formateado,
+            "tel2": "", "tel3": "", "tel4": "", "tel5": "",
+            "tel6": "", "tel7": "", "tel8": "", "tel9": "", "tel10": "",
+            "tel_extra": "",
+            "email": email,
+            "age": "", "gender": "", "country": "", "state": "",
+            "city": "", "zone": "", "address": "",
+            "opt1": str(row.get('fecha_pago', '')),
+            "opt2": str(row.get('valor_pagar', '')),
+            "opt3": str(row.get('segmento', '')),
+            "opt4": str(row.get('empresa', '')),
+            "opt5": str(row.get('fecha_pago_2', '')),
+            "opt6": str(row.get('valor_pagar_2', '')),
+            "opt7": str(row.get('valor_oferta_esp', '')),
+            "opt8": str(row.get('valor_oferta_esp_2', '')),
+            "opt9": str(row.get('cuotas', '')),
+            "opt10": str(row.get('porcentaje', '')),
+            "opt11": str(row.get('porcentaje_2', '')),
+            "opt12": str(row.get('link_pago', '')),
+            "recall_date": "",
+            "recall_telephone": ""
+        }
+        records.append(record)
+        # 2.1 COONSTRUIR SEÑUELOS
+
+    senuelos_data_ = [
+        
+        #("Camilo", "3015007868","10000000000"),
+        ]
+    logger.info(f"Agregando {len(senuelos_data_)} señuelos a la campaña {campaign.name} (ID: {campaign.id})")
+    start_id = len(records) + 1
+    for i, (nombre, telefono, customer_id) in enumerate(senuelos_data_, start=start_id):
+
+            telefono_formateado = formatear_telefono(telefono)
+            Señuelos = {
+                "customer_name": nombre,
+                "customer_last_name": apellido,
+                "id_type": "CC",
+                "customer_id": customer_id,
+                "tel1": telefono_formateado,
+                "tel2": "", "tel3": "", "tel4": "", "tel5": "",
+                "tel6": "", "tel7": "", "tel8": "", "tel9": "", "tel10": "",
+                "tel_extra": "",
+                "email": email,
+                "age": "", "gender": "", "country": "", "state": "",
+                "city": "", "zone": "", "address": "",
+                "opt1": str(row.get('fecha_pago', '')),
+                "opt2": str(row.get('valor_pagar', '')),
+                "opt3": str(row.get('segmento', '')),
+                "opt4": str(row.get('empresa', '')),
+                "opt5": str(row.get('fecha_pago_2', '')),
+                "opt6": str(row.get('valor_pagar_2', '')),
+                "opt7": str(row.get('valor_oferta_esp', '')),
+                "opt8": str(row.get('valor_oferta_esp_2', '')),
+                "opt9": str(row.get('cuotas', '')),
+                "opt10": str(row.get('porcentaje', '')),
+                "opt11": str(row.get('porcentaje_2', '')),
+                "opt12": str(row.get('link_pago', '')),
+                "recall_date": "",
+                "recall_telephone": ""
+            }
+            records.append(Señuelos)
+            logger.info(f"Señuelo agregado: {nombre}, {telefono_formateado}, {customer_id}")
+        
+    # 3. Construir URL de Wolkvox
+    server_mapping = {
+        "operacion-interna": "https://wv0016.wolkvox.com",
+        "qnt_digital": "https://wv0010.wolkvox.com/",
+        "qnt_juridico_blaster": "https://wv0016.wolkvox.com",
+        "qnt_cobro_blaster": "https://wv0016.wolkvox.com",
+        "Qnt_RBK_blaster": "https://wv0016.wolkvox.com",
+        "Qnt_recaudo_blaster": "https://wv0016.wolkvox.com",
+    }
+    server_url = server_mapping.get(campaign.server_name, "https://wv0016.wolkvox.com")
+    
+    url = f"{server_url}/api/v2/campaign.php"
+    params = {
+        "api": "add_record",
+        "type_campaign": campaign.campaign_type or "predictive",
+        "campaign_id": campaign.wolkvox_campaign_id,
+        "campaign_status": "1"
+    }
+    
+    # 4. Enviar en lotes
+    headers = {"wolkvox-token": token, "Content-Type": "application/json"}
+    batch_size = 100
+    total_enviados = 0
+    errores = []
+    
+    for i in range(0, len(records), batch_size):
+        batch = records[i:i+batch_size]
+        try:
+            response = requests.post(url, params=params, headers=headers, json=batch, timeout=60)
+            if response.status_code in [200, 201]:
+                total_enviados += len(batch)
+            else:
+                errores.append({
+                    "status": response.status_code,
+                    "response": response.text[:500]
+                })
+        except Exception as e:
+            errores.append({"error": str(e)})
+    
+    # 5. Guardar en WolkvoxLog
+    if records:
+        try:
+            guardar_wolkvox_log(bq_client, records, campaign, usuario='sistema')
+        except Exception as e:
+            logger.warning(f"Error guardando WolkvoxLog: {e}")
+    
+    # 6. Devolver resultado
+    return {
+        "success": len(errores) == 0,
+        "records_sent": total_enviados,
+        "records_fetched": validacion["total_consulta"],
+        "records_blocked": validacion["lista_negra"],
+        "records_failed": len(records) - total_enviados,
+        "duplicados": validacion["duplicados"],
+        "invalidos": validacion["invalidos"],
+        "errors": errores,
+        "message": f"{total_enviados} registros cargados. {validacion['lista_negra']} bloqueados."
+    }
+
+@app.route("/api/wolkvox/validar", methods=["POST"])
+def wolkvox_validar():
+    """Valida consulta y devuelve estadísticas."""
+    global bq_client
+    if bq_client is None:
+        init_bigquery()
+    if bq_client is None:
+        return jsonify({"success": False, "message": "No se pudo inicializar BigQuery."}), 500
+    
+    data = request.get_json(silent=True) or {}
+    query = (data.get("query") or "").strip()
+    
+    if not query:
+        return jsonify({"success": False, "message": "Consulta SQL requerida"}), 400
+    
+    try:
+        resultado = validar_consulta_wolkvox(query)
+        return jsonify({
+            "success": True,
+            "total_consulta": resultado["total_consulta"],
+            "validos": resultado["validos"],
+            "invalidos": resultado["invalidos"],
+            "duplicados": resultado["duplicados"],
+            "lista_negra": resultado["lista_negra"],
+            "a_enviar": resultado["a_enviar"]
+        })
+    except Exception as exc:
+        logger.exception("Error validando consulta Wolkvox")
+        return jsonify({"success": False, "message": str(exc)}), 500
+
 @app.route("/auto-campaigns/<int:campaign_id>/load-wkv", methods=["POST"])
 def auto_campaigns_load_wkv(campaign_id):
+    """Carga registros manualmente a Wolkvox."""
     from database import AutoCampaign, AutoCampaignExecutionLog, db
-    from auto_campaign_executor import fetch_data_from_bigquery, _get_token
+    from auto_campaign_executor import _get_token
 
     campaign = AutoCampaign.query.get(campaign_id)
     if not campaign:
@@ -2286,149 +2726,327 @@ def auto_campaigns_load_wkv(campaign_id):
     if not token:
         return jsonify({"success": False, "message": "No se encontró token Wolkvox."}), 400
 
-    server_mapping = {
-        "operacion-interna": "https://wv0016.wolkvox.com",
-        "qnt_digital": "https://wv0016.wolkvox.com",
-        "qnt_juridico_blaster": "https://wv0016.wolkvox.com",
-        "qnt_cobro_blaster": "https://wv0016.wolkvox.com",
-        "Qnt_RBK_blaster": "https://wv0016.wolkvox.com",
-        "Qnt_recaudo_blaster": "https://wv0016.wolkvox.com",
-    }
-    server_url = server_mapping.get(campaign.server_name, "https://wv0016.wolkvox.com")
-
-    url = f"{server_url}/api/v2/campaign.php"
-    params = {
-        "api": "add_record",
-        "type_campaign": campaign.campaign_type or "predictive",
-        "campaign_id": campaign.wolkvox_campaign_id,
-        "campaign_status": "1"
-    }
-
-    log = AutoCampaignExecutionLog(auto_campaign_id=campaign.id, start_time=datetime.now(timezone.utc))
+    log = AutoCampaignExecutionLog(
+        auto_campaign_id=campaign.id,
+        start_time=datetime.now(timezone.utc)
+    )
     db.session.add(log)
     db.session.commit()
 
     try:
-        rows = fetch_data_from_bigquery(campaign.bigquery_query)
-        log.records_fetched = len(rows)
-        if not rows:
-            raise ValueError("La consulta no retornó registros.")
+        #  Llamar a la función para cargar los datos a wolkbox
+        resultado = Cargue_Wolkvox(campaign, token)
 
-        blacklist = get_blacklist_phones()
-        registros_validos = []
-        registros_bloqueados = []
+        # Actualizar log
+        log.records_fetched = resultado.get("records_fetched", 0)
+        log.records_sent = resultado.get("records_sent", 0)
+        log.records_failed = resultado.get("records_failed", 0)
+        log.end_time = datetime.now(timezone.utc)
+        db.session.commit()
 
-        for row in rows:
-            telefono_raw = str(row.get('tel1', '')).strip()
-            telefono_limpio = re.sub(r'[^0-9]', '', telefono_raw)
-            if telefono_limpio.startswith('57'):
-                telefono_limpio = telefono_limpio[2:]
-            if telefono_limpio in blacklist:
-                registros_bloqueados.append({'row': row, 'telefono': telefono_limpio, 'motivo': 'Lista negra'})
-            else:
-                registros_validos.append(row)
+        return jsonify(resultado)
 
-        if not registros_validos:
-            raise ValueError("Todos los registros fueron bloqueados por lista negra.")
-
-        records = []
-        for idx, row in enumerate(registros_validos):
-            def formatear_telefono(telefono):
-                telefono = re.sub(r'[^0-9]', '', str(telefono))
-                if not telefono:
-                    return "91570000000000"
-                if telefono.startswith('57'):
-                    telefono = telefono[2:]
-                if telefono.startswith('+57'):
-                    telefono = telefono[3:]
-                if telefono.startswith('9157'):
-                    return telefono
-                return f"9157{telefono}"
-
-            customer_id = str(row.get('customer_id', '')).strip()
-            if not customer_id or customer_id in ('nan', 'None'):
-                customer_id = str(row.get('tel1', f"CLI-{idx}")).strip()
-                if not customer_id or customer_id in ('nan', 'None'):
-                    customer_id = f"CLI-{idx}"
-
-            telefono_formateado = formatear_telefono(str(row.get('tel1', '')).strip())
-
-            nombre = str(row.get('customer_name', '')).strip()
-            if not nombre or nombre in ('nan', 'None'):
-                nombre = 'Sin Nombre'
-
-            apellido = str(row.get('customer_last_name', '')).strip()
-            if apellido in ('nan', 'None'):
-                apellido = ''
-
-            email = str(row.get('email', '')).strip()
-            if email in ('nan', 'None'):
-                email = ''
-
-            record = {
-                "customer_name": nombre, "customer_last_name": apellido,
-                "id_type": "CC", "customer_id": customer_id,
-                "tel1": telefono_formateado,
-                "tel2": "", "tel3": "", "tel4": "", "tel5": "",
-                "tel6": "", "tel7": "", "tel8": "", "tel9": "", "tel10": "",
-                "tel_extra": "", "email": email,
-                "age": "", "gender": "", "country": "", "state": "",
-                "city": "", "zone": "", "address": "",
-                "opt1": str(row.get('fecha_pago', '')), "opt2": str(row.get('valor_pagar', '')),
-                "opt3": str(row.get('segmento', '')), "opt4": str(row.get('empresa', '')),
-                "opt5": str(row.get('fecha_pago_2', '')), "opt6": str(row.get('valor_pagar_2', '')),
-                "opt7": str(row.get('valor_oferta_esp', '')), "opt8": str(row.get('valor_oferta_esp_2', '')),
-                "opt9": str(row.get('cuotas', '')), "opt10": str(row.get('porcentaje', '')),
-                "opt11": str(row.get('porcentaje_2', '')), "opt12": str(row.get('link_pago', '')),
-                "recall_date": "", "recall_telephone": ""
-            }
-            records.append(record)
-
-        headers = {"wolkvox-token": token, "Content-Type": "application/json"}
-        batch_size = 100
-        total_enviados = 0
-        errores = []
-
-        for i in range(0, len(records), batch_size):
-            batch = records[i:i+batch_size]
-            try:
-                response = requests.post(url, params=params, headers=headers, json=batch, timeout=60)
-                if response.status_code in [200, 201]:
-                    total_enviados += len(batch)
-                else:
-                    errores.append({"status": response.status_code, "response": response.text[:500]})
-            except Exception as e:
-                errores.append({"error": str(e)})
-
-        if len(errores) == 0:
-            log.records_sent = total_enviados
-            log.end_time = datetime.now(timezone.utc)
-            db.session.commit()
-            return jsonify({
-                "success": True, "records_sent": total_enviados,
-                "records_fetched": log.records_fetched,
-                "records_blocked": len(registros_bloqueados),
-                "message": f"{total_enviados} registros cargados. {len(registros_bloqueados)} bloqueados."
-            })
-        else:
-            log.records_failed = len(records) - total_enviados
-            log.error_message = f"Errores en {len(errores)} lotes"
-            log.end_time = datetime.now(timezone.utc)
-            db.session.commit()
-            return jsonify({
-                "success": False, "records_sent": total_enviados,
-                "records_fetched": log.records_fetched,
-                "records_blocked": len(registros_bloqueados),
-                "message": f"{total_enviados} de {len(records)} cargados.",
-                "errors": errores
-            }), 207
     except Exception as e:
         db.session.rollback()
         log.end_time = datetime.now(timezone.utc)
         log.error_message = str(e)
-        log.records_failed = log.records_fetched or 0
         db.session.commit()
         return jsonify({"success": False, "message": str(e)}), 500
+
+
+#============= Programcion Simple ==================#
+@app.route("/auto-campaigns/programar", methods=["POST"])
+def campaigns_schedule_simple():
+    """Programa un envío UNA sola vez con datos del formulario."""
+    from database import ProgramacionCampana, db
+
+    data = request.get_json(silent=True) or {}
+    logger_programacion.info(f"Datos recibidos para programación simple: {data}")
+    # 1. Leer TODOS los datos del formulario
+    nombre = (data.get("nombre") or "").strip()
+    bigquery_query = (data.get("bigquery_query") or "").strip()
+    wolkvox_campaign_id = (data.get("wolkvox_campaign_id") or "").strip()  # ← AÑADE
+
+    server_name = (data.get("server_name") or "").strip()
+    campaign_type = (data.get("campaign_type") or "predictive").strip()
+    fecha_programada = (data.get("fecha_programada") or "").strip()
+    hora_terminar = (data.get("hora_fin" )or "").strip()
+
+
+    # 2. Validar campos obligatorios
+    if not nombre:
+        return jsonify({"success": False, "message": "El nombre es obligatorio."}), 400
+    if not bigquery_query:
+        return jsonify({"success": False, "message": "La consulta SQL es obligatoria."}), 400
+    if not wolkvox_campaign_id:
+        return jsonify({"success": False, "message": "El Campaign ID es obligatorio."}), 400
+    if not server_name:
+        return jsonify({"success": False, "message": "El servidor es obligatorio."}), 400
+    if not fecha_programada:
+        return jsonify({"success": False, "message": "La fecha programada es obligatoria."}), 400
+    if not hora_terminar:
+        return jsonify({"success":False, "message": " No ahi una fecha para terminar la programcion"}), 400
+    try:
+        # 3. Convertir y validar fecha
+        run_date = datetime.fromisoformat(fecha_programada)
+        if run_date.tzinfo is None:
+            run_date = run_date.replace(tzinfo=COLOMBIA_TZ)
+        if run_date <= datetime.now(COLOMBIA_TZ):
+            return jsonify({"success": False, "message": "La fecha debe ser futura."}), 400
+
+        try:
+            hora_fin = datetime.strptime(hora_terminar, "%H:%M").strftime("%H:%M")
+        except ValueError:
+            return jsonify({
+                "success": False,
+                "message": "Formato de hora de finalización inválido. Use HH:MM."
+            }), 400
+        ahora = datetime.now(COLOMBIA_TZ)
+
+        logger_programacion.info(f"Programando Wolkvox simple: nombre={nombre}, fecha_programada={run_date.isoformat()}, hora_fin={hora_fin}, campaign_id={wolkvox_campaign_id}, server_name={server_name}")
+        # 4. Guardar en SQLite
+        nueva = ProgramacionCampana(
+            nombre=nombre,
+            bigquery_query=bigquery_query,
+            wolkvox_campaign_id=wolkvox_campaign_id,
+            server_name=server_name,
+            tipo_programacion='simple',
+            fecha_programada=run_date,
+            hora_inicio=run_date.strftime('%H:%M'),  # Guardar hora inicio
+            hora_fin=hora_fin,
+            fecha_creacion = ahora,
+            estado='pendiente'
+        )
+        db.session.add(nueva)
+        db.session.commit()
+
+        logger_programacion.info(f"Campaña de programación simple guardada en DB con ID: {nueva.id}")
+        # 5. Crear job UNA vez
+        scheduler.add_job(
+            execute_wolkvox_schedule,
+            trigger="date",
+            run_date=run_date,
+            id=f"wolkvox_simple_{nueva.id}",
+            replace_existing=True,
+        )
+
+        logger_programacion.info(f" ✅ campaña programada creada para ID: {nueva.id} y se va a ejecutarse en {run_date.isoformat()}")
+
+        return jsonify({
+            "success": True,
+            "id": nueva.id,
+            "tipo_programacion": "simple",
+            "fecha_programada": run_date.isoformat(),
+            "message": "Programación simple creada."
+        })
+
+    except Exception as exc:
+        db.session.rollback()
+        logger_programacion.exception("Error programando Wolkvox simple")
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+# ==================== PROGRAMAR RECURRENTE ====================
+
+@app.route("/auto-campaigns/programar-recurrente", methods=["POST"])
+def campaigns_schedule_recurrent():
+    """Programa un envío recurrente diario con datos del formulario."""
+    from database import ProgramacionCampana, db
+
+    data = request.get_json(silent=True) or {}
+
+    nombre = (data.get("nombre") or "").strip()
+    bigquery_query = (data.get("bigquery_query") or "").strip()
+    wolkvox_campaign_id = (data.get("wolkvox_campaign_id") or "").strip()
+    server_name = (data.get("server_name") or "").strip()
+    campaign_type = (data.get("campaign_type") or "predictive").strip()
+    hora_inicio = (data.get("hora_inicio") or "").strip()
+    fecha_fin = (data.get("fecha_fin") or "").strip() or None
+
+    # 2. Validar campos obligatorios
+    if not nombre:
+        return jsonify({"success": False, "message": "El nombre es obligatorio."}), 400
+    if not bigquery_query:
+        return jsonify({"success": False, "message": "La consulta SQL es obligatoria."}), 400
+   
+    if not server_name:
+        return jsonify({"success": False, "message": "El servidor es obligatorio."}), 400
+    if not hora_inicio:
+        return jsonify({"success": False, "message": "La hora de envío es obligatoria."}), 400
+    if not re.match(r'^\d{2}:\d{2}$', hora_inicio):
+        return jsonify({"success": False, "message": "Formato de hora inválido. Use HH:MM."}), 400
+
+    if not wolkvox_campaign_id:
+        return jsonify({"success": False, "message": "El Campaign ID es obligatorio."}), 400
+
+    try:
+        nueva = ProgramacionCampana(
+            nombre=nombre,
+            bigquery_query=bigquery_query,
+            wolkvox_campaign_id=wolkvox_campaign_id,
+            server_name=server_name,
+            tipo_programacion='recurrente',
+            hora_inicio=hora_inicio,
+            fecha_fin=fecha_fin,
+            estado='pendiente'
+        )
+        db.session.add(nueva)
+        db.session.commit()
+
+        scheduler.add_job(
+            execute_wolkvox_schedule,
+            trigger="interval",
+            hours=10,
+            id=f"wolkvox_recurrente_{nueva.id}",
+            replace_existing=True
+        )
+
+        logger_programacion.info(f"Programación recurrente creada para ID: {nueva.id}")
+        return jsonify({"success": True, "id": nueva.id, "message": "Programación recurrente creada."})
+    except Exception as exc:
+        db.session.rollback()
+        logger_programacion.exception("Error programando Wolkvox recurrente")
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+# ==================== SCHEDULER ====================
+def execute_wolkvox_schedule():
+    """Busca y ejecuta todas las programaciones pendientes de Wolkvox."""
+    from database import ProgramacionCampana, db
+
+    with app.app_context():
+        try:
+            pendientes = ProgramacionCampana.query.filter_by(estado='pendiente').all()
+
+            if not pendientes:
+                return
+
+            ahora = datetime.now(COLOMBIA_TZ)
+            hoy_str = ahora.strftime("%Y-%m-%d")
+            hora_actual = ahora.strftime("%H:%M")
+
+            for prog in pendientes:
+                try:
+                    # ================== RECURRENTE ==================
+                    if prog.tipo_programacion == 'recurrente':
+                        if hora_actual < prog.hora_inicio:
+                            continue
+
+                        if prog.fecha_ejecucion:
+                            fe_ejec = prog.fecha_ejecucion.strftime("%Y-%m-%d")
+                            if fe_ejec == hoy_str:
+                                continue
+
+                        if prog.fecha_fin and hoy_str > prog.fecha_fin:
+                            prog.estado = 'completado'
+                            db.session.commit()
+    
+                            continue
+
+                        logger_programacion.info(f"Procesando programación {prog.id}: {prog.nombre} (tipo: {prog.tipo_programacion})")
+
+                    # ==================== SIMPLE ====================
+                    elif prog.tipo_programacion == 'simple':
+                        logger_programacion.info(f"Procesando campaña simple {prog.id}: {prog.nombre}")
+                        # COND 1: ¿Ya pasó la hora fin? -> limpiar SIEMPRE,
+                        # se haya ejecutado o no.
+                        if prog.hora_fin and hora_actual >= prog.hora_fin:
+                            token_clear = _get_token_desde_server(prog.server_name)
+                            if token_clear:
+                                try:
+                                    base_url = _get_base_url_wolkvox(prog.server_name)
+                                    clear_url = f"{base_url}/api/v2/campaign.php"
+                                    clear_params = {
+                                        "api": "clear_campaign",
+                                        "type_campaign": "predictive",
+                                        "campaign_id": prog.wolkvox_campaign_id,
+                                    }
+                                    clear_resp = requests.delete(
+                                        clear_url, params=clear_params,
+                                        headers={"wolkvox-token": token_clear},
+                                        timeout=60,
+                                    )
+                                    logger_programacion.info(f"Campaña {prog.wolkvox_campaign_id} limpiada: HTTP {clear_resp.status_code}")
+                                    if not clear_resp.ok:
+                                        logger.warning(
+                                            f"No se pudo limpiar campaña {prog.wolkvox_campaign_id} "
+                                            f"(prog {prog.id}): HTTP {clear_resp.status_code}"
+                                        )
+                                except Exception:
+                                    logger.exception(
+                                        f"Error limpiando campaña de programación {prog.id}"
+                                    )
+                            else:
+                                logger.warning(f"Sin token para limpiar programación {prog.id}")
+
+                            prog.estado = 'completado'
+                            db.session.commit()
+
+                            try:
+                                scheduler.remove_job(f"wolkvox_simple_{prog.id}")
+                            except Exception:
+                                pass
+                            continue
+
+                        # COND 2: ¿Ya se ejecutó? -> no volver a ejecutar,
+                        # solo esperar a que llegue hora_fin para limpiar.
+                        if prog.fecha_ejecucion:
+                            logger_programacion.info(f"Campaña simple {prog.id} ya ejecutada a las {prog.fecha_ejecucion}")
+
+                            continue
+                        logger_programacion.info(f"Campaña simple {prog.id}: hora_inicio={prog.hora_inicio}, hora_fin={prog.hora_fin}, hora_actual={hora_actual}, fecha_ejecucion={prog.fecha_ejecucion}")
+                        # COND 3: ¿Ya llegó la hora de inicio?
+                        if hora_actual < prog.hora_inicio:
+                            continue
+                        logger_programacion.info(f"Campaña simple {prog.id} lista para ejecutar: hora_inicio={prog.hora_inicio}, hora_fin={prog.hora_fin}, hora_actual={hora_actual}")
+                    else:
+                        logger_programacion.info(f"Procesando campaña simple  {prog.id}: {prog.nombre} (tipo: {prog.tipo_programacion})")
+
+                    logger_programacion.info(f"Ejecutando campaña simple {prog.id}: {prog.nombre} (tipo: {prog.tipo_programacion})")
+
+                     
+                    # 3. Obtener token
+                    token = _get_token_desde_server(prog.server_name)
+                    if not token:
+                        logger_programacion.warning(f"Sin token para ejecutar campaña simple {prog.id}")
+                        continue  # reintenta en el próximo barrido
+
+                    # 4. Crear objeto temporal
+                    class CampaignWrapper:
+                        pass
+
+                    campaign = CampaignWrapper()
+                    campaign.id = prog.id
+                    campaign.name = prog.nombre
+                    campaign.bigquery_query = prog.bigquery_query
+                    campaign.wolkvox_campaign_id = prog.wolkvox_campaign_id
+                    campaign.server_name = prog.server_name
+                    campaign.campaign_type = 'predictive'
+
+                    # 5. Ejecutar carga (UNA sola vez, para ambos tipos)
+                    logger_programacion.info(f"📤 Ejecutando campaña simple {prog.id}: {prog.nombre}")
+                    resultado = Cargue_Wolkvox(campaign, token)
+
+                    # 6. Actualizar registro
+                    prog.fecha_ejecucion = ahora
+                    prog.total_destinatarios = resultado.get("records_sent", 0)
+                    prog.fecha_actualizacion = datetime.now(COLOMBIA_TZ)
+                    logger_programacion.info(f"📊 Campaña simple {prog.id} actualizada: {prog.total_destinatarios} destinatarios")
+
+                    if prog.tipo_programacion == 'recurrente':
+                        
+                        prog.estado = 'enviado' if resultado.get("success") else 'fallido'
+                  
+                    db.session.commit()
+
+                except Exception as e:
+                    logger.exception(f"Error con campaña simple {prog.id}")
+                    if prog.tipo_programacion == 'recurrente':
+                        prog.estado = 'fallido'
+                        db.session.commit()
+                    
+        except Exception as exc:
+            logger.exception("Error en scheduler Wolkvox")
+
 
 
 @app.route("/auto-campaigns/<int:campaign_id>/start-wkv", methods=["POST"])
@@ -2475,8 +3093,226 @@ def auto_campaigns_stop_wkv(campaign_id):
         return jsonify({"success": False, "message": f"Error HTTP {response.status_code}", "detail": response.text[:500]}), 500
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+#===========================Programacion Robot=========================================#
+
+import logging
+logger = logging.getLogger(__name__)
 
 
+# ================== LISTAR PROGRAMACIONES (API) ==================
+@app.route("/api/programaciones", methods=["GET"])
+def list_programacion():
+    from database import ProgramacionCampana, db
+
+    query = ProgramacionCampana.query
+
+    estado = request.args.get("estado")
+    if estado:
+        query = query.filter_by(estado=estado)
+
+    tipo = request.args.get("tipo_programacion")
+    if tipo:
+        query = query.filter_by(tipo_programacion=tipo)
+
+    programaciones = query.order_by(ProgramacionCampana.id.desc()).all()
+
+    data = []
+    for prog in programaciones:
+        data.append({
+            'id': prog.id,
+            'nombre': prog.nombre,
+            'campana_id': prog.campana_id,
+            'bigquery_query': prog.bigquery_query,
+            'wolkvox_campaign_id': prog.wolkvox_campaign_id,
+            'server_name': prog.server_name,
+            'tipo_programacion': prog.tipo_programacion,
+            'fecha_programada': prog.fecha_programada.isoformat() if prog.fecha_programada else None,
+            'hora_inicio': prog.hora_inicio,
+            'hora_fin': prog.hora_fin,
+            'fecha_fin': prog.fecha_fin,
+            'estado': prog.estado,
+            'fecha_ejecucion': prog.fecha_ejecucion.isoformat() if prog.fecha_ejecucion else None,
+            'total_destinatarios': prog.total_destinatarios,
+            'fecha_creacion': prog.fecha_creacion.isoformat() if prog.fecha_creacion else None,
+            'fecha_actualizacion': prog.fecha_actualizacion.isoformat() if prog.fecha_actualizacion else None,
+        })
+
+    return jsonify({
+        "success": True,
+        "total": len(data),
+        "data": data
+    }), 200
+# ================== VER UNA ==================
+
+@app.route("/auto-campaigns/programaciones/<int:prog_id>", methods=["GET"])
+def get_programacion(prog_id):
+    from database import ProgramacionCampana
+
+    prog = ProgramacionCampana.query.get(prog_id)
+    if not prog:
+        return jsonify({"success": False, "error": "Programación no encontrada"}), 404
+
+    # ✅ Serializar a diccionario según tu modelo
+    return jsonify({
+        "success": True,
+        "data": {
+            'id': prog.id,
+            'nombre': prog.nombre,
+            'campana_id': prog.campana_id,
+            'bigquery_query': prog.bigquery_query,
+            'wolkvox_campaign_id': prog.wolkvox_campaign_id,
+            'server_name': prog.server_name,
+            'tipo_programacion': prog.tipo_programacion,
+            'fecha_programada': prog.fecha_programada.isoformat() if prog.fecha_programada else None,
+            'hora_inicio': prog.hora_inicio,
+            'hora_fin': prog.hora_fin,
+            'fecha_fin': prog.fecha_fin,
+            'estado': prog.estado,
+            'fecha_ejecucion': prog.fecha_ejecucion.isoformat() if prog.fecha_ejecucion else None,
+            'total_destinatarios': prog.total_destinatarios,
+            'fecha_creacion': prog.fecha_creacion.isoformat() if prog.fecha_creacion else None,
+            'fecha_actualizacion': prog.fecha_actualizacion.isoformat() if prog.fecha_actualizacion else None,
+        }
+    }), 200
+
+
+# ================== EDITAR ==================
+
+@app.route("/auto-campaigns/programaciones/<int:prog_id>", methods=["PATCH"])
+def editar_programacion(prog_id):
+    from database import ProgramacionCampana, db
+    from datetime import datetime
+    import re
+
+    prog = ProgramacionCampana.query.get(prog_id)
+    if not prog:
+        return jsonify({"success": False, "error": "Programación no encontrada"}), 404
+
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({"success": False, "error": "JSON inválido o vacío"}), 400
+
+    # Columnas válidas de tu modelo
+    columnas_validas = {
+        'nombre', 'campana_id', 'bigquery_query', 'wolkvox_campaign_id',
+        'server_name', 'tipo_programacion', 'fecha_programada', 'hora_inicio',
+        'hora_fin', 'fecha_fin', 'estado', 'total_destinatarios'
+    }
+
+    campos_ignorados = []
+    campos_actualizados = []
+
+    for campo, valor in body.items():
+        if campo not in columnas_validas:
+            campos_ignorados.append(campo)
+            continue
+        
+        # 🔥 CONVERTIR fecha_programada de string a datetime
+        if campo == 'fecha_programada' and valor:
+            try:
+                if isinstance(valor, str):
+                    # Intentar formato ISO (2026-09-01T16:51)
+                    if 'T' in valor:
+                        valor = datetime.fromisoformat(valor)
+                    else:
+                        valor = datetime.strptime(valor, "%Y-%m-%d %H:%M:%S")
+                # Si ya es datetime, usarlo tal cual
+            except (ValueError, TypeError) as e:
+                return jsonify({
+                    "success": False, 
+                    "error": f"Formato de fecha inválido: {valor}. Use formato ISO (YYYY-MM-DDTHH:MM)"
+                }), 400
+        elif campo == 'fecha_programada' and not valor:
+            # Si viene vacío o null, mantenerlo como None
+            valor = None
+        
+        # Validar formato de hora_fin (HH:MM)
+        if campo == 'hora_fin' and valor:
+            if not re.match(r'^\d{2}:\d{2}$', valor):
+                return jsonify({
+                    "success": False, 
+                    "error": f"Formato de hora inválido: {valor}. Use HH:MM"
+                }), 400
+        
+        setattr(prog, campo, valor)
+        campos_actualizados.append(campo)
+
+    if not campos_actualizados:
+        return jsonify({
+            "success": False,
+            "error": "No se envió ningún campo válido para actualizar",
+            "campos_ignorados": campos_ignorados,
+        }), 400
+
+    try:
+        # Actualizar fecha_actualizacion
+        prog.fecha_actualizacion = datetime.utcnow()
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.exception(f"Error editando programación {prog_id}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+    logger.info(f"✏️ Programación {prog_id} actualizada: {campos_actualizados}")
+
+    return jsonify({
+        "success": True,
+        "campos_actualizados": campos_actualizados,
+        "campos_ignorados": campos_ignorados,
+        "data": {
+            'id': prog.id,
+            'nombre': prog.nombre,
+            'campana_id': prog.campana_id,
+            'bigquery_query': prog.bigquery_query,
+            'wolkvox_campaign_id': prog.wolkvox_campaign_id,
+            'server_name': prog.server_name,
+            'tipo_programacion': prog.tipo_programacion,
+            'fecha_programada': prog.fecha_programada.isoformat() if prog.fecha_programada else None,
+            'hora_inicio': prog.hora_inicio,
+            'hora_fin': prog.hora_fin,
+            'fecha_fin': prog.fecha_fin,
+            'estado': prog.estado,
+            'fecha_ejecucion': prog.fecha_ejecucion.isoformat() if prog.fecha_ejecucion else None,
+            'total_destinatarios': prog.total_destinatarios,
+            'fecha_creacion': prog.fecha_creacion.isoformat() if prog.fecha_creacion else None,
+            'fecha_actualizacion': prog.fecha_actualizacion.isoformat() if prog.fecha_actualizacion else None,
+        }
+    }), 200
+
+@app.route("/auto-campaigns/programaciones/<int:prog_id>", methods=["DELETE"])
+def eliminar_programacion(prog_id):
+    from database import ProgramacionCampana, db
+
+    prog = ProgramacionCampana.query.get(prog_id)
+    if not prog:
+        return jsonify({"success": False, "error": "Programación no encontrada"}), 404
+
+    # Si tiene job en scheduler, lo removemos
+    try:
+        scheduler.remove_job(f"wolkvox_simple_{prog.id}")
+    except Exception:
+        pass
+    try:
+        scheduler.remove_job(f"wolkvox_recurrente_{prog.id}")
+    except Exception:
+        pass
+
+    try:
+        db.session.delete(prog)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.exception(f"Error eliminando programación {prog_id}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+    logger.info(f"🗑️ Programación {prog_id} eliminada")
+
+    return jsonify({"success": True, "message": f"Programación {prog_id} eliminada"}), 200
+
+
+
+
+#=========Informacion Campañas Wolkvox=======================#
 @app.route("/api/servers/<server_name>/url", methods=["GET"])
 def get_server_url(server_name):
     try:
@@ -2489,7 +3325,108 @@ def get_server_url(server_name):
         return jsonify({"success": False, "message": "Servidor no encontrado"}), 404
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+def _get_token_desde_server(server_name):
+    """Obtiene token de Wolkvox desde config.json según server_name."""
+    from backend import get_authorization_headers, load_config
+    
+    load_config()
+    headers = get_authorization_headers(server_name or None)
+    return headers.get("wolkvox-token") or ""
 
+
+
+# ==================== funcion para guardar logs en Wolkvox ====================
+def guardar_wolkvox_log(client, records, campaign, usuario='sistema', resultado='enviado'):
+    """Guarda cada registro enviado a Wolkvox en BigQuery."""
+    from google.cloud import bigquery
+    
+    if not records:
+        return
+    
+    now = datetime.now(COLOMBIA_TZ).isoformat()
+    batch_size = 200
+    total_guardados = 0
+    
+    for i in range(0, len(records), batch_size):
+        batch = records[i:i+batch_size]
+        
+        insert_sql = """
+        INSERT INTO `capable-arbor-209819.Temporal.WolkvoxLog`
+        (id, telefono, customer_id, customer_name, customer_last_name, email,
+         fecha_pago, fecha_pago_2, valor_pagar, valor_pagar_2,
+         valor_oferta_esp, valor_oferta_esp_2, cuotas, porcentaje, porcentaje_2,
+         segmento, link_pago, id_campana_origen, id_mensaje,
+         descripcion_campana, objetivo_campana, nombre_banco, nombre_campana,
+         canal_ley, ley_contacto, empresa, nit_empresa, direccion_cliente,
+         valor_capital, valor_total, campana_id, campana_nombre,
+         usuario, resultado, error, fecha_carga)
+        VALUES
+        """
+        
+        value_rows = []
+        parameters = []
+        
+        for idx, record in enumerate(batch):
+            value_rows.append(f"""
+                (@id_{idx}, @telefono_{idx}, @customer_id_{idx}, @customer_name_{idx},
+                 @customer_last_name_{idx}, @email_{idx}, @fecha_pago_{idx}, @fecha_pago_2_{idx},
+                 @valor_pagar_{idx}, @valor_pagar_2_{idx}, @valor_oferta_esp_{idx},
+                 @valor_oferta_esp_2_{idx}, @cuotas_{idx}, @porcentaje_{idx},
+                 @porcentaje_2_{idx}, @segmento_{idx}, @link_pago_{idx},
+                 @id_campana_origen_{idx}, @id_mensaje_{idx}, @descripcion_campana_{idx},
+                 @objetivo_campana_{idx}, @nombre_banco_{idx}, @nombre_campana_{idx},
+                 @canal_ley_{idx}, @ley_contacto_{idx}, @empresa_{idx},
+                 @nit_empresa_{idx}, @direccion_cliente_{idx}, @valor_capital_{idx},
+                 @valor_total_{idx}, @campana_id_{idx}, @campana_nombre_{idx},
+                 @usuario_{idx}, @resultado_{idx}, @error_{idx}, @fecha_carga_{idx})
+            """)
+            
+            parameters.extend([
+                bigquery.ScalarQueryParameter(f"id_{idx}", "STRING", str(uuid4())),
+                bigquery.ScalarQueryParameter(f"telefono_{idx}", "STRING", record.get('tel1', '')),
+                bigquery.ScalarQueryParameter(f"customer_id_{idx}", "STRING", record.get('customer_id', '')),
+                bigquery.ScalarQueryParameter(f"customer_name_{idx}", "STRING", record.get('customer_name', '')),
+                bigquery.ScalarQueryParameter(f"customer_last_name_{idx}", "STRING", record.get('customer_last_name', '')),
+                bigquery.ScalarQueryParameter(f"email_{idx}", "STRING", record.get('email', '')),
+                bigquery.ScalarQueryParameter(f"fecha_pago_{idx}", "STRING", record.get('opt1', '')),
+                bigquery.ScalarQueryParameter(f"fecha_pago_2_{idx}", "STRING", record.get('opt5', '')),
+                bigquery.ScalarQueryParameter(f"valor_pagar_{idx}", "STRING", record.get('opt2', '')),
+                bigquery.ScalarQueryParameter(f"valor_pagar_2_{idx}", "STRING", record.get('opt6', '')),
+                bigquery.ScalarQueryParameter(f"valor_oferta_esp_{idx}", "STRING", record.get('opt7', '')),
+                bigquery.ScalarQueryParameter(f"valor_oferta_esp_2_{idx}", "STRING", record.get('opt8', '')),
+                bigquery.ScalarQueryParameter(f"cuotas_{idx}", "STRING", record.get('opt9', '')),
+                bigquery.ScalarQueryParameter(f"porcentaje_{idx}", "STRING", record.get('opt10', '')),
+                bigquery.ScalarQueryParameter(f"porcentaje_2_{idx}", "STRING", record.get('opt11', '')),
+                bigquery.ScalarQueryParameter(f"segmento_{idx}", "STRING", record.get('opt3', '')),
+                bigquery.ScalarQueryParameter(f"link_pago_{idx}", "STRING", record.get('opt12', '')),
+                bigquery.ScalarQueryParameter(f"id_campana_origen_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"id_mensaje_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"descripcion_campana_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"objetivo_campana_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"nombre_banco_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"nombre_campana_{idx}", "STRING", campaign.name if campaign else ''),
+                bigquery.ScalarQueryParameter(f"canal_ley_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"ley_contacto_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"empresa_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"nit_empresa_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"direccion_cliente_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"valor_capital_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"valor_total_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"campana_id_{idx}", "STRING", str(campaign.id) if campaign else ''),
+                bigquery.ScalarQueryParameter(f"campana_nombre_{idx}", "STRING", campaign.name if campaign else ''),
+                bigquery.ScalarQueryParameter(f"usuario_{idx}", "STRING", usuario),
+                bigquery.ScalarQueryParameter(f"resultado_{idx}", "STRING", resultado),
+                bigquery.ScalarQueryParameter(f"error_{idx}", "STRING", ''),
+                bigquery.ScalarQueryParameter(f"fecha_carga_{idx}", "TIMESTAMP", now),
+            ])
+        
+        insert_sql += ", ".join(value_rows)
+        job_config = bigquery.QueryJobConfig(query_parameters=parameters)
+        
+        client.query(insert_sql, job_config=job_config).result()
+        total_guardados += len(batch)
+    
+    logger.info(f"✅ {total_guardados} registros guardados en WolkvoxLog")
 
 # ==================== DASHBOARD ====================
 
@@ -2498,15 +3435,88 @@ def api_dashboard():
     return jsonify({"success": True, **get_dashboard_data()})
 
 
+#https://wv0016.wolkvox.com/api/v2/real_time.php?api=campaigns
+# == Listar informacion de las campañas de wolkvox=====#
 @app.route("/api/dashboard/refresh", methods=["POST"])
 def api_dashboard_refresh():
+    from backend import total_campañas_hoy
+    
     try:
-        payload = refresh_dashboard_from_wolkvox()
-        return jsonify({"success": True, **payload})
+        # Ejecutar la función (¡no olvides los paréntesis!)
+        datos_campañas = total_campañas_hoy()
+        campañas = datos_campañas.get("campañas", [])
+        
+        # Calcular estadísticas
+        total_campanas = len(campañas)
+        total_clientes = sum(int(c.get("records", 0) ) for c in campañas)
+        total_llamados = sum(int(c.get("dial", 0) ) for c in campañas)
+        total_contactados = sum(int(c.get("answer", 0) ) for c in campañas)
+        total_pendientes = total_clientes - total_contactados
+        llamadas_x_minuto = sum(int(c.get("calls_x_min",0))for c in campañas)
+        
+        # Calcular porcentaje de progreso
+        porcentaje = 0
+        if total_clientes > 0:
+            porcentaje = round((total_contactados / total_clientes) * 100, 1)
+        
+        # Procesar campañas para la tabla
+        campañas_procesadas = []
+        for c in campañas:
+            # Extraer ID del nombre (ej: "20717 - Digital_hostil_2")
+            nombre_completo = c.get("campaign", "Sin nombre")
+            camp_id = nombre_completo.split("-")[0].strip() if "-" in nombre_completo else nombre_completo
+            
+            estado = c.get("status", "desconocido")
+            estado_label = {
+                "started": "En curso",
+                "stopped": "Detenida",
+                "paused": "Pausada",
+                "finished": "Terminada"
+            }.get(estado, estado.capitalize())
+            
+            campañas_procesadas.append({
+                "nombre": nombre_completo,
+                "id": camp_id,
+                "servidor": c.get("servidor", "No asignado"),
+                "tipo": "Predictivo",
+                "estado": estado,
+                "estado_label": estado_label,
+                "records": int(c.get("records", 0) or 0),
+                "dial": int(c.get("dial", 0) or 0),
+                "answer": int(c.get("answer", 0) or 0),
+                "clean": int(c.get("clean", 0) or 0),
+                "clientes": int(c.get("records", 0) or 0),
+                "llamados": int(c.get("dial", 0) or 0),
+                "contactados": int(c.get("answer", 0) or 0),
+                "llamadas_x_minuto": int(c.get("calls_x_min", 0) or 0),
+                "faltantes": int(c.get("records", 0) or 0) - int(c.get("answer", 0) or 0)
+            })
+        
+        # Estructurar datos para el frontend
+        data = {
+            "campañas": campañas_procesadas,
+            "servidores_count": len(datos_campañas.get("servidores", [])),
+            "porcentaje_progreso": f"{porcentaje}%",
+            "clientes_contactados": total_contactados,
+            "clientes_pendientes": total_pendientes,
+            "total_campanas": total_campanas,
+            "total_clientes": total_clientes,
+            "total_llamados": total_llamados,
+            "llamadas_x_minuto": llamadas_x_minuto
+        }
+        
+        return jsonify({
+            "success": True,
+            "data": data,
+            "timestamp": datetime.now().isoformat()
+        })
+
     except Exception as exc:
+        import traceback
+        traceback.print_exc()
         return jsonify({"success": False, "message": str(exc)}), 500
 
-
+    
 @app.route("/api/recent_logs", methods=["GET"])
 def api_recent_logs():
     return jsonify(read_recent_log_lines(50))
@@ -2520,6 +3530,78 @@ def download_file(filename):
         return jsonify({"error": "Archivo no encontrado"}), 404
 
 
+# ================== RUTAS PARA LOS NUEVOS TEMPLATES ==================
+
+@app.route("/auto-campaigns/form")
+def auto_campaigns_form():
+    """Página para crear/editar campaña"""
+    campaign_id = request.args.get("id")
+    campaign = None
+    if campaign_id:
+        from database import AutoCampaign
+        campaign = AutoCampaign.query.get(int(campaign_id))
+
+    result = load_servers()
+    servers = result.get("servers", []) if result.get("success") else []
+    return render_template("auto_campaigns/form.html", campaign=campaign, servers=servers)
+
+@app.route("/auto-campaigns/programar")
+def auto_campaigns_programar():
+    """Página para programar envíos"""
+    result = load_servers()
+    servers = result.get("servers", []) if result.get("success") else []
+    return render_template("auto_campaigns/programar.html", servers=servers)
+
+@app.route("/auto-campaigns/ver_programaciones")
+def auto_campaigns_programaciones():
+    """Página para ver todas las programaciones"""
+    result = load_servers()
+    servers = result.get("servers", []) if result.get("success") else []
+    return render_template("auto_campaigns/programaciones.html", servers=servers)
+# ================== API PROGRAMACIONES ==================
+@app.route("/api/programaciones", methods=["GET"])
+def api_list_programaciones():
+    """API para listar programaciones (JSON)"""
+    from database import ProgramacionCampana
+
+    query = ProgramacionCampana.query
+
+    estado = request.args.get("estado")
+    if estado:
+        query = query.filter_by(estado=estado)
+
+    tipo = request.args.get("tipo_programacion")
+    if tipo:
+        query = query.filter_by(tipo_programacion=tipo)
+
+    programaciones = query.order_by(ProgramacionCampana.id.desc()).all()
+
+    data = []
+    for prog in programaciones:
+        data.append({
+            'id': prog.id,
+            'nombre': prog.nombre,
+            'campana_id': prog.campana_id,
+            'bigquery_query': prog.bigquery_query,
+            'wolkvox_campaign_id': prog.wolkvox_campaign_id,
+            'server_name': prog.server_name,
+            'tipo_programacion': prog.tipo_programacion,
+            'fecha_programada': prog.fecha_programada.isoformat() if prog.fecha_programada else None,
+            'hora_inicio': prog.hora_inicio,
+            'hora_fin': prog.hora_fin,
+            'fecha_fin': prog.fecha_fin,
+            'estado': prog.estado,
+            'fecha_ejecucion': prog.fecha_ejecucion.isoformat() if prog.fecha_ejecucion else None,
+            'total_destinatarios': prog.total_destinatarios,
+            'fecha_creacion': prog.fecha_creacion.isoformat() if prog.fecha_creacion else None,
+            'fecha_actualizacion': prog.fecha_actualizacion.isoformat() if prog.fecha_actualizacion else None,
+        })
+
+    return jsonify({
+        "success": True,
+        "total": len(data),
+        "data": data
+    }), 200
 # ==================== MAIN ====================
 
 if __name__ == "__main__":

@@ -1,25 +1,25 @@
-from google.cloud import bigquery
+import logging
+import os
 
-client = bigquery.Client()
+LOG_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "prueba.log"
+)
 
-query = """
-    SELECT 
-        id,
-        fecha_programada,
-        fecha_creacion,
-        fecha_actualizacion,
-        fecha_ejecucion
-    FROM `capable-arbor-209819.Temporal.ProgramacionSMS`
-    ORDER BY fecha_programada DESC
-"""
+logging.basicConfig(
+    filename=LOG_FILE,
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    force=True
+)
 
-df = client.query(query).to_dataframe()
+logger = logging.getLogger(__name__)
 
-# Ver cuáles son NULL
-print("¿Hay NaT en fecha_creacion?:", df['fecha_creacion'].isna().any())
-print("¿Hay NaT en fecha_actualizacion?:", df['fecha_actualizacion'].isna().any())
-print("¿Hay NaT en fecha_ejecucion?:", df['fecha_ejecucion'].isna().any())
+print("Directorio actual:", os.getcwd())
+print("Ruta del log:", LOG_FILE)
 
-# Mostrar filas con NaT
-print("\nFilas con NaT:")
-print(df[df.isna().any(axis=1)])
+logger.info("🔥 PRUEBA DE LOG")
+logger.info("El archivo debería haberse creado")
+
+print("¿Existe el archivo?", os.path.exists(LOG_FILE))

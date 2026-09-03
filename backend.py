@@ -8,7 +8,7 @@ from collections import deque
 import requests
 from datetime import datetime
 from pathlib import Path
-from flask import Flask
+from flask import Flask, current_app
 from database import db, init_db, Campaign, ScheduledCSV, APIEndpoint, ScheduledQuery
 from auto_campaigns import check_auto_campaigns_schedule
 from werkzeug.utils import secure_filename
@@ -22,6 +22,9 @@ from general_params import (
     get_console_message_interval_seconds,
     get_log_retention_hours,
 )
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from servers import get_server
 
 # - ScheduledCSV: Modelo para tareas CSV programadas
@@ -201,7 +204,10 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 init_db(app)
 scheduler = BackgroundScheduler()
 scheduler.start()
-
+for job in scheduler.get_jobs():
+    if job.id.startswith('wolkvox_'):
+        scheduler.remove_job(job.id)
+        print(f"🗑️ Job viejo eliminado: {job.id}")
 UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 DOWNLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 load_config()
@@ -594,6 +600,148 @@ def execute_pending_tasks():
             log_task(f"Error revisando campañas automáticas: {e}", level="ERROR")
             db.session.rollback()
 
+#=============Elimina datos de las campñas============================
+def limpiar_campanas_wolkvox_diario():
+    """Limpia todas las campañas detenidas en Wolkvox a las 7 p. m."""
+    from auto_campaign_executor import _get_base_url_wolkvox
+
+    servidores = [
+        "operacion-interna",
+        "qnt_digital",
+        "qnt_juridico_blaster",
+        "qnt_cobro_blaster",
+        "Qnt_RBK_blaster",
+        "Qnt_recaudo_blaster",
+    ]
+
+    total_limpiadas = 0
+
+    with app.app_context():
+        for servidor in servidores:
+            try:
+                token = _obtener_token_servidor(servidor)
+                if not token:
+                    logger.warning(f"⚠️ Sin token para {servidor}")
+                    continue
+
+                base_url = _get_base_url_wolkvox(servidor)
+                url = f"{base_url}/api/v2/information.php?api=campaigns"
+
+                resp = requests.get(url, headers={"wolkvox-token": token}, timeout=60)
+
+                if not resp.ok:
+                    logger.warning(f"⚠️ {servidor}: HTTP {resp.status_code}")
+                    continue
+
+                campanas = resp.json().get("data", [])
+
+                for camp in campanas:
+                    campaign_id = str(camp.get("campaign_id", "")).strip()
+                    status = str(camp.get("status", "")).strip().lower()
+                    records = str(camp.get("records", "0")).strip()
+                    type_campaign = str(camp.get("type_campaign", "predictive")).strip()
+
+                    # 🆕 Solo detenidas
+                    if status != "stopped":
+                        continue
+
+                    logger.info(f"🧹 Limpiando {camp.get('campaign_name')} (ID={campaign_id})")
+
+                    clear_url = f"{base_url}/api/v2/campaign.php"
+                    clear_params = {
+                        "api": "clear_campaign",
+                        "type_campaign": type_campaign,
+                        "campaign_id": campaign_id,
+                    }
+
+                    clear_resp = requests.delete(
+                        clear_url,
+                        params=clear_params,
+                        headers={"wolkvox-token": token},
+                        timeout=60,
+                    )
+
+                    if clear_resp.ok:
+                        total_limpiadas += 1
+                        logger.info(f"✅ {camp.get('campaign_name')} limpiada")
+                    else:
+                        logger.warning(f"❌ No se pudo limpiar {campaign_id}: HTTP {clear_resp.status_code}")
+
+            except Exception as e:
+                logger.warning(f"❌ Error en {servidor}: {e}")
+
+        logger.info(f"🏁 Limpieza diaria Wolkvox finalizada. Total limpiadas: {total_limpiadas}")
+servidores = [
+        "operacion-interna",
+        "qnt_digital",
+        "qnt_juridico_blaster",
+        "qnt_cobro_blaster",
+        "Qnt_RBK_blaster",
+        "Qnt_recaudo_blaster",
+    ]
+
+def _fetch_servidor(servidor, app):
+    """Trae las campañas de UN servidor. Corre en un hilo del pool."""
+    from auto_campaign_executor import _get_base_url_wolkvox
+    with app.app_context():
+        try:
+            token = _obtener_token_servidor(servidor)
+            if not token:
+                logger.warning(f"⚠️ Sin token para {servidor}")
+                return servidor, []
+
+            base_url = _get_base_url_wolkvox(servidor)
+            url = f"{base_url}/api/v2/real_time.php?api=campaigns"
+            resp = requests.get(url, headers={"wolkvox-token": token}, timeout=20)
+
+            if not resp.ok:
+                logger.warning(f"⚠️ {servidor}: HTTP {resp.status_code}")
+                return servidor, []
+
+            campanas = resp.json().get("data", [])
+            for c in campanas:
+                c["servidor"] = servidor
+            logger.info(f"✅ {servidor}: {len(campanas)} campañas")
+            return servidor, campanas
+        except Exception as e:
+            logger.warning(f"❌ Error en {servidor}: {e}")
+            return servidor, []
+
+
+def total_campañas_hoy(app=None):
+    """Versión CONCURRENTE: consulta todos los servidores al mismo tiempo."""
+    app = app or current_app._get_current_object()
+
+    todas_las_campañas = []
+    servidores_activos = []
+
+    with ThreadPoolExecutor(max_workers=len(servidores)) as executor:
+        futures = {executor.submit(_fetch_servidor, s, app): s for s in servidores}
+        for future in as_completed(futures):
+            servidor, campanas = future.result()
+            if campanas:
+                todas_las_campañas.extend(campanas)
+                servidores_activos.append(servidor)
+
+    logger.info(f"📊 Total campañas: {len(todas_las_campañas)}")
+    return {
+        "campañas": todas_las_campañas,
+        "servidores": servidores_activos,
+        "total": len(todas_las_campañas),
+    }
+
+#============Toker de wokvox
+def _obtener_token_servidor(server_name):
+    """Obtiene el token Wolkvox de un servidor específico."""
+    try:
+        srv = get_server(server_name)
+        if srv:
+            token = srv.get("token") or ""
+            return token.strip() or None
+    except Exception:
+        pass
+    return None
+
 
 # ========== EJECUTAR BIGQUERY_PROCESSOR ==========
 def ejecutar_bigquery_processor(fecha: str = None):
@@ -757,6 +905,12 @@ scheduler.add_job(
     id=CONSOLE_MESSAGE_JOB_ID,
     replace_existing=True,
     next_run_time=_now,
+)
+scheduler.add_job(
+    limpiar_campanas_wolkvox_diario,
+    trigger=CronTrigger(hour=19, minute=0),
+    id="limpiar_campanas_wolkvox_diario",
+    replace_existing=True,
 )
 logger.info(
     f"Scheduler de campañas iniciado: cada {_initial_interval} segundos"

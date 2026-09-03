@@ -481,9 +481,9 @@ def procesar_datos(
 
     # Normalizar tipos
     if "DATE" in df.columns:
-        if df["DATE"].dtype == "object":
+        if not pd.api.types.is_datetime64_any_dtype(df["DATE"]):
             df["DATE"] = pd.to_datetime(df["DATE"], errors="coerce")
-    
+
     if "Contacto__c" in df.columns:
 
         df["Contacto__c"] = df["Contacto__c"].astype(str).str.strip()
@@ -689,6 +689,10 @@ def procesar_datos(
             df_venta["HORA_VENTA"] = 0
 
 
+
+#=================== VENTAS =====================
+
+
         df = df.merge(
             df_venta[["Contacto__c", "Fecha_dia", "Venta_Humano_aux","HORA_VENTA"]],
             on=["Contacto__c", "Fecha_dia"],
@@ -868,7 +872,7 @@ def convertir_tipos_bq(df: pd.DataFrame) -> pd.DataFrame:
 
 def subir_a_embudos_robot(df_procesado: pd.DataFrame, fecha: str, client) -> bool:
     """
-    🔥 ÚNICA FUNCIÓN DE SUBIDA - SOLO A Embudos_Robot_Advanced
+     ÚNICA FUNCIÓN DE SUBIDA - SOLO A Embudos_Robot_Advanced
     """
     if df_procesado.empty:
         logger.warning("⚠️ DataFrame vacío, nada que subir")

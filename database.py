@@ -198,6 +198,27 @@ class SmsLog(db.Model):
     fecha_creacion = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     fecha_envio = db.Column(db.DateTime, nullable=True)
 
+    
+class ProgramacionCampana(db.Model):
+    __tablename__ = 'programaciones_campanas'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nombre = db.Column(db.String(255), nullable=False)
+    campana_id = db.Column(db.Integer, nullable=True)
+    bigquery_query = db.Column(db.Text, nullable=False)
+    wolkvox_campaign_id = db.Column(db.String(100), nullable=False)
+    server_name = db.Column(db.String(255), nullable=False)
+    tipo_programacion = db.Column(db.String(20), default='simple')  
+    fecha_programada = db.Column(db.DateTime)  # 🆕 Para simple
+    hora_inicio = db.Column(db.String(5), default='08:00')
+    hora_fin = db.Column(db.String(5), nullable=True)
+    fecha_fin = db.Column(db.String(10))
+    estado = db.Column(db.String(20), default='pendiente')
+    fecha_ejecucion = db.Column(db.DateTime)
+    total_destinatarios = db.Column(db.Integer, default=0)
+    fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+    fecha_actualizacion = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
 class MensajeOperacion(db.Model):
     __tablename__ = 'Mensajes_'
     

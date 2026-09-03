@@ -5,10 +5,11 @@
 Servicio de envío de SMS con BigQuery e Infobip.
 VERSIÓN CORREGIDA - Con acortamiento de URLs y callbackData.
 """
+from datetime import timedelta
 
 import json
 import re
-import time
+import time 
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
@@ -20,6 +21,7 @@ import logging
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+COLOMBIA_TZ = timezone(timedelta(hours=-5))
 
 # ========== CONSTANTES ==========
 PHONE_COLUMNS = (
@@ -554,6 +556,7 @@ def guardar_sms_log(
     except Exception as e:
         logger.error(f"Error guardando logs: {e}")
 
+
 def guardar_programacion(
     client,
     query: str,
@@ -561,79 +564,54 @@ def guardar_programacion(
     *,
     campaign: str = "",
     usuario: str = "",
-    scheduled_at: str = "",
     allow_resend: bool = False,
     total_dest: int = 0,
-    # 🆕 Campos de recurrencia
-    es_recurrente: bool = False,
-    frecuencia_tipo: str = None,
-    frecuencia_valor: int = None,
-    frecuencia_unidad: str = None,
-    franja_horaria: str = None,
-    hora_inicio: str = None,
-    hora_fin: str = None,
-    fecha_limite: str = None,
-    repeticiones_max: int = None,
+    tipo_programacion: str = "simple",
+    fecha_programada: str = None,      # Para simple: "2026-08-18T08:00:00"
+    hora_inicio: str = None,           # Para recurrente: "08:00"
+    fecha_fin: str = None,             # Para recurrente: "2026-09-25"
 ) -> str:
-    """Guarda una programación en BigQuery vía INSERT."""
+    """Guarda una programación en BigQuery."""
     from google.cloud import bigquery
 
     schedule_id = str(uuid4())
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(COLOMBIA_TZ).isoformat()
 
-    # 🆕 INSERT con los nuevos campos
     insert_sql = """
     INSERT INTO `capable-arbor-209819.Temporal.ProgramacionSMS`
-    (id, fecha_programada, consulta_sql, plantilla, campana, usuario, 
-     total_destinatarios, confirmar_reenvio, estado,
-     es_recurrente, frecuencia_tipo, frecuencia_valor, frecuencia_unidad,
-     franja_horaria, hora_inicio, hora_fin, fecha_limite, repeticiones_max,
-     repeticiones_realizadas,
+    (id, tipo_programacion, consulta_sql, plantilla, campana, usuario, estado,
+     total_destinatarios, confirmar_reenvio, fecha_programada, hora_inicio, fecha_fin,
      fecha_creacion, fecha_actualizacion)
     VALUES (
-        @id, @fecha_prog, @consulta, @plantilla_param, @campana, @usuario,
-        @total_dest, @conf_reenvio, @estado,
-        @es_recurrente, @frecuencia_tipo, @frecuencia_valor, @frecuencia_unidad,
-        @franja_horaria, @hora_inicio, @hora_fin, @fecha_limite, @repeticiones_max,
-        @repeticiones_realizadas,
+        @id, @tipo_prog, @consulta, @plantilla_param, @campana, @usuario, @estado,
+        @total_dest, @conf_reenvio, @fecha_prog, @hora_inicio, @fecha_fin,
         @now, @now
     )
     """
-    
-    # 🆕 Parámetros completos
+
     job_config = bigquery.QueryJobConfig(query_parameters=[
         bigquery.ScalarQueryParameter("id", "STRING", schedule_id),
-        bigquery.ScalarQueryParameter("fecha_prog", "TIMESTAMP", scheduled_at),
+        bigquery.ScalarQueryParameter("tipo_prog", "STRING", tipo_programacion),
         bigquery.ScalarQueryParameter("consulta", "STRING", query),
         bigquery.ScalarQueryParameter("plantilla_param", "STRING", plantilla),
         bigquery.ScalarQueryParameter("campana", "STRING", campaign or ""),
         bigquery.ScalarQueryParameter("usuario", "STRING", usuario or ""),
+        bigquery.ScalarQueryParameter("estado", "STRING", "pendiente"),
         bigquery.ScalarQueryParameter("total_dest", "INT64", total_dest),
         bigquery.ScalarQueryParameter("conf_reenvio", "BOOL", allow_resend),
-        bigquery.ScalarQueryParameter("estado", "STRING", "pendiente"),
-        # 🆕
-        bigquery.ScalarQueryParameter("es_recurrente", "BOOL", es_recurrente),
-        bigquery.ScalarQueryParameter("frecuencia_tipo", "STRING", frecuencia_tipo),
-        bigquery.ScalarQueryParameter("frecuencia_valor", "INT64", frecuencia_valor),
-        bigquery.ScalarQueryParameter("frecuencia_unidad", "STRING", frecuencia_unidad),
-        bigquery.ScalarQueryParameter("franja_horaria", "STRING", franja_horaria),
+        bigquery.ScalarQueryParameter("fecha_prog", "TIMESTAMP", fecha_programada),
         bigquery.ScalarQueryParameter("hora_inicio", "STRING", hora_inicio),
-        bigquery.ScalarQueryParameter("hora_fin", "STRING", hora_fin),
-
-        bigquery.ScalarQueryParameter("fecha_limite", "STRING", fecha_limite if fecha_limite else None),
-
-        bigquery.ScalarQueryParameter("repeticiones_max", "INT64", repeticiones_max),
-        bigquery.ScalarQueryParameter("repeticiones_realizadas", "INT64", 0),
+        bigquery.ScalarQueryParameter("fecha_fin", "STRING", fecha_fin),
         bigquery.ScalarQueryParameter("now", "TIMESTAMP", now),
     ])
 
     try:
         client.query(insert_sql, job_config=job_config).result()
-        logger.info(f"✅ Programación guardada: {schedule_id} (recurrente={es_recurrente})")
+        logger.info(f"✅ Programación guardada: {schedule_id} ({tipo_programacion})")
+        return schedule_id
     except Exception as e:
         raise SmsServiceError(f"No se pudo guardar la programación: {e}")
 
-    return schedule_id
 def verificar_lista_negra(client, phones: List[str]) -> Set[str]:
     """Verifica qué números están en la lista negra."""
     if not phones:

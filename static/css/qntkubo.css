@@ -118,8 +118,8 @@ a:hover { text-decoration: underline; }
   transition: var(--transition); margin-bottom: 2px;
 }
 
-.sidebar-link:hover { background: var(--bg-sidebar-hover); color: #fff; text-decoration: none; }
-.sidebar-link.active { background: var(--bg-sidebar-active); color: #fff; font-weight: 600; }
+.sidebar-link:hover { background: var(--bg-sidebar-hover); color: #ffffff; text-decoration: none; }
+.sidebar-link.active { background: var(--bg-sidebar-active); color: #f2f2f5; font-weight: 600; }
 
 .sidebar-link .nav-icon { width: 20px; text-align: center; font-size: 0.95rem; flex-shrink: 0; }
 

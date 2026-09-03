@@ -62,6 +62,7 @@ except ImportError as e:
     
     MODO_DESCARGA = "hoy"
     DESCARGAR_CDR = True
+    HORARIOS_EJECUCION = ["08:00", "12:00", "18:00"]
 
 # Mapeo de servidores
 CORTE_A_SERVIDOR = {
@@ -75,6 +76,7 @@ CORTE_A_SERVIDOR = {
 
 _scheduler_running = False
 _scheduler_thread = None
+_scheduler_cdr = schedule.Scheduler()
 
 # ========== FUNCIONES DE UTILIDAD ==========
 
@@ -197,7 +199,7 @@ def descargar_todos_los_reportes(fecha: str = None):
         fecha = datetime.now().strftime("%Y-%m-%d")
     
     logger.info("\n" + "="*60)
-    logger.info("📥 INICIANDO DESCARGA DE REPORTES (CDR)")
+    logger.info("📥 INICIANDO DESCARGA DE REPORTES (Llamadas)")
     logger.info(f"📅 Fecha: {fecha}")
     logger.info("="*60)
     
@@ -260,53 +262,57 @@ def descargar_segun_configuracion():
 
 # ========== FUNCIONES PARA BACKEND ==========
 
-def iniciar_scheduler(): 
-    """Inicia el scheduler para ejecutar descargas automáticas"""
-    global _scheduler_running, _scheduler_thread
-    
-    if _scheduler_running:
-        logger.info("⚠️ El scheduler CDR ya está en ejecución")
-        return True
-    
-    try:
-        def ejecutar_descarga():
-            logger.info(f"\n⏰ Ejecución programada CDR a las {datetime.now().strftime('%H:%M')}")
-            try:
-                descargar_segun_configuracion()
-            except Exception as e:
-                logger.error(f"❌ Error en descarga programada: {e}")
-        
-        schedule.every(15).minutes.do(ejecutar_descarga)
-        logger.info(f" CDR programada a las 15")
-        
-        _scheduler_running = True
-        
-        def run_scheduler():
-            while _scheduler_running:
-                schedule.run_pending()
-                time.sleep(30)
-        
-        _scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
-        _scheduler_thread.start()
-        
-        logger.info("✅ Scheduler CDR iniciado")
-        return True
-            
-    except Exception as e:
-        logger.error(f"❌ Error iniciando scheduler CDR: {e}")
-        return False
+import threading
 
-def detener_scheduler(): 
-    """Detiene el scheduler de CDR"""
-    global _scheduler_running
-    _scheduler_running = False
-    logger.info("⏹️ Scheduler CDR detenido")
-    return True
+_scheduler_lock = threading.Lock()  # nuevo, arriba del archivo junto a _scheduler_running
+
+def iniciar_scheduler():
+    global _scheduler_running, _scheduler_thread
+
+    with _scheduler_lock:                     
+        if _scheduler_running:
+            logger.info("⚠️ El scheduler CDR ya está en ejecución")
+            return True
+
+        try:
+
+            def ejecutar_descarga():
+                logger.info(f"\n⏰ Ejecución programada CDR a las {datetime.now().strftime('%H:%M')}")
+                try:
+                    descargar_segun_configuracion()
+                except Exception as e:
+                    logger.error(f"❌ Error en descarga programada: {e}")
+            _scheduler_cdr.every(10).hours.do(ejecutar_descarga)
+            logger.info( f"CDR programada cada 10 horas {_scheduler_cdr}")
+            _scheduler_running = True
+
+            def run_scheduler():
+                while _scheduler_running:
+                    try:
+                        _scheduler_cdr.run_pending()
+                    except Exception as e:
+                        logger.error(
+                            f"❌ Error en scheduler CDR: {e}",
+                            exc_info=True
+                        )
+
+                    time.sleep(30)
+
+            _scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+            _scheduler_thread.start()
+
+            logger.info("✅ Scheduler CDR iniciado")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Error iniciando scheduler CDR: {e}")
+            return False
+
 
 def estado_scheduler():  
     """Retorna el estado actual del scheduler"""
     try:
-        trabajos = schedule.get_jobs()
+        trabajos = _scheduler_cdr.get_jobs()
         proximos = []
         for job in trabajos:
             if hasattr(job, 'next_run') and job.next_run:
@@ -317,7 +323,7 @@ def estado_scheduler():
         
         return {
             'running': _scheduler_running,
-            'INTERVALO_MINUTOS': INTERVALO_MINUTOS,
+            'horarios': HORARIOS_EJECUCION,
             'proximos': proximos,
             'modo': MODO_DESCARGA,
             'base_dir': str(BASE_DIR),
@@ -332,7 +338,17 @@ def estado_scheduler():
             'modo': MODO_DESCARGA
         }
 
-def init_auto_download():  # ← Este es el nombre que espera backend.py
+
+def detener_scheduler(): 
+    """Detiene el scheduler de CDR"""
+    global _scheduler_running
+    _scheduler_running = False
+    logger.info("⏹️ Scheduler CDR detenido")
+    return True
+
+
+
+def init_auto_download():  
     """Inicializa el sistema de descargas automáticas"""
     return iniciar_scheduler()
 
