@@ -180,3 +180,19 @@
 2026-08-31 12:00:29 - INFO - =================================================================
 2026-08-31 12:01:22 - INFO - ⏹️ Scheduler AMD detenido
 2026-08-31 12:01:22 - INFO - Script AMD finalizado
+2026-09-03 12:10:40 - INFO - ✅ Configuración cargada desde config.py
+2026-09-03 12:10:40 - INFO - Scheduler Funciona cada 10 horas archvio download_campaign
+2026-09-03 12:10:40 - INFO - Jobs activos antes de registrar: 1
+2026-09-03 12:10:40 - INFO - ✅ Scheduler AMD iniciado
+2026-09-03 12:11:00 - INFO - ⏹️ Scheduler AMD detenido
+2026-09-03 12:11:00 - INFO - Script AMD finalizado
+2026-09-03 12:11:04 - INFO - ✅ Configuración cargada desde config.py
+2026-09-03 12:11:04 - INFO - Scheduler Funciona cada 10 horas archvio download_campaign
+2026-09-03 12:11:04 - INFO - Jobs activos antes de registrar: 1
+2026-09-03 12:11:04 - INFO - ✅ Scheduler AMD iniciado
+2026-09-03 12:11:19 - INFO - ⏹️ Scheduler AMD detenido
+2026-09-03 12:11:19 - INFO - Script AMD finalizado
+2026-09-03 12:11:50 - INFO - ✅ Configuración cargada desde config.py
+2026-09-03 12:11:50 - INFO - Scheduler Funciona cada 10 horas archvio download_campaign
+2026-09-03 12:11:50 - INFO - Jobs activos antes de registrar: 1
+2026-09-03 12:11:50 - INFO - ✅ Scheduler AMD iniciado

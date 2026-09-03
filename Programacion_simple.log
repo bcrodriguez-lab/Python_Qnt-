@@ -111,4 +111,185 @@
 2026-09-03 09:16:00 - INFO - Ejecutando campaña simple 5: prueba (tipo: simple)
 2026-09-03 09:16:00 - INFO - 📤 Ejecutando campaña simple 5: prueba
 2026-09-03 09:16:14 - INFO - 📊 Campaña simple 5 actualizada: 2 destinatarios
-<
+<2026-09-03 11:27:15 - INFO - Datos recibidos para programación simple: {'nombre': 'prueba', 'bigquery_query': 'SELECT * FROM Temporal.sms_campaign_data where tel1  = "3144051619"', 'wolkvox_campaign_id': '20213', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-03T11:29', 'hora_fin': '00:27'}
+2026-09-03 11:27:15 - INFO - Programando Wolkvox simple: nombre=prueba, fecha_programada=2026-09-03T11:29:00-05:00, hora_fin=00:27, campaign_id=20213, server_name=operacion-interna
+2026-09-03 11:27:15 - INFO - Campaña de programación simple guardada en DB con ID: 6
+2026-09-03 11:27:15 - INFO -  ✅ campaña programada creada para ID: 6 y se va a ejecutarse en 2026-09-03T11:29:00-05:00
+2026-09-03 11:29:00 - INFO - Procesando campaña simple 5: prueba
+2026-09-03 11:29:00 - INFO - Campaña 20213 limpiada: HTTP 202
+2026-09-03 11:29:00 - INFO - Procesando campaña simple 6: prueba
+2026-09-03 11:29:00 - INFO - Campaña 20213 limpiada: HTTP 404
+2026-09-03 11:29:32 - INFO - Datos recibidos para programación simple: {'nombre': 'prueba', 'bigquery_query': 'SELECT * FROM Temporal.sms_campaign_data', 'wolkvox_campaign_id': '20213', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-03T11:31', 'hora_fin': '14:29'}
+2026-09-03 11:29:32 - INFO - Programando Wolkvox simple: nombre=prueba, fecha_programada=2026-09-03T11:31:00-05:00, hora_fin=14:29, campaign_id=20213, server_name=operacion-interna
+2026-09-03 11:29:32 - INFO - Campaña de programación simple guardada en DB con ID: 7
+2026-09-03 11:29:32 - INFO -  ✅ campaña programada creada para ID: 7 y se va a ejecutarse en 2026-09-03T11:31:00-05:00
+2026-09-03 11:29:56 - INFO - Datos recibidos para programación simple: {'nombre': 'sfa', 'bigquery_query': 'SELECT * FROM Temporal.sms_campaign_data where tel1  = "3144051619"', 'wolkvox_campaign_id': '20213', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-03T11:34', 'hora_fin': '12:29'}
+2026-09-03 11:29:56 - INFO - Programando Wolkvox simple: nombre=sfa, fecha_programada=2026-09-03T11:34:00-05:00, hora_fin=12:29, campaign_id=20213, server_name=operacion-interna
+2026-09-03 11:29:56 - INFO - Campaña de programación simple guardada en DB con ID: 8
+2026-09-03 11:29:56 - INFO -  ✅ campaña programada creada para ID: 8 y se va a ejecutarse en 2026-09-03T11:34:00-05:00
+2026-09-03 11:31:00 - INFO - Procesando campaña simple 7: prueba
+2026-09-03 11:31:00 - INFO - Campaña simple 7: hora_inicio=11:31, hora_fin=14:29, hora_actual=11:31, fecha_ejecucion=None
+2026-09-03 11:31:00 - INFO - Campaña simple 7 lista para ejecutar: hora_inicio=11:31, hora_fin=14:29, hora_actual=11:31
+2026-09-03 11:31:00 - INFO - Ejecutando campaña simple 7: prueba (tipo: simple)
+2026-09-03 11:31:00 - INFO - 📤 Ejecutando campaña simple 7: prueba
+2026-09-03 11:31:13 - INFO - 📊 Campaña simple 7 actualizada: 5 destinatarios
+2026-09-03 11:31:13 - INFO - Procesando campaña simple 8: sfa
+2026-09-03 11:31:13 - INFO - Campaña simple 8: hora_inicio=11:34, hora_fin=12:29, hora_actual=11:31, fecha_ejecucion=None
+2026-09-03 11:34:00 - INFO - Procesando campaña simple 7: prueba
+2026-09-03 11:34:00 - INFO - Campaña 20213 limpiada antes de re-ejecutar: HTTP 202
+2026-09-03 11:34:00 - INFO - Campaña simple 7 ya ejecutada a las 2026-09-03 11:31:00.008041
+2026-09-03 11:34:00 - INFO - Procesando campaña simple 8: sfa
+2026-09-03 11:34:00 - INFO - Campaña simple 8: hora_inicio=11:34, hora_fin=12:29, hora_actual=11:34, fecha_ejecucion=None
+2026-09-03 11:34:00 - INFO - Campaña simple 8 lista para ejecutar: hora_inicio=11:34, hora_fin=12:29, hora_actual=11:34
+2026-09-03 11:34:00 - INFO - Ejecutando campaña simple 8: sfa (tipo: simple)
+2026-09-03 11:34:00 - INFO - 📤 Ejecutando campaña simple 8: sfa
+2026-09-03 11:34:14 - INFO - 📊 Campaña simple 8 actualizada: 2 destinatarios
+2026-09-03 11:41:26 - INFO - Datos recibidos para programación simple: {'nombre': 'prueba', 'bigquery_query': 'SELECT * FROM Temporal.sms_campaign_data where tel1  = "3223189873"', 'wolkvox_campaign_id': '20213', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-03T11:43', 'hora_fin': '00:41'}
+2026-09-03 11:41:40 - INFO - Datos recibidos para programación simple: {'nombre': 'prueba', 'bigquery_query': 'SELECT * FROM Temporal.sms_campaign_data where tel1  = "3223189873"', 'wolkvox_campaign_id': '20213', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-03T11:43', 'hora_fin': '12:41'}
+2026-09-03 11:41:40 - INFO - Programando Wolkvox simple: nombre=prueba, fecha_programada=2026-09-03T11:43:00-05:00, hora_fin=12:41, campaign_id=20213, server_name=operacion-interna
+2026-09-03 11:41:40 - INFO - Campaña de programación simple guardada en DB con ID: 9
+2026-09-03 11:41:40 - INFO -  ✅ campaña programada creada para ID: 9 y se va a ejecutarse en 2026-09-03T11:43:00-05:00
+2026-09-03 11:42:33 - INFO - Datos recibidos para programación simple: {'nombre': 'Camp_Pocos_Barridos_3', 'bigquery_query': 'SELECT * FROM Temporal.sms_campaign_data', 'wolkvox_campaign_id': '20214', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-03T11:43', 'hora_fin': '11:46'}
+2026-09-03 11:42:33 - INFO - Programando Wolkvox simple: nombre=Camp_Pocos_Barridos_3, fecha_programada=2026-09-03T11:43:00-05:00, hora_fin=11:46, campaign_id=20214, server_name=operacion-interna
+2026-09-03 11:42:33 - INFO - Campaña de programación simple guardada en DB con ID: 10
+2026-09-03 11:42:33 - INFO -  ✅ campaña programada creada para ID: 10 y se va a ejecutarse en 2026-09-03T11:43:00-05:00
+2026-09-03 11:43:00 - INFO - Procesando campaña simple 7: prueba
+2026-09-03 11:43:00 - INFO - Campaña simple 7 ya ejecutada a las 2026-09-03 11:31:00.008041
+2026-09-03 11:43:00 - INFO - Procesando campaña simple 8: sfa
+2026-09-03 11:43:00 - INFO - Campaña simple 8 ya ejecutada a las 2026-09-03 11:34:00.027321
+2026-09-03 11:43:00 - INFO - Procesando campaña simple 9: prueba
+2026-09-03 11:43:00 - INFO - Campaña simple 9: hora_inicio=11:43, hora_fin=12:41, hora_actual=11:43, fecha_ejecucion=None
+2026-09-03 11:43:00 - INFO - Campaña simple 9 lista para ejecutar: hora_inicio=11:43, hora_fin=12:41, hora_actual=11:43
+2026-09-03 11:43:00 - INFO - Ejecutando campaña simple 9: prueba (tipo: simple)
+2026-09-03 11:43:00 - INFO - Procesando campaña simple 7: prueba
+2026-09-03 11:43:00 - INFO - Campaña simple 7 ya ejecutada a las 2026-09-03 11:31:00.008041
+2026-09-03 11:43:00 - INFO - Procesando campaña simple 8: sfa
+2026-09-03 11:43:00 - INFO - Campaña simple 8 ya ejecutada a las 2026-09-03 11:34:00.027321
+2026-09-03 11:43:00 - INFO - Procesando campaña simple 9: prueba
+2026-09-03 11:43:00 - INFO - Campaña simple 9: hora_inicio=11:43, hora_fin=12:41, hora_actual=11:43, fecha_ejecucion=None
+2026-09-03 11:43:00 - INFO - Campaña simple 9 lista para ejecutar: hora_inicio=11:43, hora_fin=12:41, hora_actual=11:43
+2026-09-03 11:43:00 - INFO - Ejecutando campaña simple 9: prueba (tipo: simple)
+2026-09-03 11:43:00 - INFO - Campaña 20213 limpiada correctamente (programación 9).
+2026-09-03 11:43:00 - INFO - 📤 Ejecutando campaña simple 9: prueba
+2026-09-03 11:43:00 - WARNING - No se pudo limpiar la campaña 20213 (programación 9): HTTP 404 - {
+    "code": "404",
+    "error": "Not Found",
+    "msg": "The campaign records have not been deleted, please validate the data"
+}
+2026-09-03 11:43:00 - INFO - Procesando campaña simple 10: Camp_Pocos_Barridos_3
+2026-09-03 11:43:00 - INFO - Campaña simple 10: hora_inicio=11:43, hora_fin=11:46, hora_actual=11:43, fecha_ejecucion=None
+2026-09-03 11:43:00 - INFO - Campaña simple 10 lista para ejecutar: hora_inicio=11:43, hora_fin=11:46, hora_actual=11:43
+2026-09-03 11:43:00 - INFO - Ejecutando campaña simple 10: Camp_Pocos_Barridos_3 (tipo: simple)
+2026-09-03 11:43:01 - WARNING - No se pudo limpiar la campaña 20214 (programación 10): HTTP 404 - {
+    "code": "404",
+    "error": "Not Found",
+    "msg": "The campaign records have not been deleted, please validate the data"
+}
+2026-09-03 11:43:12 - INFO - 📊 Campaña simple 9 actualizada: 2 destinatarios
+2026-09-03 11:43:12 - INFO - Procesando campaña simple 10: Camp_Pocos_Barridos_3
+2026-09-03 11:43:12 - INFO - Campaña simple 10: hora_inicio=11:43, hora_fin=11:46, hora_actual=11:43, fecha_ejecucion=None
+2026-09-03 11:43:12 - INFO - Campaña simple 10 lista para ejecutar: hora_inicio=11:43, hora_fin=11:46, hora_actual=11:43
+2026-09-03 11:43:12 - INFO - Ejecutando campaña simple 10: Camp_Pocos_Barridos_3 (tipo: simple)
+2026-09-03 11:43:13 - WARNING - No se pudo limpiar la campaña 20214 (programación 10): HTTP 404 - {
+    "code": "404",
+    "error": "Not Found",
+    "msg": "The campaign records have not been deleted, please validate the data"
+}
+2026-09-03 11:44:39 - INFO - Datos recibidos para programación simple: {'nombre': 'prueba', 'bigquery_query': 'SELECT * FROM Temporal.sms_campaign_data where tel1  = "3144051619"', 'wolkvox_campaign_id': '20214', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-03T11:46', 'hora_fin': '11:47'}
+2026-09-03 11:44:39 - INFO - Programando Wolkvox simple: nombre=prueba, fecha_programada=2026-09-03T11:46:00-05:00, hora_fin=11:47, campaign_id=20214, server_name=operacion-interna
+2026-09-03 11:44:39 - INFO - Campaña de programación simple guardada en DB con ID: 11
+2026-09-03 11:44:39 - INFO -  ✅ campaña programada creada para ID: 11 y se va a ejecutarse en 2026-09-03T11:46:00-05:00
+2026-09-03 11:45:17 - INFO - Datos recibidos para programación simple: {'nombre': 'prueba', 'bigquery_query': 'SELECT * FROM Temporal.sms_campaign_data', 'wolkvox_campaign_id': '20213', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-03T11:45', 'hora_fin': '11:47'}
+2026-09-03 11:45:22 - INFO - Datos recibidos para programación simple: {'nombre': 'prueba', 'bigquery_query': 'SELECT * FROM Temporal.sms_campaign_data', 'wolkvox_campaign_id': '20213', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-03T11:45', 'hora_fin': '23:47'}
+2026-09-03 11:45:35 - INFO - Datos recibidos para programación simple: {'nombre': 'prueba', 'bigquery_query': 'SELECT * FROM Temporal.sms_campaign_data', 'wolkvox_campaign_id': '20213', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-03T11:46', 'hora_fin': '11:47'}
+2026-09-03 11:45:35 - INFO - Programando Wolkvox simple: nombre=prueba, fecha_programada=2026-09-03T11:46:00-05:00, hora_fin=11:47, campaign_id=20213, server_name=operacion-interna
+2026-09-03 11:45:35 - INFO - Campaña de programación simple guardada en DB con ID: 12
+2026-09-03 11:45:35 - INFO -  ✅ campaña programada creada para ID: 12 y se va a ejecutarse en 2026-09-03T11:46:00-05:00
+2026-09-03 11:46:00 - INFO - Procesando campaña simple 7: prueba
+2026-09-03 11:46:00 - INFO - Campaña simple 7 ya ejecutada a las 2026-09-03 11:31:00.008041
+2026-09-03 11:46:00 - INFO - Procesando campaña simple 8: sfa
+2026-09-03 11:46:00 - INFO - Campaña simple 8 ya ejecutada a las 2026-09-03 11:34:00.027321
+2026-09-03 11:46:00 - INFO - Procesando campaña simple 11: prueba
+2026-09-03 11:46:00 - INFO - Campaña simple 11: hora_inicio=11:46, hora_fin=11:47, hora_actual=11:46, fecha_ejecucion=None
+2026-09-03 11:46:00 - INFO - Campaña simple 11 lista para ejecutar: hora_inicio=11:46, hora_fin=11:47, hora_actual=11:46
+2026-09-03 11:46:00 - INFO - Ejecutando campaña simple 11: prueba (tipo: simple)
+2026-09-03 11:46:00 - INFO - Procesando campaña simple 7: prueba
+2026-09-03 11:46:00 - INFO - Campaña simple 7 ya ejecutada a las 2026-09-03 11:31:00.008041
+2026-09-03 11:46:00 - INFO - Procesando campaña simple 8: sfa
+2026-09-03 11:46:00 - INFO - Campaña simple 8 ya ejecutada a las 2026-09-03 11:34:00.027321
+2026-09-03 11:46:00 - INFO - Procesando campaña simple 11: prueba
+2026-09-03 11:46:00 - INFO - Campaña simple 11: hora_inicio=11:46, hora_fin=11:47, hora_actual=11:46, fecha_ejecucion=None
+2026-09-03 11:46:00 - INFO - Campaña simple 11 lista para ejecutar: hora_inicio=11:46, hora_fin=11:47, hora_actual=11:46
+2026-09-03 11:46:00 - INFO - Ejecutando campaña simple 11: prueba (tipo: simple)
+2026-09-03 11:46:00 - INFO - Procesando campaña simple 7: prueba
+2026-09-03 11:46:00 - INFO - Campaña simple 7 ya ejecutada a las 2026-09-03 11:31:00.008041
+2026-09-03 11:46:00 - INFO - Procesando campaña simple 8: sfa
+2026-09-03 11:46:00 - INFO - Campaña simple 8 ya ejecutada a las 2026-09-03 11:34:00.027321
+2026-09-03 11:46:00 - INFO - Procesando campaña simple 11: prueba
+2026-09-03 11:46:00 - INFO - Campaña simple 11: hora_inicio=11:46, hora_fin=11:47, hora_actual=11:46, fecha_ejecucion=None
+2026-09-03 11:46:00 - INFO - Campaña simple 11 lista para ejecutar: hora_inicio=11:46, hora_fin=11:47, hora_actual=11:46
+2026-09-03 11:46:00 - INFO - Ejecutando campaña simple 11: prueba (tipo: simple)
+2026-09-03 11:46:00 - WARNING - No se pudo limpiar la campaña 20214 (programación 11): HTTP 404 - {
+    "code": "404",
+    "error": "Not Found",
+    "msg": "The campaign records have not been deleted, please validate the data"
+}
+2026-09-03 11:46:00 - WARNING - No se pudo limpiar la campaña 20214 (programación 11): HTTP 404 - {
+    "code": "404",
+    "error": "Not Found",
+    "msg": "The campaign records have not been deleted, please validate the data"
+}
+2026-09-03 11:46:00 - INFO - Procesando campaña simple 12: prueba
+2026-09-03 11:46:00 - INFO - Campaña simple 12: hora_inicio=11:46, hora_fin=11:47, hora_actual=11:46, fecha_ejecucion=None
+2026-09-03 11:46:00 - INFO - Campaña simple 12 lista para ejecutar: hora_inicio=11:46, hora_fin=11:47, hora_actual=11:46
+2026-09-03 11:46:00 - INFO - Ejecutando campaña simple 12: prueba (tipo: simple)
+2026-09-03 11:46:00 - WARNING - No se pudo limpiar la campaña 20214 (programación 11): HTTP 404 - {
+    "code": "404",
+    "error": "Not Found",
+    "msg": "The campaign records have not been deleted, please validate the data"
+}
+2026-09-03 11:46:00 - INFO - Procesando campaña simple 12: prueba
+2026-09-03 11:46:00 - INFO - Campaña simple 12: hora_inicio=11:46, hora_fin=11:47, hora_actual=11:46, fecha_ejecucion=None
+2026-09-03 11:46:00 - INFO - Campaña simple 12 lista para ejecutar: hora_inicio=11:46, hora_fin=11:47, hora_actual=11:46
+2026-09-03 11:46:00 - INFO - Ejecutando campaña simple 12: prueba (tipo: simple)
+2026-09-03 11:46:00 - INFO - Procesando campaña simple 12: prueba
+2026-09-03 11:46:00 - INFO - Campaña simple 12: hora_inicio=11:46, hora_fin=11:47, hora_actual=11:46, fecha_ejecucion=None
+2026-09-03 11:46:00 - INFO - Campaña simple 12 lista para ejecutar: hora_inicio=11:46, hora_fin=11:47, hora_actual=11:46
+2026-09-03 11:46:00 - INFO - Ejecutando campaña simple 12: prueba (tipo: simple)
+2026-09-03 11:46:00 - INFO - Campaña 20213 limpiada correctamente (programación 12).
+2026-09-03 11:46:00 - INFO - 📤 Ejecutando campaña simple 12: prueba
+2026-09-03 11:46:00 - WARNING - No se pudo limpiar la campaña 20213 (programación 12): HTTP 404 - {
+    "code": "404",
+    "error": "Not Found",
+    "msg": "The campaign records have not been deleted, please validate the data"
+}
+2026-09-03 11:46:00 - WARNING - No se pudo limpiar la campaña 20213 (programación 12): HTTP 404 - {
+    "code": "404",
+    "error": "Not Found",
+    "msg": "The campaign records have not been deleted, please validate the data"
+}
+2026-09-03 11:46:12 - INFO - 📊 Campaña simple 12 actualizada: 5 destinatarios
+2026-09-03 11:47:00 - INFO - Procesando campaña simple 7: prueba
+2026-09-03 11:47:00 - INFO - Campaña simple 7 ya ejecutada a las 2026-09-03 11:31:00.008041
+2026-09-03 11:47:00 - INFO - Procesando campaña simple 8: sfa
+2026-09-03 11:47:00 - INFO - Campaña simple 8 ya ejecutada a las 2026-09-03 11:34:00.027321
+2026-09-03 11:47:00 - INFO - Procesando campaña simple 7: prueba
+2026-09-03 11:47:00 - INFO - Campaña simple 7 ya ejecutada a las 2026-09-03 11:31:00.008041
+2026-09-03 11:47:00 - INFO - Procesando campaña simple 8: sfa
+2026-09-03 11:47:00 - INFO - Campaña simple 8 ya ejecutada a las 2026-09-03 11:34:00.027321
+2026-09-03 12:23:59 - INFO - Datos recibidos para programación simple: {'nombre': 'prueba', 'bigquery_query': 'SELECT * FROM Temporal.sms_campaign_data where tel1  = "3144051619"', 'wolkvox_campaign_id': '20213', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-03T00:24', 'hora_fin': '12:25'}
+2026-09-03 12:24:09 - INFO - Datos recibidos para programación simple: {'nombre': 'prueba', 'bigquery_query': 'SELECT * FROM Temporal.sms_campaign_data where tel1  = "3144051619"', 'wolkvox_campaign_id': '20213', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-03T00:25', 'hora_fin': '12:26'}
+2026-09-03 12:24:15 - INFO - Datos recibidos para programación simple: {'nombre': 'prueba', 'bigquery_query': 'SELECT * FROM Temporal.sms_campaign_data where tel1  = "3144051619"', 'wolkvox_campaign_id': '20213', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-03T12:25', 'hora_fin': '12:26'}
+2026-09-03 12:24:15 - INFO - Programando Wolkvox simple: nombre=prueba, fecha_programada=2026-09-03T12:25:00-05:00, hora_fin=12:26, campaign_id=20213, server_name=operacion-interna
+2026-09-03 12:24:15 - INFO - Campaña de programación simple guardada en DB con ID: 13
+2026-09-03 12:24:15 - INFO -  ✅ campaña programada creada para ID: 13 y se va a ejecutarse en 2026-09-03T12:25:00-05:00
+2026-09-03 12:25:00 - INFO - Procesando campaña simple 7: prueba
+2026-09-03 12:25:00 - INFO - Campaña simple 7 ya ejecutada a las 2026-09-03 11:31:00.008041
+2026-09-03 12:25:00 - INFO - Procesando campaña simple 8: sfa
+2026-09-03 12:25:00 - INFO - Campaña simple 8 ya ejecutada a las 2026-09-03 11:34:00.027321
+2026-09-03 12:25:00 - INFO - Procesando campaña simple 13: prueba
+2026-09-03 12:25:00 - INFO - Campaña simple 13: hora_inicio=12:25, hora_fin=12:26, hora_actual=12:25, fecha_ejecucion=None
+2026-09-03 12:25:00 - INFO - Campaña simple 13 lista para ejecutar: hora_inicio=12:25, hora_fin=12:26, hora_actual=12:25
+2026-09-03 12:25:00 - INFO - Ejecutando campaña simple 13: prueba (tipo: simple)
+2026-09-03 12:25:00 - INFO - 📤 Ejecutando campaña simple 13: prueba
+2026-09-03 12:25:13 - INFO - 📊 Campaña simple 13 actualizada: 2 destinatarios
