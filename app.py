@@ -2622,7 +2622,26 @@ def Cargue_Wolkvox(campaign, token):
             }
             records.append(Señuelos)
             logger.info(f"Señuelo agregado: {nombre}, {telefono_formateado}, {customer_id}")
-        
+    try:
+        base_url = _get_base_url_wolkvox(campaign.server_name)
+        clear_url = f"{base_url}/api/v2/campaign.php"
+        clear_params = {
+            "api": "clear_campaign",
+            "type_campaign": "predictive",
+            "campaign_id": campaign.wolkvox_campaign_id,
+        }
+        clear_resp = requests.delete(
+            clear_url, params=clear_params,
+            headers={"wolkvox-token": token},
+            timeout=60,
+        )
+        if clear_resp.ok:
+            logger.info(f"🧹 Campaña {campaign.wolkvox_campaign_id} limpiada antes de cargar")
+        else:
+            logger.warning(f"No se pudo limpiar campaña: HTTP {clear_resp.status_code}")
+            
+    except Exception as e:
+        logger.warning(f"Error limpiando campaña: {e}")
     # 3. Construir URL de Wolkvox
     server_mapping = {
         "operacion-interna": "https://wv0016.wolkvox.com",
