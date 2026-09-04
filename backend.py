@@ -709,9 +709,18 @@ def _fetch_servidor(servidor, app):
 
 
 def total_campañas_hoy(app=None):
-    """Versión CONCURRENTE: consulta todos los servidores al mismo tiempo."""
+    """Versión CONCURRENTE: consulta SOLO los servidores específicos."""
     app = app or current_app._get_current_object()
-
+    
+    servidores = [
+        "operacion-interna",
+        "qnt_digital_2_dashboard",
+        "qnt_juridico_blaster",
+        "qnt_cobro_blaster",
+        "Qnt_RBK_blaster",
+        "Qnt_recaudo_blaster",
+    ]
+    
     todas_las_campañas = []
     servidores_activos = []
 

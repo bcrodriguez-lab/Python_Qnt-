@@ -161,9 +161,65 @@
     background: #FAFAFD;
   }
 
+  /* Botones de acción en tabla */
+  .btn-action-group {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .btn-action-group .btn {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    border-radius: 6px;
+    border: none;
+    transition: var(--sms-transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .btn-action-group .btn:hover {
+    transform: scale(1.05);
+  }
+  .btn-action-group .btn-start {
+    background: #17A673;
+    color: #fff;
+  }
+  .btn-action-group .btn-start:hover {
+    background: #13895D;
+  }
+  .btn-action-group .btn-stop {
+    background: #E24C4B;
+    color: #fff;
+  }
+  .btn-action-group .btn-stop:hover {
+    background: #C0392B;
+  }
+  .btn-action-group .btn-clear {
+    background: #B8790A;
+    color: #fff;
+  }
+  .btn-action-group .btn-clear:hover {
+    background: #A06700;
+  }
+  .btn-action-group .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .btn-action-group .spinner-border-sm {
+    width: 14px;
+    height: 14px;
+    border-width: 2px;
+  }
+
   @media (max-width: 768px) {
     .stats-grid {
       grid-template-columns: 1fr;
+    }
+    .btn-action-group .btn {
+      padding: 3px 7px;
+      font-size: 0.7rem;
     }
   }
 </style>
@@ -224,7 +280,7 @@
           <th class="text-right">Llamados</th>
           <th class="text-right">Faltantes</th>
           <th class="text-right">Llamadas/min</th>
-          <th class="text-center">Acción</th>
+          <th class="text-center">Acciones</th>
         </tr>
       </thead>
       <tbody id="campaignTableBody">
@@ -245,7 +301,7 @@
 <div class="section-card">
   <div class="section-header">
     <h3><i class="fas fa-terminal mr-2"></i> Actividad en vivo</h3>
-    <button class="btn-tool" onclick="loadLogs()" title="Actualizar"><i class="fas fa-sync-alt"></i></button>
+    <button class="btn-tool" onclick="cargarLogs()" title="Actualizar"><i class="fas fa-sync-alt"></i></button>
   </div>
   <div class="section-body">
     <div class="logs-panel" id="logsPanel">
@@ -257,6 +313,8 @@
 
 {% block extra_js %}
 <script>
+// ========== FUNCIONES HELPER ==========
+
 // Función para escapar HTML (seguridad)
 function escapeHtml(text) {
     if (!text) return '';
@@ -277,29 +335,55 @@ function showToast(message, type = 'info') {
     setTimeout(() => toast.remove(), 3000);
 }
 
-// Función principal para actualizar el dashboard
+// Función para mostrar resultado
+function showResult(success, message) {
+    const alertClass = success ? 'alert-success' : 'alert-danger';
+    const alert = document.createElement('div');
+    alert.className = `alert ${alertClass} mt-2`;
+    alert.textContent = message;
+    const container = document.querySelector('.section-card .section-body');
+    if (container) {
+        container.prepend(alert);
+        setTimeout(() => alert.remove(), 5000);
+    }
+}
+
+// Función para setear loading en botones
+function setLoading(btn, loading) {
+    if (!btn) return;
+    if (loading) {
+        btn._orig = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+    } else {
+        btn.disabled = false;
+        if (btn._orig) btn.innerHTML = btn._orig;
+    }
+}
+
+// ========== FUNCIÓN PRINCIPAL PARA ACTUALIZAR DASHBOARD ==========
 function actualizarDashboard() {
-    console.log('🔄 Actualizando dashboard...');  // 👈 Debug
+    console.log('🔄 Actualizando dashboard...');
     
     const btn = document.getElementById('btnRefreshCampaigns');
     const icon = document.getElementById('iconRefreshCampaigns');
     
     if (btn) {
         btn.disabled = true;
-        icon.classList.add('fa-spin');
+        if (icon) icon.classList.add('fa-spin');
     }
     
     fetch('/api/dashboard/refresh', { method: 'POST' })
         .then(r => {
-            console.log('📡 Respuesta recibida:', r.status);  // 👈 Debug
+            console.log('📡 Respuesta recibida:', r.status);
             return r.json();
         })
         .then(data => {
-            console.log('📊 Datos recibidos:', data);  // 👈 Debug
+            console.log('📊 Datos recibidos:', data);
             
             if (data.success) {
                 const datos = data.data;
-                console.log('✅ Datos procesados:', datos);  // 👈 Debug
+                console.log('✅ Datos procesados:', datos);
                 
                 // Actualizar estadísticas
                 const statServers = document.getElementById('statServers');
@@ -329,7 +413,8 @@ function actualizarDashboard() {
                 
                 if (tbody) {
                     if (datos.campañas && datos.campañas.length > 0) {
-                        tbody.innerHTML = datos.campañas.map(camp => {
+                        tbody.innerHTML = datos.campañas.map((camp, index) => {
+                            console.log('🔹 Procesando campaña:', datos.campañas[0]);
                             const estado = camp.estado || 'desconocido';
                             let badgeClass = 'badge-secondary';
                             let estadoLabel = camp.estado_label || estado;
@@ -347,28 +432,124 @@ function actualizarDashboard() {
                                 badgeClass = 'badge-info';
                                 estadoLabel = 'Programada';
                             }
-                            //#statLlamadasXMin
+                            
                             const clientes = parseInt(camp.clientes || camp.records || 0);
                             const llamados = parseInt(camp.llamados || camp.dial || 0);
                             const contactados = parseInt(camp.contactados || camp.answer || 0);
                             const faltantes = clientes - contactados;
                             const llamadasXMin = Number(camp.llamadas_x_minuto) || 0;
+                            const campaignId = camp.id || camp.campaign_id || index;
+                            const serverName = camp.servidor || '';
+                            
                             return `
-                                <tr>
+                                <tr data-campaign-id="${escapeHtml(String(campaignId))}" data-server="${escapeHtml(serverName)}">
                                     <td>
                                         <strong>${escapeHtml(camp.nombre || camp.campaign || 'Sin nombre')}</strong>
-                                        ${camp.servidor ? `<br><small class="text-muted">${escapeHtml(camp.servidor)}</small>` : ''}
+                                        ${serverName ? `<br><small class="text-muted">${escapeHtml(serverName)}</small>` : ''}
+                                        <br><small class="text-muted">ID: ${escapeHtml(String(campaignId))}</small>
                                     </td>
                                     <td class="text-right">${clientes.toLocaleString()}</td>
                                     <td class="text-right">${llamados.toLocaleString()}</td>
                                     <td class="text-right">${faltantes.toLocaleString()}</td>
                                     <td class="text-right">${llamadasXMin}</td>
                                     <td class="text-center">
-                                        <a href="/config-bigquery" class="btn btn-outline-primary btn-sm">Gestionar</a>
+                                        <div class="btn-action-group">
+                                            <button type="button" class="btn btn-start btn-start-campaign" data-campaign-id="${escapeHtml(String(campaignId))}" data-server="${escapeHtml(serverName)}" title="Iniciar campaña">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-stop btn-stop-campaign" data-campaign-id="${escapeHtml(String(campaignId))}" data-server="${escapeHtml(serverName)}" title="Detener campaña">
+                                                <i class="fas fa-stop"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-clear btn-clear-campaign" data-campaign-id="${escapeHtml(String(campaignId))}" data-server="${escapeHtml(serverName)}" title="Limpiar registros">
+                                                <i class="fas fa-broom"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             `;
                         }).join('');
+                        // ========== DELEGACIÓN DE EVENTOS (una sola vez, fuera del .then) ==========
+                        // ============================================
+                        // MANEJADOR DE EVENTOS PARA BOTONES (ACTUALIZADO)
+                        // ============================================
+                        document.getElementById('campaignTableBody').addEventListener('click', async function(e) {
+                            const btn = e.target.closest('.btn-start-campaign, .btn-stop-campaign, .btn-clear-campaign');
+                            if (!btn) return;
+                            
+                            // Obtener datos del botón (directamente de Wolkvox)
+                            const campaignId = btn.dataset.campaignId;  // ← ID de Wolkvox (ej: "20717")
+                            const server = btn.dataset.server || '';    // ← Servidor (ej: "wv0016")
+                            
+                            // Validar
+                            if (!campaignId || campaignId === 'undefined' || campaignId === 'null') {
+                                showToast('❌ No se pudo identificar la campaña (ID inválido)', 'danger');
+                                return;
+                            }
+                            
+                            if (!server) {
+                                showToast('❌ No se pudo identificar el servidor', 'danger');
+                                return;
+                            }
+                            
+                            // Determinar acción
+                            let url, method, confirmMsg, successMsg;
+                            
+                            if (btn.classList.contains('btn-start-campaign')) {
+                                url = `/api/campaigns/${campaignId}/start`;  // ← NUEVA RUTA
+                                method = 'POST';
+                                confirmMsg = `¿Iniciar la campaña ${campaignId} en ${server}?`;
+                                successMsg = '✅ Campaña iniciada correctamente';
+                            } else if (btn.classList.contains('btn-stop-campaign')) {
+                                url = `/api/campaigns/${campaignId}/stop`;   // ← NUEVA RUTA
+                                method = 'POST';
+                                confirmMsg = `¿Detener la campaña ${campaignId} en ${server}?`;
+                                successMsg = '⏹️ Campaña detenida correctamente';
+                            } else if (btn.classList.contains('btn-clear-campaign')) {
+                                url = `/api/campaigns/${campaignId}/clear`;  // ← NUEVA RUTA
+                                method = 'DELETE';
+                                confirmMsg = `¿Limpiar todos los registros de la campaña ${campaignId} en ${server}?`;
+                                successMsg = '🧹 Campaña limpiada correctamente';
+                            } else {
+                                return;
+                            }
+                            
+                            // Confirmar
+                            if (!confirm(confirmMsg)) return;
+                            
+                            // Ejecutar
+                            try {
+                                setLoading(btn, true);
+                                
+                                const resp = await fetch(url, {
+                                    method: method,
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ 
+                                        server_name: server,
+                                        campaign_id: campaignId
+                                    })
+                                });
+                                
+                                const data = await resp.json();
+                                
+                                if (data.success) {
+                                    showToast(successMsg, 'success');
+                                    showResult(true, data.message || successMsg);
+                                    // Recargar dashboard
+                                    setTimeout(actualizarDashboard, 1000);
+                                } else {
+                                    showToast('❌ ' + (data.message || 'Error en la operación'), 'danger');
+                                    showResult(false, data.message || 'Error en la operación');
+                                }
+                            } catch (err) {
+                                console.error('❌ Error:', err);
+                                showToast('❌ Error: ' + err.message, 'danger');
+                                showResult(false, '❌ Error: ' + err.message);
+                            } finally {
+                                setLoading(btn, false);
+                            }
+                        });
+                                                
+                        
                     } else {
                         tbody.innerHTML = `
                             <tr>
@@ -390,38 +571,68 @@ function actualizarDashboard() {
         .finally(() => {
             if (btn) {
                 btn.disabled = false;
-                icon.classList.remove('fa-spin');
+                if (icon) icon.classList.remove('fa-spin');
             }
         });
 }
 
-// Función para cargar logs
+// ========== FUNCIÓN PARA CARGAR LOGS ==========
 function cargarLogs() {
     const panel = document.getElementById('logsPanel');
     if (panel) {
         panel.innerHTML = '<div class="text-muted">Cargando logs...</div>';
-        setTimeout(() => {
-            panel.innerHTML = `
-                <div class="log-entry">
-                    <span class="log-time">${new Date().toLocaleTimeString()}</span>
-                    <span class="log-level info">INFO</span>
-                    <span class="log-message">Dashboard actualizado correctamente</span>
-                </div>
-                <div class="log-entry">
-                    <span class="log-time">${new Date().toLocaleTimeString()}</span>
-                    <span class="log-level success">SUCCESS</span>
-                    <span class="log-message">Campañas cargadas desde Wolkvox</span>
-                </div>
-            `;
-        }, 500);
+        
+        fetch('/api/recent_logs')
+            .then(r => r.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    panel.innerHTML = data.map(log => {
+                        const level = log.level || 'info';
+                        const levelClass = level === 'error' ? 'log-error' : 
+                                         level === 'warning' ? 'log-warning' : 'log-info';
+                        const time = log.time || new Date().toLocaleTimeString();
+                        return `<div class="log-entry">
+                            <span class="log-time">${escapeHtml(time)}</span>
+                            <span class="log-level ${levelClass}">${escapeHtml(level.toUpperCase())}</span>
+                            <span class="log-message">${escapeHtml(log.message || '')}</span>
+                        </div>`;
+                    }).join('');
+                } else {
+                    panel.innerHTML = `
+                        <div class="log-entry">
+                            <span class="log-time">${new Date().toLocaleTimeString()}</span>
+                            <span class="log-level log-info">INFO</span>
+                            <span class="log-message">Dashboard actualizado correctamente</span>
+                        </div>
+                        <div class="log-entry">
+                            <span class="log-time">${new Date().toLocaleTimeString()}</span>
+                            <span class="log-level log-info">INFO</span>
+                            <span class="log-message">Sistema funcionando normalmente</span>
+                        </div>
+                    `;
+                }
+            })
+            .catch(() => {
+                panel.innerHTML = `
+                    <div class="log-entry">
+                        <span class="log-time">${new Date().toLocaleTimeString()}</span>
+                        <span class="log-level log-info">INFO</span>
+                        <span class="log-message">Dashboard actualizado correctamente</span>
+                    </div>
+                    <div class="log-entry">
+                        <span class="log-time">${new Date().toLocaleTimeString()}</span>
+                        <span class="log-level log-warning">WARNING</span>
+                        <span class="log-message">No se pudieron cargar logs desde el servidor</span>
+                    </div>
+                `;
+            });
     }
 }
 
-// Cargar datos al iniciar
+// ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 DOM cargado, iniciando dashboard...');  
+    console.log('🚀 DOM cargado, iniciando dashboard...');
     
-    // ✅ Agregar event listener al botón
     const btn = document.getElementById('btnRefreshCampaigns');
     if (btn) {
         btn.addEventListener('click', actualizarDashboard);
@@ -430,12 +641,11 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('❌ No se encontró el botón #btnRefreshCampaigns');
     }
     
-    // Cargar datos iniciales
     actualizarDashboard();
     cargarLogs();
 });
 
-// Actualizar cada 6 minutos
+// ========== ACTUALIZACIONES AUTOMÁTICAS ==========
 setInterval(actualizarDashboard, 360000);
 setInterval(cargarLogs, 60000);
 </script>

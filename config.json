@@ -29,6 +29,12 @@
     {
       "name": "qnt_digital",
       "url": "https://wv0010.wolkvox.com/",
+      "token": "7b69645f6469737472697d2d3230323630393034303733333232",
+      "created_at": "2026-05-25T16:11:15.522168"
+    },
+    {
+      "name": "qnt_digital_2_dashboard",
+      "url": "https://wv0010.wolkvox.com/",
       "token": "7b69645f6469737472697d2d3230323630353232303832393533",
       "created_at": "2026-05-25T16:11:15.522168"
     },
