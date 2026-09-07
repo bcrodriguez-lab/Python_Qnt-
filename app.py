@@ -79,6 +79,7 @@ from services.email_service import (
     construir_contenido, preview_email, guardar_email_log, extraer_variables,
 )
 import logging
+from database import db, ProgramacionSms
 # ==================== CONFIGURACIÓN GLOBAL ====================
 PROJECT_ID = "capable-arbor-209819"
 bq_client = None
@@ -891,29 +892,7 @@ def _auto_campaign_form_context(campaign=None, logs=None):
         "tipos_campana_con_flujo": TIPO_CAMPANA_CON_FLUJO,
     }
 
-
-@app.context_processor
-def inject_admin_ui():
-    return {"current_endpoint": request.endpoint or ""}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# ==================== SMS - PÁGINA ====================
+#================= SMS - PÁGINA ====================
 
 @app.route("/config-sms")
 def config_sms():
@@ -1076,7 +1055,6 @@ def sms_schedule():
 
         # Guardar en BigQuery como SIMPLE
         schedule_id = guardar_programacion(
-            bq_client,
             query=query,
             plantilla=plantilla,
             campaign=campaign,
@@ -1148,7 +1126,6 @@ def sms_schedule_recurrent():
 
         # Guardar en BigQuery como RECURRENTE
         schedule_id = guardar_programacion(
-            bq_client,
             query=query,
             plantilla=plantilla,
             campaign=campaign,
@@ -1171,9 +1148,9 @@ def sms_schedule_recurrent():
         )
 
 
-        logger_sms.info(f"🕒 Job recurrente creado: {schedule_id[:8]} (hora={hora_inicio}, fecha_fin={fecha_fin})")
+        logger_sms.info(f"🕒 Job recurrente creado: {str(schedule_id)} (hora={hora_inicio}, fecha_fin={fecha_fin})")
         logger_sms.info(f"ejecutando cada minuto para verificar si es hora de enviar.")
-        logger_sms.info(f"✅ Programación recurrente creada: {schedule_id[:8]} (hora={hora_inicio}, fecha_fin={fecha_fin})")
+        logger_sms.info(f"✅ Programación recurrente creada: {str(schedule_id)[:8]} (hora={hora_inicio}, fecha_fin={fecha_fin})")
 
         return jsonify({
             "success": True,
@@ -1191,156 +1168,418 @@ def sms_schedule_recurrent():
         logger.exception("Error programando SMS recurrente")
         return jsonify({"success": False, "message": str(exc)}), 500
 
-#------------------Schedule de SMS --------------------------------
-def execute_sms_schedule(schedule_id: str):
-    """Job que ejecuta programaciones SIMPLES y RECURRENTES."""
-    try:
-        client = bq_client or get_bigquery_client()
-        if client is None:
-            raise SmsServiceError("No se pudo conectar a BigQuery")
+def execute_sms_schedule(schedule_id: int):
+    """Ejecuta programaciones SIMPLES y RECURRENTES desde SQLite."""
 
-        # 1. Obtener la programación
-        query = f"""
-            SELECT * FROM `{PROJECT_ID}.Temporal.ProgramacionSMS`
-            WHERE id = '{schedule_id}' AND estado = 'pendiente'
-            LIMIT 1
-        """
-        df = client.query(query).to_dataframe()
-        if df.empty:
-            # Ya no está pendiente → eliminar job si existe
-            for prefix in ['sms_simple_', 'sms_recurrente_']:
+ 
+
+    with app.app_context():
+
+        try:
+
+            # ==================================================
+            # 1. BUSCAR PROGRAMACIÓN EN SQLITE
+            # ==================================================
+
+            scheduled = ProgramacionSms.query.filter_by(
+                id=schedule_id,
+                estado='pendiente'
+            ).first()
+
+            if not scheduled:
+
+                logger_sms.info(
+                    f"⚠️ No se encontró programación pendiente: "
+                    f"{schedule_id}"
+                )
+
+                # Ya no está pendiente.
+                # Puede ser porque ya fue enviada,
+              
                 try:
-                    scheduler.remove_job(f"{prefix}{schedule_id}")
+                    scheduler.remove_job(
+                        f"sms_simple_{schedule_id}"
+                    )
                 except:
                     pass
-            return
 
-        scheduled = df.iloc[0].to_dict()
-        tipo = scheduled.get('tipo_programacion', 'simple')
-        ahora = datetime.now(COLOMBIA_TZ)
+                try:
+                    scheduler.remove_job(
+                        f"sms_recurrente_{schedule_id}"
+                    )
+                except:
+                    pass
 
-        # 2. LÓGICA SEGÚN TIPO
-        if tipo == 'simple':
-            # ========== PROGRAMACIÓN SIMPLE ==========
-            logger_sms.info(f"📤 Ejecutando programación SIMPLE: {schedule_id[:8]}")
-            
-            infobip_config = (CONFIG or load_config()).get("infobip", {})
-            fetched = fetch_sms_query_rows(client, scheduled['consulta_sql'])
-            if not fetched.get("success"):
-                raise SmsServiceError(fetched.get("message", "Error en consulta"))
-
-            enviar_sms_desde_filas(
-                fetched["rows"], scheduled['plantilla'], infobip_config,
-                client=client, usuario=scheduled.get('usuario', 'sistema'),
-                query_sql=scheduled['consulta_sql'],
-                allow_resend=bool(scheduled.get('confirmar_reenvio', False))
-            )
-
-            # Marcar como enviado
-            client.query(f"""
-                UPDATE `{PROJECT_ID}.Temporal.ProgramacionSMS`
-                SET estado = 'enviado', fecha_ejecucion = CURRENT_TIMESTAMP(),
-                    fecha_actualizacion = CURRENT_TIMESTAMP()
-                WHERE id = '{schedule_id}'
-            """).result()
-
-            logger_sms.info(f"✅ Simple enviado: {schedule_id[:8]}")
-
-        elif tipo == 'recurrente':
-            # ========== PROGRAMACIÓN RECURRENTE ==========
-            fecha_actual = ahora.strftime("%Y-%m-%d")
-            hora_actual = ahora.strftime("%H:%M")
-            hora_inicio = scheduled.get('hora_inicio') or '08:00'
-            fecha_fin = scheduled.get('fecha_fin')
-            fecha_ejecucion = scheduled.get('fecha_ejecucion')
-
-            # CONDICIÓN 1: ¿Ya llegó la hora?
-            if hora_actual < hora_inicio:
-                logger_sms.info(f"⏰ {schedule_id[:8]}: Aún no es la hora ({hora_actual} < {hora_inicio})")
                 return
 
-            # CONDICIÓN 2: ¿Ya se ejecutó HOY?
-            if fecha_ejecucion is not None:
-                try:
-                    # Convertir a string seguro
-                    if hasattr(fecha_ejecucion, 'astimezone') and not pd.isna(fecha_ejecucion):
-                        fe_col = fecha_ejecucion.astimezone(COLOMBIA_TZ)
-                        fe_str = fe_col.strftime("%Y-%m-%d")
-                    elif hasattr(fecha_ejecucion, 'strftime') and not pd.isna(fecha_ejecucion):
-                        fe_str = fecha_ejecucion.strftime("%Y-%m-%d")
-                    else:
-                        fe_str = str(fecha_ejecucion)[:10]
-                    
-                    if fe_str == fecha_actual:
-                        logger_sms.info(f"✅ {schedule_id[:8]}: Ya se ejecutó hoy ({fecha_actual})")
-                        return
-                except (ValueError, TypeError) as e:
-                    logger_sms.warning(f"⚠️ No se pudo parsear fecha_ejecucion: {e}")
-                    # Si no se puede parsear, asumir que NO se ha ejecutado
-                    pass
+            # ==================================================
+            # 2. DATOS DE LA PROGRAMACIÓN
+            # ==================================================
 
-            # CONDICIÓN 3: ¿Ya pasó la fecha fin?
-            if fecha_fin:
+            tipo = scheduled.tipo_programacion
+
+            ahora = datetime.now(COLOMBIA_TZ)
+
+            logger_sms.info(
+                f"🔎 Revisando programación {schedule_id} "
+                f"(tipo={tipo})"
+            )
+
+            # ==================================================
+            # 3. PROGRAMACIÓN SIMPLE
+            # ==================================================
+
+            if tipo == "simple":
+
+                logger_sms.info(
+                    f"📤 Ejecutando programación SIMPLE: "
+                    f"{schedule_id}"
+                )
+
+                # ----------------------------------------------
+                # Configuración Infobip
+                # ----------------------------------------------
+
+                infobip_config = (
+                    CONFIG or load_config()
+                ).get("infobip", {})
+
+                # ----------------------------------------------
+                # Ejecutar consulta de destinatarios
+                # ----------------------------------------------
+
+                fetched = fetch_sms_query_rows(
+                    bq_client,
+                    scheduled.consulta_sql
+                )
+
+                if not fetched.get("success"):
+
+                    raise SmsServiceError(
+                        fetched.get(
+                            "message",
+                            "Error en consulta"
+                        )
+                    )
+
+                # ----------------------------------------------
+                # Enviar SMS
+                # ----------------------------------------------
+
+                enviar_sms_desde_filas(
+                    fetched["rows"],
+                    scheduled.plantilla,
+                    infobip_config,
+                    client=bq_client,
+                    usuario=scheduled.usuario or "sistema",
+                    query_sql=scheduled.consulta_sql,
+                    allow_resend=bool(
+                        scheduled.confirmar_reenvio
+                    )
+                )
+
+                # ----------------------------------------------
+                # Marcar programación como enviada
+                # ----------------------------------------------
+
+                scheduled.estado = "enviado"
+
+                scheduled.fecha_ejecucion = ahora
+
+                scheduled.fecha_actualizacion = ahora
+
+                db.session.commit()
+
+                logger_sms.info(
+                    f"✅ Simple enviado correctamente: "
+                    f"{schedule_id}"
+                )
+
+            # ==================================================
+            # 4. PROGRAMACIÓN RECURRENTE
+            # ==================================================
+
+            elif tipo == "recurrente":
+
+                fecha_actual = ahora.strftime(
+                    "%Y-%m-%d"
+                )
+
+                hora_actual = ahora.strftime(
+                    "%H:%M"
+                )
+
+                hora_inicio = (
+                    scheduled.hora_inicio or "08:00"
+                )
+
+                fecha_fin = scheduled.fecha_fin
+
+                fecha_ejecucion = (
+                    scheduled.fecha_ejecucion
+                )
+
+                logger_sms.info(
+                    f"🔄 Revisando recurrente {schedule_id} "
+                    f"(hora actual={hora_actual}, "
+                    f"hora inicio={hora_inicio}, "
+                    f"fecha fin={fecha_fin})"
+                )
+
+                # ==================================================
+                # CONDICIÓN 1
+                # TODAVÍA NO ES LA HORA
+                # ==================================================
+
+                if hora_actual < hora_inicio:
+
+                    logger_sms.info(
+                        f"⏰ {schedule_id}: "
+                        f"Aún no es la hora "
+                        f"({hora_actual} < {hora_inicio})"
+                    )
+
+                    return
+
+                # ==================================================
+                # CONDICIÓN 2
+                # YA SE EJECUTÓ HOY
+                # ==================================================
+
+                if fecha_ejecucion:
+
+                    try:
+
+                        fecha_ejecucion_local = (
+                            fecha_ejecucion
+                        )
+
+                        # Si tiene zona horaria,
+                        # convertir a Colombia
+
+                        if fecha_ejecucion_local.tzinfo:
+
+                            fecha_ejecucion_local = (
+                                fecha_ejecucion_local.astimezone(
+                                    COLOMBIA_TZ
+                                )
+                            )
+
+                        fecha_ejecucion_str = (
+                            fecha_ejecucion_local.strftime(
+                                "%Y-%m-%d"
+                            )
+                        )
+
+                        if (
+                            fecha_ejecucion_str
+                            == fecha_actual
+                        ):
+
+                            logger_sms.info(
+                                f"✅ {schedule_id}: "
+                                f"Ya se ejecutó hoy "
+                                f"({fecha_actual})"
+                            )
+
+                            return
+
+                    except Exception as e:
+
+                        logger_sms.warning(
+                            f"⚠️ No se pudo interpretar "
+                            f"fecha_ejecucion de "
+                            f"{schedule_id}: {e}"
+                        )
+
+                # ==================================================
+                # CONDICIÓN 3
+                # YA PASÓ LA FECHA FIN
+                # ==================================================
+
+                if fecha_fin:
+
+                    try:
+
+                        if fecha_actual > fecha_fin:
+
+                            logger_sms.info(
+                                f"🛑 {schedule_id}: "
+                                f"Ya pasó la fecha fin "
+                                f"({fecha_fin})"
+                            )
+
+                            scheduled.estado = (
+                                "completado"
+                            )
+
+                            scheduled.fecha_actualizacion = (
+                                ahora
+                            )
+
+                            db.session.commit()
+
+                            # ----------------------------------
+                            # Eliminar job del scheduler
+                            # ----------------------------------
+
+                            try:
+
+                                scheduler.remove_job(
+                                    f"sms_recurrente_{schedule_id}"
+                                )
+
+                            except:
+
+                                pass
+
+                            return
+
+                    except Exception as e:
+
+                        logger_sms.warning(
+                            f"⚠️ Error validando fecha_fin "
+                            f"de {schedule_id}: {e}"
+                        )
+
+                # ==================================================
+                # 5. TODAS LAS CONDICIONES SE CUMPLIERON
+                #    → ENVIAR SMS
+                # ==================================================
+
+                logger_sms.info(
+                    f"📤 Ejecutando programación "
+                    f"RECURRENTE: {schedule_id}"
+                )
+
+                # ----------------------------------------------
+                # Configuración Infobip
+                # ----------------------------------------------
+
+                infobip_config = (
+                    CONFIG or load_config()
+                ).get("infobip", {})
+
+                # ----------------------------------------------
+                # Ejecutar consulta
+                # ----------------------------------------------
+
+                fetched = fetch_sms_query_rows(
+                    bq_client,
+                    scheduled.consulta_sql
+                )
+
+                if not fetched.get("success"):
+
+                    raise SmsServiceError(
+                        fetched.get(
+                            "message",
+                            "Error en consulta"
+                        )
+                    )
+
+                # ----------------------------------------------
+                # Enviar SMS
+                # ----------------------------------------------
+
+                enviar_sms_desde_filas(
+                    fetched["rows"],
+                    scheduled.plantilla,
+                    infobip_config,
+                    client=bq_client,
+                    usuario=scheduled.usuario or "sistema",
+                    query_sql=scheduled.consulta_sql,
+                    allow_resend=bool(
+                        scheduled.confirmar_reenvio
+                    )
+                )
+
+                # ==================================================
+                # 6. GUARDAR QUE YA SE EJECUTÓ HOY
+                # ==================================================
+
+                scheduled.fecha_ejecucion = ahora
+
+                scheduled.fecha_actualizacion = ahora
+
+                db.session.commit()
+
+                logger_sms.info(
+                    f"✅ Recurrente enviado correctamente: "
+                    f"{schedule_id}"
+                )
+
+            # ==================================================
+            # 7. TIPO DESCONOCIDO
+            # ==================================================
+
+            else:
+
+                logger_sms.warning(
+                    f"⚠️ Tipo de programación desconocido: "
+                    f"{tipo}"
+                )
+
+            # ==================================================
+            # 8. REGISTRAR ACCIÓN
+            # ==================================================
+
+            log_gui_action(
+                "SMS programado ejecutado",
+                programacion=str(schedule_id)
+            )
+
+        # ======================================================
+        # 9. MANEJO DE ERRORES
+        # ======================================================
+
+        except Exception as exc:
+
+            logger_sms.exception(
+                f"❌ Error en programación SMS "
+                f"{schedule_id}: {exc}"
+            )
+
+            # ----------------------------------------------
+            # Intentar marcar la programación como fallida
+            # ----------------------------------------------
+
+            try:
+
+                scheduled = ProgramacionSms.query.get(
+                    schedule_id
+                )
+
+                if scheduled:
+
+                    scheduled.estado = "fallido"
+
+                    scheduled.fecha_actualizacion = (
+                        datetime.now(COLOMBIA_TZ)
+                    )
+
+                    db.session.commit()
+
+                    logger_sms.info(
+                        f"⚠️ Programación {schedule_id} "
+                        f"marcada como FALLIDA"
+                    )
+
+            except Exception as db_error:
+
+                logger_sms.exception(
+                    f"❌ No se pudo actualizar el estado "
+                    f"de la programación {schedule_id}: "
+                    f"{db_error}"
+                )
+
+                # Como seguimos dentro de app.app_context(),
+                # ahora sí podemos hacer rollback.
                 try:
-                    if fecha_actual > fecha_fin:
-                        logger_sms.info(f"🛑 {schedule_id[:8]}: Ya pasó la fecha fin ({fecha_fin})")
-                        client.query(f"""
-                            UPDATE `{PROJECT_ID}.Temporal.ProgramacionSMS`
-                            SET estado = 'completado', fecha_actualizacion = CURRENT_TIMESTAMP()
-                            WHERE id = '{schedule_id}'
-                        """).result()
-                        try:
-                            scheduler.remove_job(f"sms_recurrente_{schedule_id}")
-                        except:
-                            pass
-                        return
+                    db.session.rollback()
                 except:
                     pass
 
-            # Si pasa todas las condiciones → ENVIAR
-            logger_sms.info(f"📤 Ejecutando programación RECURRENTE: {schedule_id[:8]}")
-            infobip_config = (CONFIG or load_config()).get("infobip", {})
-            fetched = fetch_sms_query_rows(client, scheduled['consulta_sql'])
-            if not fetched.get("success"):
-                raise SmsServiceError(fetched.get("message", "Error en consulta"))
-
-            enviar_sms_desde_filas(
-                fetched["rows"], scheduled['plantilla'], infobip_config,
-                client=client, usuario=scheduled.get('usuario', 'sistema'),
-                query_sql=scheduled['consulta_sql'],
-                allow_resend=bool(scheduled.get('confirmar_reenvio', False))
-            )
-
-            # Actualizar fecha_ejecucion = hoy
-            client.query(f"""
-                UPDATE `{PROJECT_ID}.Temporal.ProgramacionSMS`
-                SET fecha_ejecucion = CURRENT_TIMESTAMP(),
-                    fecha_actualizacion = CURRENT_TIMESTAMP()
-                WHERE id = '{schedule_id}'
-            """).result()
-
-            logger_sms.info(f"✅ Recurrente enviado: {schedule_id[:8]}")
-
-        else:
-            logger_sms.warning(f"⚠️ Tipo de programación desconocido: {tipo}")
-
-        log_gui_action("SMS programado ejecutado", programacion=schedule_id)
-
-    except Exception as exc:
-        logger_sms.exception("Error en programación SMS %s", schedule_id)
-        try:
-            client = bq_client or get_bigquery_client()
-            if client:
-                client.query(f"""
-                    UPDATE `{PROJECT_ID}.Temporal.ProgramacionSMS`
-                    SET estado = 'fallido', fecha_actualizacion = CURRENT_TIMESTAMP()
-                    WHERE id = '{schedule_id}'
-                """).result()
-        except:
-            pass
-
-
-# ==================== SMS - PROGRAMACIONES ====================
 
 @app.route("/api/sms/programaciones", methods=["GET"])
 def sms_programaciones():

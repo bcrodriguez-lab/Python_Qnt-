@@ -15,7 +15,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, Set
 from uuid import uuid4
-
+from database import db, ProgramacionSms
 import requests
 import logging
 import pandas as pd
@@ -558,7 +558,6 @@ def guardar_sms_log(
 
 
 def guardar_programacion(
-    client,
     query: str,
     plantilla: str,
     *,
@@ -567,50 +566,57 @@ def guardar_programacion(
     allow_resend: bool = False,
     total_dest: int = 0,
     tipo_programacion: str = "simple",
-    fecha_programada: str = None,      # Para simple: "2026-08-18T08:00:00"
-    hora_inicio: str = None,           # Para recurrente: "08:00"
-    fecha_fin: str = None,             # Para recurrente: "2026-09-25"
-) -> str:
-    """Guarda una programación en BigQuery."""
-    from google.cloud import bigquery
-
-    schedule_id = str(uuid4())
-    now = datetime.now(COLOMBIA_TZ).isoformat()
-
-    insert_sql = """
-    INSERT INTO `capable-arbor-209819.Temporal.ProgramacionSMS`
-    (id, tipo_programacion, consulta_sql, plantilla, campana, usuario, estado,
-     total_destinatarios, confirmar_reenvio, fecha_programada, hora_inicio, fecha_fin,
-     fecha_creacion, fecha_actualizacion)
-    VALUES (
-        @id, @tipo_prog, @consulta, @plantilla_param, @campana, @usuario, @estado,
-        @total_dest, @conf_reenvio, @fecha_prog, @hora_inicio, @fecha_fin,
-        @now, @now
-    )
-    """
-
-    job_config = bigquery.QueryJobConfig(query_parameters=[
-        bigquery.ScalarQueryParameter("id", "STRING", schedule_id),
-        bigquery.ScalarQueryParameter("tipo_prog", "STRING", tipo_programacion),
-        bigquery.ScalarQueryParameter("consulta", "STRING", query),
-        bigquery.ScalarQueryParameter("plantilla_param", "STRING", plantilla),
-        bigquery.ScalarQueryParameter("campana", "STRING", campaign or ""),
-        bigquery.ScalarQueryParameter("usuario", "STRING", usuario or ""),
-        bigquery.ScalarQueryParameter("estado", "STRING", "pendiente"),
-        bigquery.ScalarQueryParameter("total_dest", "INT64", total_dest),
-        bigquery.ScalarQueryParameter("conf_reenvio", "BOOL", allow_resend),
-        bigquery.ScalarQueryParameter("fecha_prog", "TIMESTAMP", fecha_programada),
-        bigquery.ScalarQueryParameter("hora_inicio", "STRING", hora_inicio),
-        bigquery.ScalarQueryParameter("fecha_fin", "STRING", fecha_fin),
-        bigquery.ScalarQueryParameter("now", "TIMESTAMP", now),
-    ])
+    fecha_programada: str = None,
+    hora_inicio: str = None,
+    fecha_fin: str = None
+) -> int:
 
     try:
-        client.query(insert_sql, job_config=job_config).result()
-        logger.info(f"✅ Programación guardada: {schedule_id} ({tipo_programacion})")
-        return schedule_id
+
+        fecha_prog = None
+
+        if fecha_programada:
+            fecha_prog = datetime.fromisoformat(
+                fecha_programada
+            )
+
+        nueva_programacion = ProgramacionSms(
+            tipo_programacion=tipo_programacion,
+            consulta_sql=query,
+            plantilla=plantilla,
+            campana=campaign or "",
+            usuario=usuario or "",
+            estado="pendiente",
+            total_destinatarios=total_dest,
+            confirmar_reenvio=allow_resend,
+            fecha_programada=fecha_prog,
+            hora_inicio=hora_inicio,
+            fecha_fin=fecha_fin
+        )
+
+        db.session.add(nueva_programacion)
+        db.session.commit()
+
+        logger.info(
+            f"✅ Programación guardada en SQLite: "
+            f"{nueva_programacion.id} "
+            f"({tipo_programacion})"
+        )
+
+        return nueva_programacion.id
+
     except Exception as e:
-        raise SmsServiceError(f"No se pudo guardar la programación: {e}")
+
+        db.session.rollback()
+
+        logger.exception(
+            "❌ Error guardando programación en SQLite"
+        )
+
+        raise SmsServiceError(
+            f"No se pudo guardar la programación: {e}"
+        )
+
 
 def verificar_lista_negra(client, phones: List[str]) -> Set[str]:
     """Verifica qué números están en la lista negra."""

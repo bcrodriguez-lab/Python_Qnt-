@@ -218,6 +218,32 @@ class ProgramacionCampana(db.Model):
     total_destinatarios = db.Column(db.Integer, default=0)
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
     fecha_actualizacion = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class ProgramacionSms(db.Model):
+    __tablename__ = 'programaciones_sms'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    tipo_programacion = db.Column(db.String(255), nullable=False)
+    consulta_sql = db.Column(db.Text, nullable=True)
+    plantilla = db.Column(db.Text, nullable=False)
+    campana = db.Column(db.String(100), nullable=False)
+    usuario = db.Column(db.String(100), nullable=False)
+    estado = db.Column(db.String(20), default='pendiente')
+    total_destinatarios = db.Column(db.Integer, default=0)
+    confirmar_reenvio = db.Column(db.Boolean, default=False)
+    fecha_programada = db.Column(db.DateTime)
+    hora_inicio = db.Column(db.String(5), default='08:00')
+    fecha_fin = db.Column(db.String(10))
+    fecha_ejecucion = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+    fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+    fecha_actualizacion = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
     
 class MensajeOperacion(db.Model):
     __tablename__ = 'Mensajes_'
