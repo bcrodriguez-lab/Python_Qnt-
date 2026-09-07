@@ -84,10 +84,42 @@ PROJECT_ID = "capable-arbor-209819"
 bq_client = None
 import os
 
+OPERADORES_SMS = [
+    "HELLO_BPO",
+    "QNT_RBK_2",
+    "MORACERO_CD2",
+    "QNT_RBK_1.2",
+    "AVALOGIC",
+    "DIGITAL_MONTOS_BAJOS",
+    "DIGITAL_ESPECIAL",
+    "PAZ_SALVO",
+    "MANTENIMIENTO_DIGITAL",
+    "DIGITAL_1",
+    "QNT_PERSONA_JURIDICA",
+    "QNT_JUD",
+    "MANTENIMIENTO-QNT",
+    "DIGITAL_2",
+    "GRADUADOS",
+    "QNT_OPERADOR_ESPECIAL",
+    "GENNIALS_BPO_CD",
+    "QNT_COBRO",
+    "VICBRA",
+    "MORACERO_CD",
+    "QNT_FALLECIDOS",
+    "QNT_RECAUDO",
+    "QNT_RBK_1.1",
+    "SATELITE_1",
+    "MANTENIMIENTO-QNT-MORAS-ALTAS",
+    "MANTENIMIENTO-ESP-QNT",
+    "VENTAS_TERCEROSJUD"
+]
 
-ruta_log = os.path.abspath("Programacion_simple.log")
 
-logger_programacion = logging.getLogger("programacion_simple")
+#==================== CONFIGURACIÓN DE LOGS ====================
+# =============== Logger De Programcion Robots 
+ruta_log = os.path.abspath("Programacion_Robot_simple.log")
+
+logger_programacion = logging.getLogger("Programacion_Robot_simple")
 
 logger_programacion.setLevel(logging.INFO)
 
@@ -106,6 +138,31 @@ handler_programacion.setFormatter(formatter_programacion)
 logger_programacion.addHandler(handler_programacion)
 
 logger_programacion.propagate = False
+
+
+#================ Logger De Programcion SMS ========================
+ruta_log = os.path.abspath("Programacion_sms.log")
+
+logger_sms = logging.getLogger("Programacion_sms")
+
+logger_sms.setLevel(logging.INFO)
+
+handler_sms = logging.FileHandler(
+    ruta_log,
+    encoding="utf-8"
+)
+
+formatter_sms = logging.Formatter(
+    '%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+handler_sms.setFormatter(formatter_sms)
+
+logger_sms.addHandler(handler_sms)
+
+logger_sms.propagate = False
+
 
  #==================== PÁGINAS PRINCIPALES ====================
 
@@ -1107,13 +1164,16 @@ def sms_schedule_recurrent():
         scheduler.add_job(
             execute_sms_schedule,
             trigger="interval",
-            hours=10,
+            minutes=1,
             args=[schedule_id],
             id=f"sms_recurrente_{schedule_id}",
             replace_existing=True
         )
 
-        log_gui_action("SMS programado (recurrente)", programacion=schedule_id, hora=hora_inicio, fecha_fin=fecha_fin)
+
+        logger_sms.info(f"🕒 Job recurrente creado: {schedule_id[:8]} (hora={hora_inicio}, fecha_fin={fecha_fin})")
+        logger_sms.info(f"ejecutando cada minuto para verificar si es hora de enviar.")
+        logger_sms.info(f"✅ Programación recurrente creada: {schedule_id[:8]} (hora={hora_inicio}, fecha_fin={fecha_fin})")
 
         return jsonify({
             "success": True,
@@ -1162,7 +1222,7 @@ def execute_sms_schedule(schedule_id: str):
         # 2. LÓGICA SEGÚN TIPO
         if tipo == 'simple':
             # ========== PROGRAMACIÓN SIMPLE ==========
-            logger.info(f"📤 Ejecutando programación SIMPLE: {schedule_id[:8]}")
+            logger_sms.info(f"📤 Ejecutando programación SIMPLE: {schedule_id[:8]}")
             
             infobip_config = (CONFIG or load_config()).get("infobip", {})
             fetched = fetch_sms_query_rows(client, scheduled['consulta_sql'])
@@ -1184,7 +1244,7 @@ def execute_sms_schedule(schedule_id: str):
                 WHERE id = '{schedule_id}'
             """).result()
 
-            logger.info(f"✅ Simple enviado: {schedule_id[:8]}")
+            logger_sms.info(f"✅ Simple enviado: {schedule_id[:8]}")
 
         elif tipo == 'recurrente':
             # ========== PROGRAMACIÓN RECURRENTE ==========
@@ -1196,7 +1256,7 @@ def execute_sms_schedule(schedule_id: str):
 
             # CONDICIÓN 1: ¿Ya llegó la hora?
             if hora_actual < hora_inicio:
-                logger.info(f"⏰ {schedule_id[:8]}: Aún no es la hora ({hora_actual} < {hora_inicio})")
+                logger_sms.info(f"⏰ {schedule_id[:8]}: Aún no es la hora ({hora_actual} < {hora_inicio})")
                 return
 
             # CONDICIÓN 2: ¿Ya se ejecutó HOY?
@@ -1212,10 +1272,10 @@ def execute_sms_schedule(schedule_id: str):
                         fe_str = str(fecha_ejecucion)[:10]
                     
                     if fe_str == fecha_actual:
-                        logger.info(f"✅ {schedule_id[:8]}: Ya se ejecutó hoy ({fecha_actual})")
+                        logger_sms.info(f"✅ {schedule_id[:8]}: Ya se ejecutó hoy ({fecha_actual})")
                         return
                 except (ValueError, TypeError) as e:
-                    logger.warning(f"⚠️ No se pudo parsear fecha_ejecucion: {e}")
+                    logger_sms.warning(f"⚠️ No se pudo parsear fecha_ejecucion: {e}")
                     # Si no se puede parsear, asumir que NO se ha ejecutado
                     pass
 
@@ -1223,7 +1283,7 @@ def execute_sms_schedule(schedule_id: str):
             if fecha_fin:
                 try:
                     if fecha_actual > fecha_fin:
-                        logger.info(f"🛑 {schedule_id[:8]}: Ya pasó la fecha fin ({fecha_fin})")
+                        logger_sms.info(f"🛑 {schedule_id[:8]}: Ya pasó la fecha fin ({fecha_fin})")
                         client.query(f"""
                             UPDATE `{PROJECT_ID}.Temporal.ProgramacionSMS`
                             SET estado = 'completado', fecha_actualizacion = CURRENT_TIMESTAMP()
@@ -1238,7 +1298,7 @@ def execute_sms_schedule(schedule_id: str):
                     pass
 
             # Si pasa todas las condiciones → ENVIAR
-            logger.info(f"📤 Ejecutando programación RECURRENTE: {schedule_id[:8]}")
+            logger_sms.info(f"📤 Ejecutando programación RECURRENTE: {schedule_id[:8]}")
             infobip_config = (CONFIG or load_config()).get("infobip", {})
             fetched = fetch_sms_query_rows(client, scheduled['consulta_sql'])
             if not fetched.get("success"):
@@ -1259,15 +1319,15 @@ def execute_sms_schedule(schedule_id: str):
                 WHERE id = '{schedule_id}'
             """).result()
 
-            logger.info(f"✅ Recurrente enviado: {schedule_id[:8]}")
+            logger_sms.info(f"✅ Recurrente enviado: {schedule_id[:8]}")
 
         else:
-            logger.warning(f"⚠️ Tipo de programación desconocido: {tipo}")
+            logger_sms.warning(f"⚠️ Tipo de programación desconocido: {tipo}")
 
         log_gui_action("SMS programado ejecutado", programacion=schedule_id)
 
     except Exception as exc:
-        logger.exception("Error en programación SMS %s", schedule_id)
+        logger_sms.exception("Error en programación SMS %s", schedule_id)
         try:
             client = bq_client or get_bigquery_client()
             if client:
@@ -1382,11 +1442,11 @@ def sms_history():
         items = df.to_dict('records') if not df.empty else []
         return jsonify({"success": True, "page": page, "items": items})
     except Exception as exc:
-        logger.exception("Error en historial SMS")
+        logger_sms.exception("Error en historial SMS")
         return jsonify({"success": False, "message": str(exc)}), 500
 
 
-# ==================== SMS - LISTA NEGRA ====================
+# ==================== SMS - LISTA NEGRA =============== =====
 
 @app.route("/api/sms/lista-negra", methods=["GET"])
 def sms_blacklist():
@@ -1416,13 +1476,15 @@ def sms_blacklist():
 @app.route("/api/sms/operadores", methods=["GET"])
 def sms_operadores():
     try:
-        from database import MensajeOperacion
-        operadores = MensajeOperacion.query.filter(MensajeOperacion.Estado == 1) \
-            .with_entities(MensajeOperacion.Operador).distinct().order_by(MensajeOperacion.Operador).all()
-        items = [op[0] for op in operadores if op[0]]
-        return jsonify({"success": True, "items": items})
+        return jsonify({
+            "success": True, "items": OPERADORES_SMS,
+            "message": "Lista de operadores obtenida correctamente"
+            })
+        
     except Exception as exc:
-        return jsonify({"success": False, "message": str(exc)}), 500
+        return jsonify({
+            "success": False, "message": str(exc)
+            }), 500
 
 
 @app.route("/api/sms/tipos-por-operador", methods=["GET"])

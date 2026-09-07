@@ -3,15 +3,15 @@
 {% block title %}Campañas SMS{% endblock %}
 
 {% block page_title %}
-  <div class="d-flex align-items-center">
-    <div class="mr-3" style="font-size:2rem; color: var(--primary);">
-      <i class="fas fa-comment-sms"></i>
-    </div>
-    <div>
-      <h1 class="m-0" style="font-weight:700;">Campañas SMS</h1>
-      <small class="text-muted">Destinatarios desde BigQuery · Envío vía Infobip</small>
-    </div>
+<div class="d-flex align-items-center">
+  <div class="mr-3" style="font-size:2rem; color: var(--primary);">
+    <i class="fas fa-comment-sms"></i>
   </div>
+  <div>
+    <h1 class="m-0" style="font-weight:700;">Campañas SMS</h1>
+    <small class="text-muted">Destinatarios desde BigQuery · Envío vía Infobip</small>
+  </div>
+</div>
 {% endblock %}
 
 {% block breadcrumb %}
@@ -195,7 +195,6 @@
     border-radius: 50%; animation: spin 0.7s linear infinite;
   }
 
-  /* Switch toggle */
   .switch-sm {
     position: relative; display: inline-block; width: 44px; height: 24px;
   }
@@ -211,7 +210,6 @@
   input:checked + .slider-sm { background-color: var(--primary); }
   input:checked + .slider-sm:before { transform: translateX(20px); }
 
-  /* Multi-select */
   .multi-select-container { position: relative; width: 100%; }
   .multi-select-trigger {
     border: 1.5px solid var(--border); border-radius: 10px;
@@ -256,9 +254,41 @@
   }
   .multi-select-actions .btn-aplicar { background: var(--primary); color: #fff; border-color: var(--primary); }
 
+  /* Estilos para programaciones */
+  .scheduled-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 16px 18px;
+    margin-bottom: 12px; transition: var(--transition);
+  }
+  .scheduled-card:hover { border-color: var(--primary); box-shadow: var(--shadow); }
+  .scheduled-card .header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  .scheduled-card .title { font-weight: 700; font-size: 0.95rem; color: var(--text-primary); }
+  .scheduled-card .meta { font-size: 0.78rem; color: var(--text-secondary); }
+  .scheduled-card .preview {
+    background: var(--bg-code); border-radius: 8px;
+    padding: 10px 14px; font-size: 0.82rem;
+    margin: 8px 0; border-left: 3px solid var(--primary);
+  }
+  .scheduled-card .actions {
+    display: flex; gap: 8px; margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .badge-scheduled {
+    display: inline-block; padding: 3px 10px;
+    border-radius: 20px; font-size: 0.65rem; font-weight: 600;
+  }
+  .badge-scheduled.pendiente { background: var(--warning-bg); color: var(--warning); }
+  .badge-scheduled.enviado { background: var(--success-bg); color: var(--success); }
+  .badge-scheduled.fallido { background: var(--danger-bg); color: var(--danger); }
+  .badge-scheduled.procesando { background: var(--info-bg); color: var(--info); }
+
   @media (max-width: 768px) {
     .sms-card-body { padding: 16px; }
     .sms-schedule-row { flex-direction: column; align-items: stretch; }
+    .sms-container { grid-template-columns: 1fr; }
   }
 </style>
 {% endblock %}
@@ -274,8 +304,7 @@
 
       <div class="sms-tabs" id="smsTabs">
         <button class="tab active" data-tab="send"><i class="fas fa-paper-plane"></i> Enviar</button>
-        <button class="tab" data-tab="history"><i class="fas fa-history"></i> Historial</button>
-        <button class="tab" data-tab="scheduled"><i class="fas fa-clock"></i> Programados</button>
+        <button class="tab" data-tab="scheduled"><i class="fas fa-clock"></i> Programaciones</button>
       </div>
 
       <!-- PANEL ENVIAR -->
@@ -325,8 +354,7 @@
         <!-- CONSULTA SQL -->
         <div class="sms-field">
           <label for="query">Consulta SQL <span class="badge-required">requerido</span></label>
-          <textarea id="query" class="form-control textarea-code" placeholder="SELECT celular, nombre, monto FROM ..." rows="4">SELECT * FROM `capable-arbor-209819.Temporal.sms_prueba_python`
-          </textarea>
+          <textarea id="query" class="form-control textarea-code" placeholder="SELECT celular, nombre, monto FROM ..." rows="4">SELECT * FROM `capable-arbor-209819.Temporal.sms_prueba_python`</textarea>
           <div class="sms-help">
             <span>Incluye columna de teléfono: <code>telefono</code>, <code>celular</code>, <code>movil</code>, <code>phone</code>.</span>
             <span id="rowCount" style="font-weight:600;color:var(--primary);">0 filas</span>
@@ -419,21 +447,14 @@
         <div id="smsResult" class="sms-result"></div>
       </div>
 
-      <!-- PANEL HISTORIAL -->
-      <div class="sms-tab-panel" id="panel-history">
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
-          <input id="histFiltroFecha" type="date" class="form-control" style="width:auto;flex:1;min-width:140px;">
-          <input id="histFiltroCampana" class="form-control" style="width:auto;flex:1;min-width:140px;" placeholder="Campaña">
-          <input id="histFiltroTelefono" class="form-control" style="width:auto;flex:1;min-width:140px;" placeholder="Teléfono">
-          <button id="histFiltrarBtn" class="btn btn-outline-primary"><i class="fas fa-search"></i> Filtrar</button>
-        </div>
-        <div id="histResult" style="max-height:400px;overflow-y:auto;">
-          <div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Cargando historial...</div>
-        </div>
-      </div>
-
-      <!-- PANEL PROGRAMADOS -->
+      <!-- PANEL PROGRAMACIONES (NUEVO - Con vista previa y envío) -->
       <div class="sms-tab-panel" id="panel-scheduled">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+          <input id="schedFiltroFecha" type="date" class="form-control" style="width:auto;flex:1;min-width:140px;" placeholder="Fecha">
+          <input id="schedFiltroCampana" class="form-control" style="width:auto;flex:1;min-width:140px;" placeholder="Campaña">
+          <button id="schedFiltrarBtn" class="btn btn-outline-primary"><i class="fas fa-search"></i> Filtrar</button>
+          <button id="schedRefreshBtn" class="btn btn-outline-secondary"><i class="fas fa-sync-alt"></i> Actualizar</button>
+        </div>
         <div id="scheduledResult">
           <div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Cargando programaciones...</div>
         </div>
@@ -529,7 +550,6 @@
   const tabs = document.querySelectorAll('.sms-tabs .tab');
   const panels = {
     send: document.getElementById('panel-send'),
-    history: document.getElementById('panel-history'),
     scheduled: document.getElementById('panel-scheduled')
   };
 
@@ -970,6 +990,8 @@
       showResult(`<div class="alert alert-success mb-0"><i class="fas fa-check-circle"></i> <strong>Programado</strong><br>ID: <code>${data.id}</code><br>Fecha: ${fecha} ${hora}<br>Destinatarios: ${data.total_destinatarios || '—'}</div>`);
       fechaProgramadaEl.value = '';
       horaProgramadaEl.value = '08:00';
+      // Recargar programaciones
+      loadScheduled();
     } catch (error) { showToast(`❌ ${escapeHtml(error.message)}`, 'danger'); }
     finally { setLoading(scheduleBtn, false); }
   });
@@ -992,6 +1014,8 @@
       scheduleBtn.style.display = 'inline-flex';
       horaRecurrenteEl.value = '08:00';
       fechaLimiteEl.value = '';
+      // Recargar programaciones
+      loadScheduled();
     } catch (error) { showToast(`❌ ${escapeHtml(error.message)}`, 'danger'); }
     finally { setLoading(scheduleRecurrentBtn, false); }
   });
@@ -1020,75 +1044,199 @@
     tabs.forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     Object.keys(panels).forEach(key => panels[key].classList.toggle('active', key === tab.dataset.tab));
-    if (tab.dataset.tab === 'history') loadHistory();
     if (tab.dataset.tab === 'scheduled') loadScheduled();
   }));
 
-  // ========== HISTORIAL ==========
-  async function loadHistory() {
-    const container = document.getElementById('histResult');
-    container.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
-    try {
-      const resp = await fetch('/api/sms/historial');
-      const data = await resp.json();
-      if (!data.items?.length) { container.innerHTML = '<div class="text-center text-muted py-4">Sin registros</div>'; return; }
-      container.innerHTML = '<table class="table table-hover table-sm"><thead><tr><th>Fecha</th><th>Teléfono</th><th>Mensaje</th><th>Campaña</th><th>Estado</th></tr></thead><tbody>' +
-        data.items.slice(0, 50).map(row => `<tr><td>${row.fecha_envio ? new Date(row.fecha_envio).toLocaleString() : '—'}</td><td>${escapeHtml(row.telefono||'')}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml((row.mensaje||'').substring(0,50))}</td><td>${escapeHtml(row.campana||'—')}</td><td><span class="badge badge-${row.resultado==='enviado'?'success':'danger'}">${row.resultado||'?'}</span></td></tr>`).join('') + '</tbody></table>';
-    } catch (e) { container.innerHTML = `<div class="alert alert-danger">${escapeHtml(e.message)}</div>`; }
-  }
-
-  // ========== PROGRAMACIONES ==========
+  // ========== CARGAR PROGRAMACIONES (CON VISTA PREVIA Y ENVÍO) ==========
   async function loadScheduled() {
     const container = document.getElementById('scheduledResult');
-    container.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+    container.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Cargando programaciones...</div>';
+    
     try {
-      const resp = await fetch('/api/sms/programaciones');
+      const fechaFiltro = document.getElementById('schedFiltroFecha')?.value || '';
+      const campanaFiltro = document.getElementById('schedFiltroCampana')?.value || '';
+      
+      let url = '/api/sms/programaciones';
+      const params = new URLSearchParams();
+      if (fechaFiltro) params.append('fecha', fechaFiltro);
+      if (campanaFiltro) params.append('campana', campanaFiltro);
+      if (params.toString()) url += '?' + params.toString();
+      
+      const resp = await fetch(url);
       const data = await resp.json();
-      if (!data.items?.length) { container.innerHTML = '<div class="text-center text-muted py-4">Sin programaciones</div>'; return; }
       
-      let html = '<table class="table table-hover table-sm"><thead><tr><th>ID</th><th>Tipo</th><th>Fecha/Hora</th><th>Estado</th><th></th></tr></thead><tbody>';
+      if (!data.items?.length) {
+        container.innerHTML = '<div class="text-center text-muted py-4">📭 No hay programaciones</div>';
+        return;
+      }
       
-      data.items.forEach(row => {
-        const tipo = row.tipo_programacion || 'simple';
-        const fecha = row.fecha_programada ? new Date(row.fecha_programada).toLocaleString() : (row.hora_inicio || '—');
+      let html = '';
+      data.items.forEach(item => {
+        const tipo = item.tipo_programacion || 'simple';
+        const fecha = item.fecha_programada ? new Date(item.fecha_programada).toLocaleString() : (item.hora_inicio || '—');
+        const estadoClass = item.estado === 'pendiente' ? 'pendiente' :
+          item.estado === 'enviado' ? 'enviado' :
+          item.estado === 'completado' ? 'enviado' :
+          item.estado === 'fallido' ? 'fallido' : 'procesando';
         
-        const tipoBadge = tipo === 'recurrente'
-          ? '<span class="badge badge-info">🔄 Recurrente</span>'
-          : '<span class="badge badge-secondary">Simple</span>';
+        const tipoLabel = tipo === 'recurrente' ? '🔄 Recurrente' : '📅 Programado';
         
-        const estadoClass = row.estado === 'pendiente' ? 'warning' :
-          row.estado === 'enviado' ? 'success' :
-          row.estado === 'completado' ? 'info' :
-          row.estado === 'fallido' ? 'danger' : 'secondary';
-        
-        html += `<tr>
-          <td><code>${escapeHtml((row.id||'').substring(0,8))}</code></td>
-          <td>${tipoBadge}</td>
-          <td>${fecha}</td>
-          <td><span class="badge badge-${estadoClass}">${row.estado || '?'}</span></td>
-          <td>${row.estado === 'pendiente' ? `<button class="btn btn-sm btn-outline-danger cancelar-btn" data-id="${row.id}"><i class="fas fa-times"></i></button>` : ''}</td>
-        </tr>`;
+        html += `
+          <div class="scheduled-card">
+            <div class="header">
+              <div>
+                <div class="title">${escapeHtml(item.campana || 'Sin campaña')}</div>
+                <div class="meta">
+                  <span class="badge-scheduled ${estadoClass}">${item.estado || '?'}</span>
+                  <span style="margin-left:10px;">${tipoLabel}</span>
+                  <span style="margin-left:10px;">📅 ${fecha}</span>
+                  ${item.fecha_fin ? `<span style="margin-left:10px;">📌 Hasta: ${new Date(item.fecha_fin).toLocaleDateString()}</span>` : ''}
+                </div>
+              </div>
+              <div>
+                <span class="badge" style="background:var(--primary-light);color:var(--primary);">
+                  ${item.total_destinatarios || 0} destinatarios
+                </span>
+              </div>
+            </div>
+            
+            <!-- VISTA PREVIA DEL MENSAJE -->
+            <div class="preview">
+              <div style="font-weight:600;font-size:0.7rem;color:var(--text-secondary);margin-bottom:4px;">
+                <i class="fas fa-comment"></i> Vista previa del mensaje:
+              </div>
+              ${item.preview_mensaje ? escapeHtml(item.preview_mensaje) : 'Sin vista previa disponible'}
+              ${item.cantidad_mensajes ? `<div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px;">📊 ${item.cantidad_mensajes} mensajes generados</div>` : ''}
+            </div>
+            
+            <!-- ACCIONES -->
+            <div class="actions">
+              ${item.estado === 'pendiente' ? `
+                <button class="btn btn-success btn-sm enviar-ahora-btn" data-id="${item.id}" data-tipo="${tipo}">
+                  <i class="fas fa-paper-plane"></i> Enviar ahora
+                </button>
+                <button class="btn btn-outline-danger btn-sm cancelar-btn" data-id="${item.id}">
+                  <i class="fas fa-times"></i> Cancelar
+                </button>
+              ` : ''}
+              ${item.estado === 'enviado' || item.estado === 'completado' ? `
+                <span class="badge badge-success"><i class="fas fa-check"></i> Enviado</span>
+              ` : ''}
+              ${item.estado === 'fallido' ? `
+                <button class="btn btn-outline-warning btn-sm reintentar-btn" data-id="${item.id}">
+                  <i class="fas fa-redo"></i> Reintentar
+                </button>
+              ` : ''}
+              <button class="btn btn-outline-secondary btn-sm ver-detalle-btn" data-id="${item.id}">
+                <i class="fas fa-info-circle"></i> Detalle
+              </button>
+            </div>
+          </div>
+        `;
       });
       
-      html += '</tbody></table>';
       container.innerHTML = html;
+      
+      // Event listeners para acciones
+      container.querySelectorAll('.enviar-ahora-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          const tipo = btn.dataset.tipo;
+          if (!confirm(`📤 ¿Enviar ${tipo === 'recurrente' ? 'la programación recurrente' : 'el envío programado'} ahora?`)) return;
+          
+          try {
+            setLoading(btn, true);
+            const resp = await fetch(`/api/sms/enviar-programacion/${id}`, { method: 'POST' });
+            const data = await resp.json();
+            if (data.success) {
+              showToast(`✅ Envío iniciado: ${data.enviados || 0} SMS`, 'success');
+              loadScheduled();
+            } else {
+              showToast(`❌ ${data.message || 'Error'}`, 'danger');
+            }
+          } catch (error) {
+            showToast(`❌ ${error.message}`, 'danger');
+          } finally {
+            setLoading(btn, false);
+          }
+        });
+      });
       
       container.querySelectorAll('.cancelar-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
-          if (!confirm('¿Cancelar programación?')) return;
-          await fetch(`/api/sms/cancelar/${btn.dataset.id}`, {method:'POST'});
-          loadScheduled();
+          if (!confirm('¿Cancelar esta programación?')) return;
+          try {
+            const resp = await fetch(`/api/sms/cancelar/${btn.dataset.id}`, { method: 'POST' });
+            const data = await resp.json();
+            if (data.success) {
+              showToast('✅ Programación cancelada', 'success');
+              loadScheduled();
+            } else {
+              showToast(`❌ ${data.message}`, 'danger');
+            }
+          } catch (error) {
+            showToast(`❌ ${error.message}`, 'danger');
+          }
         });
       });
-    } catch (e) { container.innerHTML = `<div class="alert alert-danger">${escapeHtml(e.message)}</div>`; }
+      
+      container.querySelectorAll('.reintentar-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('¿Reintentar envío?')) return;
+          try {
+            const resp = await fetch(`/api/sms/reintentar/${btn.dataset.id}`, { method: 'POST' });
+            const data = await resp.json();
+            if (data.success) {
+              showToast('✅ Reintentando envío', 'success');
+              loadScheduled();
+            } else {
+              showToast(`❌ ${data.message}`, 'danger');
+            }
+          } catch (error) {
+            showToast(`❌ ${error.message}`, 'danger');
+          }
+        });
+      });
+      
+      container.querySelectorAll('.ver-detalle-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try {
+            const resp = await fetch(`/api/sms/programacion/${btn.dataset.id}`);
+            const data = await resp.json();
+            if (data.success) {
+              const item = data.item;
+              showToast(`
+                📋 <strong>Detalle:</strong><br>
+                Campaña: ${item.campana || '—'}<br>
+                Destinatarios: ${item.total_destinatarios || 0}<br>
+                Estado: ${item.estado || '?'}<br>
+                ${item.error ? '❌ Error: ' + item.error : ''}
+              `, 'info', 8000);
+            }
+          } catch (error) {
+            showToast(`❌ ${error.message}`, 'danger');
+          }
+        });
+      });
+      
+    } catch (error) {
+      container.innerHTML = `<div class="alert alert-danger">${escapeHtml(error.message)}</div>`;
+    }
   }
 
-  document.getElementById('histFiltrarBtn').addEventListener('click', loadHistory);
+  // ========== FILTROS DE PROGRAMACIONES ==========
+  document.getElementById('schedFiltrarBtn')?.addEventListener('click', loadScheduled);
+  document.getElementById('schedRefreshBtn')?.addEventListener('click', loadScheduled);
+
+  // ========== INICIALIZACIÓN ==========
   plantillaEl.addEventListener('input', actualizarMockup);
   actualizarMockup();
-  loadHistory();
-  loadScheduled();
-  setTimeout(() => showToast('💬 Listo · Usa "Probar consulta"', 'info', 4000), 500);
+  
+  // Cargar programaciones al inicio
+  setTimeout(() => {
+    loadScheduled();
+    showToast('💬 Listo · Usa "Probar consulta" para validar', 'info', 4000);
+  }, 500);
 
 })();
 </script>
