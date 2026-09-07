@@ -307,7 +307,7 @@ label { font-weight: 600; font-size: 0.85rem; color: var(--text-primary); }
 
 /* ===== UTILIDADES ===== */
 .text-center { text-align: center; }
-.text-right { text-align: right; }
+.text-right { text-align: center; }
 .text-muted { color: var(--text-secondary); }
 .text-success { color: var(--success); }
 .text-danger { color: var(--danger); }

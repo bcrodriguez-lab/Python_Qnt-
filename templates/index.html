@@ -232,7 +232,7 @@
   <div class="stat-card primary">
     <div class="stat-icon"><i class="fas fa-server"></i></div>
     <div class="stat-value" id="statServers">0</div>
-    <div class="stat-label">Servidores configurados</div>
+    <div class="stat-label">Servidores Utilizados</div>
     <a href="/config-servers" class="stat-footer">Ver servidores <i class="fas fa-arrow-right"></i></a>
   </div>
   
@@ -268,7 +268,7 @@
       <button class="btn-tool" id="btnRefreshCampaigns" title="Actualizar">
           <i class="fas fa-sync-alt" id="iconRefreshCampaigns"></i>
       </button>
-      <a href="/config-bigquery" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Nueva campaña</a>
+      <a href="/auto-campaigns/new" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Nueva campaña</a>
     </div>
   </div>
   <div class="section-body table-responsive">
@@ -495,17 +495,17 @@ function actualizarDashboard() {
                             let url, method, confirmMsg, successMsg;
                             
                             if (btn.classList.contains('btn-start-campaign')) {
-                                url = `/api/campaigns/${campaignId}/start`;  // ← NUEVA RUTA
+                                url = `/api/campaigns/${campaignId}/start`;  // 
                                 method = 'POST';
                                 confirmMsg = `¿Iniciar la campaña ${campaignId} en ${server}?`;
                                 successMsg = '✅ Campaña iniciada correctamente';
                             } else if (btn.classList.contains('btn-stop-campaign')) {
-                                url = `/api/campaigns/${campaignId}/stop`;   // ← NUEVA RUTA
+                                url = `/api/campaigns/${campaignId}/stop`;   //
                                 method = 'POST';
                                 confirmMsg = `¿Detener la campaña ${campaignId} en ${server}?`;
                                 successMsg = '⏹️ Campaña detenida correctamente';
                             } else if (btn.classList.contains('btn-clear-campaign')) {
-                                url = `/api/campaigns/${campaignId}/clear`;  // ← NUEVA RUTA
+                                url = `/api/campaigns/${campaignId}/clear`;  // 
                                 method = 'DELETE';
                                 confirmMsg = `¿Limpiar todos los registros de la campaña ${campaignId} en ${server}?`;
                                 successMsg = '🧹 Campaña limpiada correctamente';
@@ -578,56 +578,28 @@ function actualizarDashboard() {
 
 // ========== FUNCIÓN PARA CARGAR LOGS ==========
 function cargarLogs() {
-    const panel = document.getElementById('logsPanel');
-    if (panel) {
-        panel.innerHTML = '<div class="text-muted">Cargando logs...</div>';
-        
-        fetch('/api/recent_logs')
-            .then(r => r.json())
-            .then(data => {
-                if (data && data.length > 0) {
-                    panel.innerHTML = data.map(log => {
-                        const level = log.level || 'info';
-                        const levelClass = level === 'error' ? 'log-error' : 
-                                         level === 'warning' ? 'log-warning' : 'log-info';
-                        const time = log.time || new Date().toLocaleTimeString();
-                        return `<div class="log-entry">
-                            <span class="log-time">${escapeHtml(time)}</span>
-                            <span class="log-level ${levelClass}">${escapeHtml(level.toUpperCase())}</span>
-                            <span class="log-message">${escapeHtml(log.message || '')}</span>
-                        </div>`;
-                    }).join('');
-                } else {
-                    panel.innerHTML = `
-                        <div class="log-entry">
-                            <span class="log-time">${new Date().toLocaleTimeString()}</span>
-                            <span class="log-level log-info">INFO</span>
-                            <span class="log-message">Dashboard actualizado correctamente</span>
-                        </div>
-                        <div class="log-entry">
-                            <span class="log-time">${new Date().toLocaleTimeString()}</span>
-                            <span class="log-level log-info">INFO</span>
-                            <span class="log-message">Sistema funcionando normalmente</span>
-                        </div>
-                    `;
+  fetch('/api/recent_logs')
+            .then(response => response.json())
+            .then(logs => {
+                const logsPanel = document.getElementById('logsPanel');
+                if (!logs.length) {
+                    logsPanel.innerHTML = '<div class="text-muted">No hay logs disponibles</div>';
+                    return;
                 }
+                let html = '';
+                logs.forEach(log => {
+                    let className = 'log-info';
+                    if (log.includes('ERROR')) className = 'log-error';
+                    else if (log.includes('WARNING')) className = 'log-warning';
+                    html += `<div class="log-line ${className}">${escapeHtml(log)}</div>`;
+                });
+                logsPanel.innerHTML = html;
             })
             .catch(() => {
-                panel.innerHTML = `
-                    <div class="log-entry">
-                        <span class="log-time">${new Date().toLocaleTimeString()}</span>
-                        <span class="log-level log-info">INFO</span>
-                        <span class="log-message">Dashboard actualizado correctamente</span>
-                    </div>
-                    <div class="log-entry">
-                        <span class="log-time">${new Date().toLocaleTimeString()}</span>
-                        <span class="log-level log-warning">WARNING</span>
-                        <span class="log-message">No se pudieron cargar logs desde el servidor</span>
-                    </div>
-                `;
+                document.getElementById('logsPanel').innerHTML =
+                    '<div class="text-danger">No se pudieron cargar los logs.</div>';
             });
     }
-}
 
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', function() {

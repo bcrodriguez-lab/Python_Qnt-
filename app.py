@@ -3045,218 +3045,101 @@ from datetime import datetime
 # FUNCIONES AUXILIARES
 # ============================================
 
-
+import requests
+from flask import request, jsonify
 
 # ============================================
-# ENDPOINT: DETENER CAMPAÑA (SIN BD LOCAL)
-# ============================================
-@app.route("/api/campaigns/<string:campaign_id>/stop", methods=["POST"])
-def api_campaigns_stop(campaign_id):
-    """
-    Detiene una campaña en Wolkvox.
-    campaign_id = ID de Wolkvox (ej: "20717")
-    """
+# FUNCIONES AUXILIARES (compartidas)
+
+
+def _get_base_url_wolkvox(server_name: str) -> str:
+    """Obtiene la URL base de Wolkvox para un servidor."""
+    from backend import get_server
+    
     try:
-        # Obtener el servidor desde el body
-        data = request.get_json() or {}
-        server_name = data.get("server_name", "").strip()
-        
-        if not server_name:
-            return jsonify({
-                "success": False, 
-                "message": "Se requiere el nombre del servidor."
-            }), 400
-        
-        # Obtener token usando la función existente
-        token = _obtener_token_servidor(server_name)
-        if not token:
-            return jsonify({
-                "success": False, 
-                "message": f"No se encontró token para el servidor {server_name}."
-            }), 400
-        
-        # Construir URL usando la función existente
-        base_url = _get_base_url_wolkvox(server_name)
-        stop_url = f"{base_url}/api/v2/campaign.php?api=stop&campaign_id={campaign_id}"
-        
-        # Hacer petición a Wolkvox (PUT según la API)
-        response = requests.put(
-            stop_url,
+        srv = get_server(server_name)
+    except Exception:
+        srv = None
+    
+    if srv:
+        prefix = (srv.get("url") or "").strip().rstrip("/")
+        if prefix.lower().startswith("http"):
+            return prefix
+        return f"https://wv{prefix}.wolkvox.com"
+    else:
+        if server_name.lower().startswith("http"):
+            return server_name.rstrip("/")
+        return f"https://wv{server_name}.wolkvox.com"
+
+def _ejecutar_accion_wolkvox(campaign_id, server_name, accion, metodo_http):
+    """
+    Función genérica para ejecutar acciones en Wolkvox.
+    
+    Args:
+        campaign_id: ID de la campaña en Wolkvox
+        server_name: Nombre del servidor
+        accion: 'start', 'stop', 'clear_campaign'
+        metodo_http: 'POST', 'PUT', 'DELETE'
+    """
+    # Validar server_name
+    if not server_name:
+        return {"success": False, "message": "Se requiere server_name"}, 400
+    
+    # Obtener token
+    token = _obtener_token_servidor(server_name)
+    if not token:
+        return {"success": False, "message": f"Token no encontrado para {server_name}"}, 400
+    
+    # Construir URL
+    base_url = _get_base_url_wolkvox(server_name)
+    url = f"{base_url}/api/v2/campaign.php?api={accion}&campaign_id={campaign_id}"
+    
+    # Ejecutar petición
+    try:
+        response = requests.request(
+            method=metodo_http,
+            url=url,
             headers={"wolkvox-token": token},
             timeout=60
         )
         
         if response.ok:
-            return jsonify({
-                "success": True,
-                "message": f"Campaña {campaign_id} detenida correctamente.",
-                "data": {
-                    "campaign_id": campaign_id,
-                    "server": server_name,
-                    "status": "stopped"
-                }
-            })
+            return {"success": True, "message": f"Campaña {campaign_id} {accion.replace('_', 'da ')}"}, 200
         else:
-            return jsonify({
-                "success": False,
-                "message": f"Error HTTP {response.status_code}",
-                "detail": response.text[:500]
-            }), response.status_code if response.status_code < 500 else 500
-            
+            return {"success": False, "message": f"Error HTTP {response.status_code}"}, response.status_code
     except requests.Timeout:
-        return jsonify({
-            "success": False,
-            "message": f"Timeout al intentar detener la campaña {campaign_id} en {server_name}."
-        }), 504
+        return {"success": False, "message": f"Timeout en {server_name}"}, 504
     except Exception as e:
-        return jsonify({
-            "success": False,
-            "message": str(e)
-        }), 500
+        return {"success": False, "message": str(e)}, 500
 
+
+# ============================================
+# ENDPOINTS (solo lo esencial)
+# ============================================
 
 @app.route("/api/campaigns/<string:campaign_id>/start", methods=["POST"])
 def api_campaigns_start(campaign_id):
-    try:
-        data = request.get_json() or {}
-        server_name = data.get("server_name", "").strip()
-        
-        if not server_name:
-            return jsonify({"success": False, "message": "Se requiere server_name"}), 400
-        
-        token = _obtener_token_servidor(server_name)
-        if not token:
-            return jsonify({"success": False, "message": "Token no encontrado"}), 400
-        
-        base_url = _get_base_url_wolkvox(server_name)
-        start_url = f"{base_url}/api/v2/campaign.php?api=start&campaign_id={campaign_id}"
-        
-        response = requests.post(start_url, headers={"wolkvox-token": token}, timeout=60)
-        
-        if response.ok:
-            return jsonify({"success": True, "message": f"Campaña {campaign_id} iniciada"})
-        return jsonify({"success": False, "message": f"Error HTTP {response.status_code}"}), response.status_code
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+    data = request.get_json() or {}
+    server_name = data.get("server_name", "").strip()
+    result, status = _ejecutar_accion_wolkvox(campaign_id, server_name, "start", "POST")
+    return jsonify(result), status
+
+
+@app.route("/api/campaigns/<string:campaign_id>/stop", methods=["POST"])
+def api_campaigns_stop(campaign_id):
+    data = request.get_json() or {}
+    server_name = data.get("server_name", "").strip()
+    result, status = _ejecutar_accion_wolkvox(campaign_id, server_name, "stop", "PUT")
+    return jsonify(result), status
 
 
 @app.route("/api/campaigns/<string:campaign_id>/clear", methods=["DELETE"])
 def api_campaigns_clear(campaign_id):
-    """
-    Limpia los registros de una campaña en Wolkvox.
-    Basado en la documentación oficial de Wolkvox.
-    Método: DELETE
-    Parámetros: api=clear, campaign_id={id}
-    """
-    try:
-        # Obtener el servidor desde el body
-        data = request.get_json() or {}
-        server_name = data.get("server_name", "").strip()
-        
-        if not server_name:
-            return jsonify({
-                "success": False,
-                "message": "Se requiere el nombre del servidor."
-            }), 400
-        
-        # Obtener token
-        token = _obtener_token_servidor(server_name)
-        if not token:
-            return jsonify({
-                "success": False,
-                "message": f"No se encontró token para el servidor {server_name}."
-            }), 400
-        
-        # Construir URL base
-        base_url = _get_base_url_wolkvox(server_name)
-        
-        # Construir URL con parámetros (según documentación)
-        clear_url = f"{base_url}/api/v2/campaign.php?api=clear_campaign&campaign_id={campaign_id}"        
-        logger.info(f"🔍 CLEAR - URL: {clear_url}, Server: {server_name}, Campaign ID: {campaign_id}")
-        # ✅ Agregar type_campaign si viene en la petición (opcional)
-        type_campaign = data.get("type_campaign", "").strip()
-        if type_campaign and type_campaign in ["preview", "predictive"]:
-            clear_url += f"&type_campaign={type_campaign}"
-        
-        # ✅ Agregar result si viene en la petición (opcional)
-        result = data.get("result", "").strip()
-        valid_results = ["no-answer", "answer-machine", "abandon", "busy", "congestion", 
-                        "unknown", "failed", "do-not-call", "chanunavail", "answer"]
-        if result and result in valid_results:
-            clear_url += f"&result={result}"
-        
-        print(f"🔍 CLEAR - URL: {clear_url}")
-        print(f"🔍 CLEAR - Server: {server_name}")
-        print(f"🔍 CLEAR - Campaign ID: {campaign_id}")
-        
-        # ✅ Usar DELETE como dice la documentación
-        response = requests.delete(
-            clear_url,
-            headers={"wolkvox-token": token},
-            timeout=60
-        )
-        
-        print(f"🔍 CLEAR - Status Code: {response.status_code}")
-        print(f"🔍 CLEAR - Response: {response.text[:500]}")
-        
-        # Procesar respuesta
-        if response.ok:
-            try:
-                resp_data = response.json()
-                # La documentación dice que devuelve: code, error, msg
-                if resp_data.get("code") == 0 or resp_data.get("error") == "0":
-                    return jsonify({
-                        "success": True,
-                        "message": resp_data.get("msg", f"Campaña {campaign_id} limpiada correctamente."),
-                        "data": {
-                            "campaign_id": campaign_id,
-                            "server": server_name,
-                            "status": "cleared",
-                            "response": resp_data
-                        }
-                    })
-                else:
-                    return jsonify({
-                        "success": False,
-                        "message": resp_data.get("msg", "Error al limpiar la campaña"),
-                        "code": resp_data.get("code"),
-                        "error": resp_data.get("error")
-                    }), 400
-            except:
-                # Si no es JSON, pero la respuesta es OK
-                return jsonify({
-                    "success": True,
-                    "message": f"Campaña {campaign_id} limpiada correctamente."
-                })
-        else:
-            return jsonify({
-                "success": False,
-                "message": f"Error HTTP {response.status_code}",
-                "detail": response.text[:500]
-            }), response.status_code
-            
-    except requests.Timeout:
-        return jsonify({
-            "success": False,
-            "message": f"Timeout al limpiar la campaña {campaign_id} en {server_name}."
-        }), 504
-    except requests.RequestException as e:
-        print(f"❌ Error de requests en CLEAR: {e}")
-        return jsonify({
-            "success": False,
-            "message": f"Error de conexión: {str(e)}"
-        }), 500
-    except Exception as e:
-        print(f"❌ Error general en CLEAR: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({
-            "success": False,
-            "message": f"Error interno: {str(e)}"
-        }), 500
+    data = request.get_json() or {}
+    server_name = data.get("server_name", "").strip()
+    result, status = _ejecutar_accion_wolkvox(campaign_id, server_name, "clear_campaign", "DELETE")
+    return jsonify(result), status
 
-import logging
-logger = logging.getLogger(__name__)
 
 
 # ================== LISTAR PROGRAMACIONES (API) ==================
