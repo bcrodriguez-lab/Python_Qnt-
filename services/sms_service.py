@@ -312,6 +312,7 @@ def preview_sms(rows: List[Dict], plantilla: str, limit: int = 3) -> Dict:
 # 📤 ENVÍO DE LOTES CON CALLBACKDATA Y ACORTAMIENTO
 # ==================================================
 
+
 def enviar_sms_desde_filas(
     rows: List[Dict], 
     plantilla: str, 
@@ -341,6 +342,7 @@ def enviar_sms_desde_filas(
     print(f"🔍 DEBUG - Details: {details}")
     for i, item in enumerate(prepared):
         print(f"🔍 DEBUG - Preparado {i}: phone={item['phone']}")
+    
     # Aplicar validaciones (lista negra, duplicados)
     if client:
         phones = [item["phone"] for item in prepared]
@@ -359,14 +361,14 @@ def enviar_sms_desde_filas(
         })
         
         prepared = allowed
-    # En enviar_sms_desde_filas, después de verificar duplicados
+    
     print(f"🔍 DEBUG - Blocked: {blocked}")
     print(f"🔍 DEBUG - Duplicates: {duplicates}")
     print(f"🔍 DEBUG - Allow resend: {allow_resend}")
     print(f"🔍 DEBUG - Allowed antes del filtro: {[item['phone'] for item in allowed]}")
-
     print(f"🔍 DEBUG - Aplicando filtro de duplicados...")
     print(f"🔍 DEBUG - Allowed después del filtro: {[item['phone'] for item in allowed]}")
+    
     if not prepared:
         raise SmsServiceError("No hay destinatarios válidos después de aplicar las validaciones.")
     
@@ -375,7 +377,7 @@ def enviar_sms_desde_filas(
     messages = []
     
     for item in prepared:
-        #  callbackData con todos los datos de la fila
+        # callbackData con todos los datos de la fila
         datos_fila = {}
         for key, value in item["row"].items():
             if value is not None and str(value).strip() != "":
@@ -432,6 +434,51 @@ def enviar_sms_desde_filas(
         if data.get("bulkId"):
             bulk_ids.append(data["bulkId"])
     
+    # ============================================================
+    # GUARDAR BULKID EN ARCHIVO .TXT
+    # ============================================================
+    if bulk_ids:
+        archivo = "bulk_ids_registrados.txt"
+        fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        try:
+            # Leer archivo existente
+            try:
+                with open(archivo, "r", encoding="utf-8") as f:
+                    lineas = f.readlines()
+            except FileNotFoundError:
+                lineas = []
+            
+            # Agregar nuevos bulkIds
+            for bulk_id in bulk_ids:
+                # Verificar si ya existe
+                existe = False
+                for linea in lineas:
+                    if f"BULK_ID: {bulk_id}" in linea:
+                        existe = True
+                        break
+                
+                if not existe:
+                    nueva_linea = (
+                        f"BULK_ID: {bulk_id} | "
+                        f"CAMPAÑA: {campaign} | "
+                        f"USUARIO: {usuario} | "
+                        f"TOTAL: {len(messages)} | "
+                        f"FECHA_ENVIO: {fecha_actual} | "
+                        f"ESTADO: PENDIENTE\n"
+                    )
+                    lineas.append(nueva_linea)
+                    logger.info(f"💾 BulkId guardado en archivo: {bulk_id}")
+            
+            # Guardar archivo
+            with open(archivo, "w", encoding="utf-8") as f:
+                f.writelines(lineas)
+            
+            logger.info(f"✅ Archivo actualizado: {archivo} ({len(bulk_ids)} bulkIds guardados)")
+            
+        except Exception as e:
+            logger.error(f"⚠️ Error guardando bulkId en archivo: {e}")
+    
     # Recolectar errores
     errores = []
     for result in failed:
@@ -455,6 +502,9 @@ def enviar_sms_desde_filas(
     enviados = len(successful) * batch_size  # Aproximado
     fallidos = len(failed) * batch_size
     
+    # ============================================================
+    # 🔥 NUEVO: Agregar bulk_ids al resultado
+    # ============================================================
     return {
         "total_preparados": len(messages),
         "lotes_enviados": len(successful),
@@ -463,8 +513,12 @@ def enviar_sms_desde_filas(
         "fallidos": fallidos,
         "bulk_ids": bulk_ids,
         "errores": errores[:10],
-        "details": details
+        "details": details,
+        "archivo_guardado": "bulk_ids_registrados.txt" if bulk_ids else None
     }
+
+
+
 
 
 def guardar_sms_log(
