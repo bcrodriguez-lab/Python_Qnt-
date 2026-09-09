@@ -161,9 +161,65 @@
     background: #FAFAFD;
   }
 
+  /* Botones de acción en tabla */
+  .btn-action-group {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .btn-action-group .btn {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    border-radius: 6px;
+    border: none;
+    transition: var(--sms-transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .btn-action-group .btn:hover {
+    transform: scale(1.05);
+  }
+  .btn-action-group .btn-start {
+    background: #17A673;
+    color: #fff;
+  }
+  .btn-action-group .btn-start:hover {
+    background: #13895D;
+  }
+  .btn-action-group .btn-stop {
+    background: #E24C4B;
+    color: #fff;
+  }
+  .btn-action-group .btn-stop:hover {
+    background: #C0392B;
+  }
+  .btn-action-group .btn-clear {
+    background: #B8790A;
+    color: #fff;
+  }
+  .btn-action-group .btn-clear:hover {
+    background: #A06700;
+  }
+  .btn-action-group .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .btn-action-group .spinner-border-sm {
+    width: 14px;
+    height: 14px;
+    border-width: 2px;
+  }
+
   @media (max-width: 768px) {
     .stats-grid {
       grid-template-columns: 1fr;
+    }
+    .btn-action-group .btn {
+      padding: 3px 7px;
+      font-size: 0.7rem;
     }
   }
 </style>
@@ -175,25 +231,32 @@
 <div class="stats-grid">
   <div class="stat-card primary">
     <div class="stat-icon"><i class="fas fa-server"></i></div>
-    <div class="stat-value" id="statServers">{{ servers_count }}</div>
-    <div class="stat-label">Servidores configurados</div>
+    <div class="stat-value" id="statServers">0</div>
+    <div class="stat-label">Servidores Utilizados</div>
     <a href="/config-servers" class="stat-footer">Ver servidores <i class="fas fa-arrow-right"></i></a>
   </div>
   
   <div class="stat-card success">
     <div class="stat-icon"><i class="fas fa-bullhorn"></i></div>
-    <div class="stat-value">{{ campaigns_total }} <small>/ {{ campaigns_scheduled }} prog.</small></div>
+    <div class="stat-value"><span id="statCampanasActivas">0</span> <small>/ <span id="statCampanasTotales">0</span> prog.</small></div>
     <div class="stat-label">Campañas de hoy (totales / programadas)</div>
     <a href="/config-bigquery" class="stat-footer">Gestionar campañas <i class="fas fa-arrow-right"></i></a>
   </div>
   
   <div class="stat-card warning">
     <div class="stat-icon"><i class="fas fa-phone-volume"></i></div>
-    <div class="stat-value">{{ clients_called }} <small>/ {{ clients_total }}</small></div>
-    <div class="stat-label">Clientes llamados vs total (<span id="statProgressPercent">{{ progress_percent }}</span>%)</div>
+    <div class="stat-value"><span id="statClientesLlamados">0</span> <small>/ <span id="statClientesTotal">0</span></small></div>
+    <div class="stat-label">Clientes llamados vs total (<span id="statProgressPercent">0</span>%)</div>
     <a href="/config-bigquery" class="stat-footer">
-      <span id="statClientsContacted">{{ clients_contacted }}</span> contactados · <span id="statClientsPending">{{ clients_pending }}</span> pendientes
+      <span id="statClientsContacted">0</span> contactados · <span id="statClientsPending">0</span> pendientes
     </a>
+  </div>
+  
+  <div class="stat-card info">
+    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+    <div class="stat-value" id="statLlamadasXMin">0</div>
+    <div class="stat-label">Llamadas por minuto</div>
+    <a href="#" class="stat-footer">Actualizado: <span id="statTimestamp">---</span></a>
   </div>
 </div>
 
@@ -202,62 +265,33 @@
   <div class="section-header">
     <h3><i class="fas fa-table mr-2"></i> Campañas de hoy</h3>
     <div class="d-flex align-items-center gap-2">
-      <button class="btn-tool" id="btnRefreshCampaigns" onclick="refreshCampaigns()" title="Actualizar">
-        <i class="fas fa-sync-alt" id="iconRefreshCampaigns"></i>
+      <button class="btn-tool" id="btnRefreshCampaigns" title="Actualizar">
+          <i class="fas fa-sync-alt" id="iconRefreshCampaigns"></i>
       </button>
-      <a href="/config-bigquery" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Nueva campaña</a>
+      <a href="/auto-campaigns/new" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Nueva campaña</a>
     </div>
   </div>
-  <div class="section-body table-responsive {% if campaign_rows|length > 5 %}campaign-table-scroll{% endif %}">
+  <div class="section-body table-responsive">
     <table class="table table-sm mb-0">
       <thead>
         <tr>
           <th>Campaña</th>
-          <th>Tipo</th>
           <th class="text-right">Clientes</th>
           <th class="text-right">Llamados</th>
           <th class="text-right">Faltantes</th>
-          <th class="text-right">Contactados</th>
-          <th>Estado</th>
-          <th class="text-center">Acción</th>
+          <th class="text-right">Llamadas/min</th>
+          <th class="text-center">Acciones</th>
         </tr>
       </thead>
       <tbody id="campaignTableBody">
-        {% if campaign_rows %}
-          {% for row in campaign_rows %}
-          <tr>
-            <td>
-              <strong>{{ row.nombre }}</strong>
-              {% if row.servidor %}<br><small class="text-muted">{{ row.servidor }}</small>{% endif %}
-            </td>
-            <td>{{ row.tipo_campana or '—' }}</td>
-            <td class="text-right">{{ row.clientes }}</td>
-            <td class="text-right">{{ row.llamados }}</td>
-            <td class="text-right">{{ row.faltantes }}</td>
-            <td class="text-right">{{ row.contactados }}</td>
-            <td>
-              {% if row.estado == 'programada' %}
-                <span class="badge badge-info">{{ row.estado_label }}</span>
-              {% elif row.estado == 'en_curso' %}
-                <span class="badge badge-warning">{{ row.estado_label }}</span>
-              {% elif row.estado == 'terminada' %}
-                <span class="badge badge-success">{{ row.estado_label }}</span>
-              {% else %}
-                <span class="badge badge-secondary">{{ row.estado_label }}</span>
-              {% endif %}
-            </td>
-            <td class="text-center">
-              <a href="/config-bigquery" class="btn btn-outline-primary btn-sm">Gestionar</a>
-            </td>
-          </tr>
-          {% endfor %}
-        {% else %}
-          <tr>
-            <td colspan="8" class="text-center" style="padding:40px;color:var(--text-secondary);">
-              No hay campañas programadas para hoy. <a href="/config-bigquery">Programar una campaña</a>
-            </td>
-          </tr>
-        {% endif %}
+        <tr>
+          <td colspan="8" class="text-center" style="padding:40px;color:var(--text-secondary);">
+            <div class="spinner-border spinner-border-sm text-primary" role="status">
+              <span class="visually-hidden">Cargando...</span>
+            </div>
+            <span class="ms-2">Cargando campañas...</span>
+          </td>
+        </tr>
       </tbody>
     </table>
   </div>
@@ -267,7 +301,7 @@
 <div class="section-card">
   <div class="section-header">
     <h3><i class="fas fa-terminal mr-2"></i> Actividad en vivo</h3>
-    <button class="btn-tool" onclick="loadLogs()" title="Actualizar"><i class="fas fa-sync-alt"></i></button>
+    <button class="btn-tool" onclick="cargarLogs()" title="Actualizar"><i class="fas fa-sync-alt"></i></button>
   </div>
   <div class="section-body">
     <div class="logs-panel" id="logsPanel">
@@ -275,78 +309,316 @@
     </div>
   </div>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    const DASHBOARD_REFRESH_MS = 300000;
+// ========== FUNCIONES HELPER ==========
 
-    function escapeHtml(text) {
-        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-        return text.replace(/[&<>"']/g, m => map[m]);
+// Función para escapar HTML (seguridad)
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Función para mostrar toast (notificaciones)
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} position-fixed top-0 end-0 m-3`;
+    toast.style.zIndex = '9999';
+    toast.style.minWidth = '300px';
+    toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// Función para mostrar resultado
+function showResult(success, message) {
+    const alertClass = success ? 'alert-success' : 'alert-danger';
+    const alert = document.createElement('div');
+    alert.className = `alert ${alertClass} mt-2`;
+    alert.textContent = message;
+    const container = document.querySelector('.section-card .section-body');
+    if (container) {
+        container.prepend(alert);
+        setTimeout(() => alert.remove(), 5000);
     }
+}
 
-    function loadLogs() {
-        fetch('/api/recent_logs')
-            .then(r => r.json())
-            .then(logs => {
-                const panel = document.getElementById('logsPanel');
-                if (!logs.length) {
-                    panel.innerHTML = '<div class="text-muted">No hay logs</div>';
-                    return;
-                }
-                panel.innerHTML = logs.map(log => {
-                    let cls = 'log-info';
-                    if (log.includes('ERROR')) cls = 'log-error';
-                    else if (log.includes('WARNING')) cls = 'log-warning';
-                    return `<div class="${cls}">${escapeHtml(log)}</div>`;
-                }).join('');
-            })
-            .catch(() => {
-                document.getElementById('logsPanel').innerHTML = '<div class="text-danger">Error al cargar logs.</div>';
-            });
-    }
-
-    function refreshCampaigns() {
-        const btn = document.getElementById('btnRefreshCampaigns');
-        const icon = document.getElementById('iconRefreshCampaigns');
+// Función para setear loading en botones
+function setLoading(btn, loading) {
+    if (!btn) return;
+    if (loading) {
+        btn._orig = btn.innerHTML;
         btn.disabled = true;
-        icon.classList.add('fa-spin');
-        fetch('/api/dashboard/refresh', { method: 'POST' })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById('statServers').textContent = data.servers_count;
-                    document.getElementById('statProgressPercent').textContent = data.progress_percent;
-                    document.getElementById('statClientsContacted').textContent = data.clients_contacted;
-                    document.getElementById('statClientsPending').textContent = data.clients_pending;
-                    
-                    const tbody = document.getElementById('campaignTableBody');
-                    if (data.campaign_rows?.length) {
-                        tbody.innerHTML = data.campaign_rows.map(row => `
-                            <tr>
-                                <td><strong>${escapeHtml(row.nombre)}</strong>${row.servidor ? `<br><small class="text-muted">${escapeHtml(row.servidor)}</small>` : ''}</td>
-                                <td>${escapeHtml(row.tipo_campana || '—')}</td>
-                                <td class="text-right">${row.clientes}</td>
-                                <td class="text-right">${row.llamados}</td>
-                                <td class="text-right">${row.faltantes}</td>
-                                <td class="text-right">${row.contactados}</td>
-                                <td><span class="badge badge-${row.estado==='programada'?'info':row.estado==='en_curso'?'warning':row.estado==='terminada'?'success':'secondary'}">${escapeHtml(row.estado_label)}</span></td>
-                                <td class="text-center"><a href="/config-bigquery" class="btn btn-outline-primary btn-sm">Gestionar</a></td>
-                            </tr>`).join('');
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+    } else {
+        btn.disabled = false;
+        if (btn._orig) btn.innerHTML = btn._orig;
+    }
+}
+
+// ========== FUNCIÓN PRINCIPAL PARA ACTUALIZAR DASHBOARD ==========
+function actualizarDashboard() {
+    console.log('🔄 Actualizando dashboard...');
+    
+    const btn = document.getElementById('btnRefreshCampaigns');
+    const icon = document.getElementById('iconRefreshCampaigns');
+    
+    if (btn) {
+        btn.disabled = true;
+        if (icon) icon.classList.add('fa-spin');
+    }
+    
+    fetch('/api/dashboard/refresh', { method: 'POST' })
+        .then(r => {
+            console.log('📡 Respuesta recibida:', r.status);
+            return r.json();
+        })
+        .then(data => {
+            console.log('📊 Datos recibidos:', data);
+            
+            if (data.success) {
+                const datos = data.data;
+                console.log('✅ Datos procesados:', datos);
+                
+                // Actualizar estadísticas
+                const statServers = document.getElementById('statServers');
+                const statCampanasActivas = document.getElementById('statCampanasActivas');
+                const statCampanasTotales = document.getElementById('statCampanasTotales');
+                const statClientesLlamados = document.getElementById('statClientesLlamados');
+                const statClientesTotal = document.getElementById('statClientesTotal');
+                const statProgressPercent = document.getElementById('statProgressPercent');
+                const statClientsContacted = document.getElementById('statClientsContacted');
+                const statClientsPending = document.getElementById('statClientsPending');
+                const statLlamadasXMin = document.getElementById('statLlamadasXMin');
+                const statTimestamp = document.getElementById('statTimestamp');
+                
+                if (statServers) statServers.textContent = datos.servidores_count || 0;
+                if (statCampanasActivas) statCampanasActivas.textContent = datos.campanas_activas || 0;
+                if (statCampanasTotales) statCampanasTotales.textContent = datos.total_campanas || 0;
+                if (statClientesLlamados) statClientesLlamados.textContent = (datos.clientes_contactados || 0).toLocaleString();
+                if (statClientesTotal) statClientesTotal.textContent = (datos.total_clientes || 0).toLocaleString();
+                if (statProgressPercent) statProgressPercent.textContent = datos.porcentaje_progreso || '0';
+                if (statClientsContacted) statClientsContacted.textContent = (datos.clientes_contactados || 0).toLocaleString();
+                if (statClientsPending) statClientsPending.textContent = (datos.clientes_pendientes || 0).toLocaleString();
+                if (statLlamadasXMin) statLlamadasXMin.textContent = datos.llamadas_x_minuto || '0';
+                if (statTimestamp) statTimestamp.textContent = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : '---';
+                
+                // Actualizar tabla de campañas
+                const tbody = document.getElementById('campaignTableBody');
+                
+                if (tbody) {
+                    if (datos.campañas && datos.campañas.length > 0) {
+                        tbody.innerHTML = datos.campañas.map((camp, index) => {
+                            console.log('🔹 Procesando campaña:', datos.campañas[0]);
+                            const estado = camp.estado || 'desconocido';
+                            let badgeClass = 'badge-secondary';
+                            let estadoLabel = camp.estado_label || estado;
+                            
+                            if (estado === 'started' || estado === 'en_curso') {
+                                badgeClass = 'badge-warning';
+                                estadoLabel = 'En curso';
+                            } else if (estado === 'stopped' || estado === 'detenida') {
+                                badgeClass = 'badge-danger';
+                                estadoLabel = 'Detenida';
+                            } else if (estado === 'finished' || estado === 'terminada') {
+                                badgeClass = 'badge-success';
+                                estadoLabel = 'Terminada';
+                            } else if (estado === 'programada') {
+                                badgeClass = 'badge-info';
+                                estadoLabel = 'Programada';
+                            }
+                            
+                            const clientes = parseInt(camp.clientes || camp.records || 0);
+                            const llamados = parseInt(camp.llamados || camp.dial || 0);
+                            const contactados = parseInt(camp.contactados || camp.answer || 0);
+                            const faltantes = clientes - contactados;
+                            const llamadasXMin = Number(camp.llamadas_x_minuto) || 0;
+                            const campaignId = camp.id || camp.campaign_id || index;
+                            const serverName = camp.servidor || '';
+                            
+                            return `
+                                <tr data-campaign-id="${escapeHtml(String(campaignId))}" data-server="${escapeHtml(serverName)}">
+                                    <td>
+                                        <strong>${escapeHtml(camp.nombre || camp.campaign || 'Sin nombre')}</strong>
+                                        ${serverName ? `<br><small class="text-muted">${escapeHtml(serverName)}</small>` : ''}
+                                        <br><small class="text-muted">ID: ${escapeHtml(String(campaignId))}</small>
+                                    </td>
+                                    <td class="text-right">${clientes.toLocaleString()}</td>
+                                    <td class="text-right">${llamados.toLocaleString()}</td>
+                                    <td class="text-right">${faltantes.toLocaleString()}</td>
+                                    <td class="text-right">${llamadasXMin}</td>
+                                    <td class="text-center">
+                                        <div class="btn-action-group">
+                                            <button type="button" class="btn btn-start btn-start-campaign" data-campaign-id="${escapeHtml(String(campaignId))}" data-server="${escapeHtml(serverName)}" title="Iniciar campaña">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-stop btn-stop-campaign" data-campaign-id="${escapeHtml(String(campaignId))}" data-server="${escapeHtml(serverName)}" title="Detener campaña">
+                                                <i class="fas fa-stop"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-clear btn-clear-campaign" data-campaign-id="${escapeHtml(String(campaignId))}" data-server="${escapeHtml(serverName)}" title="Limpiar registros">
+                                                <i class="fas fa-broom"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('');
+                        // ========== DELEGACIÓN DE EVENTOS (una sola vez, fuera del .then) ==========
+                        // ============================================
+                        // MANEJADOR DE EVENTOS PARA BOTONES (ACTUALIZADO)
+                        // ============================================
+                        document.getElementById('campaignTableBody').addEventListener('click', async function(e) {
+                            const btn = e.target.closest('.btn-start-campaign, .btn-stop-campaign, .btn-clear-campaign');
+                            if (!btn) return;
+                            
+                            // Obtener datos del botón (directamente de Wolkvox)
+                            const campaignId = btn.dataset.campaignId;  // ← ID de Wolkvox (ej: "20717")
+                            const server = btn.dataset.server || '';    // ← Servidor (ej: "wv0016")
+                            
+                            // Validar
+                            if (!campaignId || campaignId === 'undefined' || campaignId === 'null') {
+                                showToast('❌ No se pudo identificar la campaña (ID inválido)', 'danger');
+                                return;
+                            }
+                            
+                            if (!server) {
+                                showToast('❌ No se pudo identificar el servidor', 'danger');
+                                return;
+                            }
+                            
+                            // Determinar acción
+                            let url, method, confirmMsg, successMsg;
+                            
+                            if (btn.classList.contains('btn-start-campaign')) {
+                                url = `/api/campaigns/${campaignId}/start`;  // 
+                                method = 'POST';
+                                confirmMsg = `¿Iniciar la campaña ${campaignId} en ${server}?`;
+                                successMsg = '✅ Campaña iniciada correctamente';
+                            } else if (btn.classList.contains('btn-stop-campaign')) {
+                                url = `/api/campaigns/${campaignId}/stop`;   //
+                                method = 'POST';
+                                confirmMsg = `¿Detener la campaña ${campaignId} en ${server}?`;
+                                successMsg = '⏹️ Campaña detenida correctamente';
+                            } else if (btn.classList.contains('btn-clear-campaign')) {
+                                url = `/api/campaigns/${campaignId}/clear`;  // 
+                                method = 'DELETE';
+                                confirmMsg = `¿Limpiar todos los registros de la campaña ${campaignId} en ${server}?`;
+                                successMsg = '🧹 Campaña limpiada correctamente';
+                            } else {
+                                return;
+                            }
+                            
+                            // Confirmar
+                            if (!confirm(confirmMsg)) return;
+                            
+                            // Ejecutar
+                            try {
+                                setLoading(btn, true);
+                                
+                                const resp = await fetch(url, {
+                                    method: method,
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ 
+                                        server_name: server,
+                                        campaign_id: campaignId
+                                    })
+                                });
+                                
+                                const data = await resp.json();
+                                
+                                if (data.success) {
+                                    showToast(successMsg, 'success');
+                                    showResult(true, data.message || successMsg);
+                                    // Recargar dashboard
+                                    setTimeout(actualizarDashboard, 1000);
+                                } else {
+                                    showToast('❌ ' + (data.message || 'Error en la operación'), 'danger');
+                                    showResult(false, data.message || 'Error en la operación');
+                                }
+                            } catch (err) {
+                                console.error('❌ Error:', err);
+                                showToast('❌ Error: ' + err.message, 'danger');
+                                showResult(false, '❌ Error: ' + err.message);
+                            } finally {
+                                setLoading(btn, false);
+                            }
+                        });
+                                                
+                        
                     } else {
-                        tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding:40px;color:var(--text-secondary);">No hay campañas programadas para hoy.</td></tr>';
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="8" class="text-center" style="padding:40px;color:var(--text-secondary);">
+                                    No hay campañas programadas para hoy. <a href="/config-bigquery">Programar una campaña</a>
+                                </td>
+                            </tr>
+                        `;
                     }
                 }
-            })
-            .finally(() => {
+            } else {
+                showToast('❌ ' + data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error:', error);
+            showToast('❌ Error al actualizar: ' + error.message, 'danger');
+        })
+        .finally(() => {
+            if (btn) {
                 btn.disabled = false;
-                icon.classList.remove('fa-spin');
+                if (icon) icon.classList.remove('fa-spin');
+            }
+        });
+}
+
+// ========== FUNCIÓN PARA CARGAR LOGS ==========
+function cargarLogs() {
+  fetch('/api/recent_logs')
+            .then(response => response.json())
+            .then(logs => {
+                const logsPanel = document.getElementById('logsPanel');
+                if (!logs.length) {
+                    logsPanel.innerHTML = '<div class="text-muted">No hay logs disponibles</div>';
+                    return;
+                }
+                let html = '';
+                logs.forEach(log => {
+                    let className = 'log-info';
+                    if (log.includes('ERROR')) className = 'log-error';
+                    else if (log.includes('WARNING')) className = 'log-warning';
+                    html += `<div class="log-line ${className}">${escapeHtml(log)}</div>`;
+                });
+                logsPanel.innerHTML = html;
+            })
+            .catch(() => {
+                document.getElementById('logsPanel').innerHTML =
+                    '<div class="text-danger">No se pudieron cargar los logs.</div>';
             });
     }
 
-    loadLogs();
-    setInterval(loadLogs, 5000);
+// ========== INICIALIZACIÓN ==========
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOM cargado, iniciando dashboard...');
+    
+    const btn = document.getElementById('btnRefreshCampaigns');
+    if (btn) {
+        btn.addEventListener('click', actualizarDashboard);
+        console.log('✅ Botón de actualizar configurado');
+    } else {
+        console.error('❌ No se encontró el botón #btnRefreshCampaigns');
+    }
+    
+    actualizarDashboard();
+    cargarLogs();
+});
+
+// ========== ACTUALIZACIONES AUTOMÁTICAS ==========
+setInterval(actualizarDashboard, 360000);
+setInterval(cargarLogs, 1000);
 </script>
 {% endblock %}

@@ -684,19 +684,32 @@
 
   async function cargarMensajes() {
     try {
-      const resp = await fetch('/api/sms/mensajes');
-      const data = await resp.json();
-      if (!data.success) { toast(data.message || 'Error al cargar datos', 'danger'); return; }
-      TODOS_LOS_MENSAJES = data.items;
-      configurarMultiSelects();
-      actualizarSugerenciasCategoria();
-      actualizarIndicadoresOrden();
-      renderTabla();
-    } catch(e) { 
-      tablaMensajes.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-4">Error al conectar con el servidor.</td></tr>';
-      toast('Error al cargar datos', 'danger'); 
+        const resp = await fetch('/api/sms/mensajes');
+        const data = await resp.json();
+
+        if (!data.success) {
+            toast(
+                data.message || 'Error al cargar datos',
+                'danger'
+            );
+            return;
+        }
+
+        TODOS_LOS_MENSAJES = data.items;
+
+        await configurarMultiSelects();
+
+        actualizarSugerenciasCategoria();
+        actualizarIndicadoresOrden();
+        renderTabla();
+
+    } catch(e) {
+        tablaMensajes.innerHTML =
+            '<tr><td colspan="7" class="text-center text-danger py-4">Error al conectar con el servidor.</td></tr>';
+
+        toast('Error al cargar datos', 'danger');
     }
-  }
+  }  
 
   function editarMensaje(id) {
     const m = TODOS_LOS_MENSAJES.find(i => i.id == id);
@@ -937,23 +950,76 @@
     return inst;
   }
 
-  function configurarMultiSelects() {
-    const categorias = [...new Set(TODOS_LOS_MENSAJES.map(i => i.categoria).filter(Boolean))].sort();
-    const operadores = obtenerTodosOperadores();
+  async function configurarMultiSelects() {
+      const categorias = [
+          ...new Set(
+              TODOS_LOS_MENSAJES
+                  .map(i => i.categoria)
+                  .filter(Boolean)
+          )
+      ].sort();
 
-    if (!msCategoria) {
-      msCategoria = initMultiSelect('msCategoria', 'msCategoriaTrigger', 'msCategoriaDropdown', () => renderTabla());
-    }
-    if (!msOperador) {
-      msOperador = initMultiSelect('msOperador', 'msOperadorTrigger', 'msOperadorDropdown', () => renderTabla());
-    }
-    if (!msModalOperador) {
-      msModalOperador = initMultiSelect('msModalOperador', 'msModalOperadorTrigger', 'msModalOperadorDropdown', null);
-    }
+      // Operadores que realmente aparecen en los mensajes
+      const operadoresMensajes = obtenerTodosOperadores();
 
-    msCategoria.setOpciones(categorias);
-    msOperador.setOpciones(operadores);
-    msModalOperador.setOpciones(operadores);
+      // Crear los multi-select
+      if (!msCategoria) {
+          msCategoria = initMultiSelect(
+              'msCategoria',
+              'msCategoriaTrigger',
+              'msCategoriaDropdown',
+              () => renderTabla()
+          );
+      }
+
+      if (!msOperador) {
+          msOperador = initMultiSelect(
+              'msOperador',
+              'msOperadorTrigger',
+              'msOperadorDropdown',
+              () => renderTabla()
+          );
+      }
+
+      if (!msModalOperador) {
+          msModalOperador = initMultiSelect(
+              'msModalOperador',
+              'msModalOperadorTrigger',
+              'msModalOperadorDropdown',
+              null
+          );
+      }
+
+      // Categorías
+      msCategoria.setOpciones(categorias);
+
+      // Filtro de operadores de la tabla
+      msOperador.setOpciones(operadoresMensajes);
+
+      // Obtener los 27 operadores desde Python
+      try {
+          const resp = await fetch('/api/sms/operadores');
+          const data = await resp.json();
+
+          if (!data.success) {
+              toast(
+                  data.message || 'Error al cargar operadores',
+                  'danger'
+              );
+              return;
+          }
+
+          // Cargar los 27 operadores en el modal
+          msModalOperador.setOpciones(data.items);
+
+      } catch (e) {
+          console.error('Error cargando operadores:', e);
+
+          toast(
+              'No se pudieron cargar los operadores',
+              'danger'
+          );
+      }
   }
 
   cargarMensajes();

@@ -5,21 +5,23 @@
 Servicio de envío de SMS con BigQuery e Infobip.
 VERSIÓN CORREGIDA - Con acortamiento de URLs y callbackData.
 """
+from datetime import timedelta
 
 import json
 import re
-import time
+import time 
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, Set
 from uuid import uuid4
-
+from database import db, ProgramacionSms
 import requests
 import logging
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+COLOMBIA_TZ = timezone(timedelta(hours=-5))
 
 # ========== CONSTANTES ==========
 PHONE_COLUMNS = (
@@ -232,35 +234,51 @@ def preparar_sms(rows: List[Dict], plantilla: str) -> Tuple[List[Dict], Dict]:
             f"Variables no encontradas en la consulta: {', '.join(missing)}. "
             "Verifique los nombres de las variables en la plantilla."
         )
-
+    
     seen = set()
     prepared = []
     invalid_numbers = 0
-    
-    for row in rows:
-        phone = limpiar_numero(row.get(phone_column))
-        if not phone:
-            invalid_numbers += 1
-            continue
-            print(f"📱 Fila: {row.get(phone_column)} -> Limpiado: '{phone}'")
-        # Eliminar duplicados dentro del mismo lote
-        if phone in seen:
-            continue
-        seen.add(phone)
+    señuelos = [
         
+        ("3144051619", "john","10000000000"),
+]
+
+    for (telefono, nombre, customer_id) in señuelos:
+        row = {
+            "nombre": nombre,
+            "customer_id": customer_id,
+            "telefono": telefono
+        }
         prepared.append({
-            "phone": phone,
+            "phone": telefono,
             "text": construir_mensaje(row, plantilla, variables),
             "row": row
         })
-    
+    for row in rows:
+            phone = limpiar_numero(row.get(phone_column))
+            if not phone:
+                invalid_numbers += 1
+                continue
+            logger.info(f"Preparando mensaje para {phone} (fila {row})")
+            # Eliminar duplicados dentro del mismo lote
+            if phone in seen:
+                continue
+            seen.add(phone)
+            
+            prepared.append({
+                "phone": phone,
+                "text": construir_mensaje(row, plantilla, variables),
+                "row": row
+            })
+        
     return prepared, {
-        "phone_column": phone_column,
-        "invalid_numbers": invalid_numbers,
-        "duplicates": len(rows) - invalid_numbers - len(prepared),
-        "empty_variables": empty_variables,
-        "total_validos": len(prepared)
-    }
+            "phone_column": phone_column,
+            "invalid_numbers": invalid_numbers,
+            "duplicates": len(rows) - invalid_numbers - len(prepared),
+            "empty_variables": empty_variables,
+            "total_validos": len(prepared)
+        }
+
 
 
 def preview_sms(rows: List[Dict], plantilla: str, limit: int = 3) -> Dict:
@@ -554,86 +572,68 @@ def guardar_sms_log(
     except Exception as e:
         logger.error(f"Error guardando logs: {e}")
 
+
 def guardar_programacion(
-    client,
     query: str,
     plantilla: str,
     *,
     campaign: str = "",
     usuario: str = "",
-    scheduled_at: str = "",
     allow_resend: bool = False,
     total_dest: int = 0,
-    # 🆕 Campos de recurrencia
-    es_recurrente: bool = False,
-    frecuencia_tipo: str = None,
-    frecuencia_valor: int = None,
-    frecuencia_unidad: str = None,
-    franja_horaria: str = None,
+    tipo_programacion: str = "simple",
+    fecha_programada: str = None,
     hora_inicio: str = None,
-    hora_fin: str = None,
-    fecha_limite: str = None,
-    repeticiones_max: int = None,
-) -> str:
-    """Guarda una programación en BigQuery vía INSERT."""
-    from google.cloud import bigquery
-
-    schedule_id = str(uuid4())
-    now = datetime.now(timezone.utc).isoformat()
-
-    # 🆕 INSERT con los nuevos campos
-    insert_sql = """
-    INSERT INTO `capable-arbor-209819.Temporal.ProgramacionSMS`
-    (id, fecha_programada, consulta_sql, plantilla, campana, usuario, 
-     total_destinatarios, confirmar_reenvio, estado,
-     es_recurrente, frecuencia_tipo, frecuencia_valor, frecuencia_unidad,
-     franja_horaria, hora_inicio, hora_fin, fecha_limite, repeticiones_max,
-     repeticiones_realizadas,
-     fecha_creacion, fecha_actualizacion)
-    VALUES (
-        @id, @fecha_prog, @consulta, @plantilla_param, @campana, @usuario,
-        @total_dest, @conf_reenvio, @estado,
-        @es_recurrente, @frecuencia_tipo, @frecuencia_valor, @frecuencia_unidad,
-        @franja_horaria, @hora_inicio, @hora_fin, @fecha_limite, @repeticiones_max,
-        @repeticiones_realizadas,
-        @now, @now
-    )
-    """
-    
-    # 🆕 Parámetros completos
-    job_config = bigquery.QueryJobConfig(query_parameters=[
-        bigquery.ScalarQueryParameter("id", "STRING", schedule_id),
-        bigquery.ScalarQueryParameter("fecha_prog", "TIMESTAMP", scheduled_at),
-        bigquery.ScalarQueryParameter("consulta", "STRING", query),
-        bigquery.ScalarQueryParameter("plantilla_param", "STRING", plantilla),
-        bigquery.ScalarQueryParameter("campana", "STRING", campaign or ""),
-        bigquery.ScalarQueryParameter("usuario", "STRING", usuario or ""),
-        bigquery.ScalarQueryParameter("total_dest", "INT64", total_dest),
-        bigquery.ScalarQueryParameter("conf_reenvio", "BOOL", allow_resend),
-        bigquery.ScalarQueryParameter("estado", "STRING", "pendiente"),
-        # 🆕
-        bigquery.ScalarQueryParameter("es_recurrente", "BOOL", es_recurrente),
-        bigquery.ScalarQueryParameter("frecuencia_tipo", "STRING", frecuencia_tipo),
-        bigquery.ScalarQueryParameter("frecuencia_valor", "INT64", frecuencia_valor),
-        bigquery.ScalarQueryParameter("frecuencia_unidad", "STRING", frecuencia_unidad),
-        bigquery.ScalarQueryParameter("franja_horaria", "STRING", franja_horaria),
-        bigquery.ScalarQueryParameter("hora_inicio", "STRING", hora_inicio),
-        bigquery.ScalarQueryParameter("hora_fin", "STRING", hora_fin),
-
-        bigquery.ScalarQueryParameter("fecha_limite", "STRING", fecha_limite if fecha_limite else None),
-
-        bigquery.ScalarQueryParameter("repeticiones_max", "INT64", repeticiones_max),
-        bigquery.ScalarQueryParameter("repeticiones_realizadas", "INT64", 0),
-        bigquery.ScalarQueryParameter("now", "TIMESTAMP", now),
-    ])
+    fecha_fin: str = None
+) -> int:
 
     try:
-        client.query(insert_sql, job_config=job_config).result()
-        logger.info(f"✅ Programación guardada: {schedule_id} (recurrente={es_recurrente})")
-    except Exception as e:
-        raise SmsServiceError(f"No se pudo guardar la programación: {e}")
 
-    return schedule_id
+        fecha_prog = None
+
+        if fecha_programada:
+            fecha_prog = datetime.fromisoformat(
+                fecha_programada
+            )
+
+        nueva_programacion = ProgramacionSms(
+            tipo_programacion=tipo_programacion,
+            consulta_sql=query,
+            plantilla=plantilla,
+            campana=campaign or "",
+            usuario=usuario or "",
+            estado="pendiente",
+            total_destinatarios=total_dest,
+            confirmar_reenvio=allow_resend,
+            fecha_programada=fecha_prog,
+            hora_inicio=hora_inicio,
+            fecha_fin=fecha_fin
+        )
+
+        db.session.add(nueva_programacion)
+        db.session.commit()
+
+        logger.info(
+            f"✅ Programación guardada en SQLite: "
+            f"{nueva_programacion.id} "
+            f"({tipo_programacion})"
+        )
+
+        return nueva_programacion.id
+
+    except Exception as e:
+
+        db.session.rollback()
+
+        logger.exception(
+            "❌ Error guardando programación en SQLite"
+        )
+
+        raise SmsServiceError(
+            f"No se pudo guardar la programación: {e}"
+        )
+
+
 def verificar_lista_negra(client, phones: List[str]) -> Set[str]:
     """Verifica qué números están en la lista negra."""
     if not phones:

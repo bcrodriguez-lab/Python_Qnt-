@@ -1,0 +1,790 @@
+{% extends "layouts/adminlte.html" %}
+
+{% block title %}     Programar envío Wolkvox{% endblock %}
+
+{% block page_title %}
+  <div class="d-flex align-items-center">
+    <div class="mr-3" style="font-size:2rem; color: #3452E1;">
+      <i class="fas fa-clock"></i>
+    </div>
+    <div>
+      <h1 class="m-0" style="font-weight:700; ">Programar envío Wolkvox</h1>
+      <small class="text-muted">Programación simple o recurrente de campañas</small>
+    </div>
+  </div>
+{% endblock %}
+
+{% block breadcrumb %}
+<li><a href="/auto-campaigns">Campañas</a></li>
+<li class="active">Programar</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --sms-primary: #3452E1;
+    --sms-primary-dark: #2438B0;
+    --sms-primary-light: #EEF1FD;
+    --sms-accent: #7B6EF6;
+    --sms-success: #17A673;
+    --sms-success-bg: #E7F8F1;
+    --sms-danger: #E24C4B;
+    --sms-danger-bg: #FCEAEA;
+    --sms-warning: #B8790A;
+    --sms-warning-bg: #FDF2E1;
+    --sms-info: #00B4D8;
+    --sms-info-bg: #E3F6FC;
+    --sms-text: #1C2333;
+    --sms-muted: #6B7280;
+    --sms-border: #E4E7F0;
+    --sms-bg: #F5F6FA;
+    --sms-radius: 16px;
+    --sms-shadow: 0 8px 30px rgba(31, 41, 102, 0.08);
+    --sms-transition: all 0.25s ease;
+  }
+
+  .content-wrapper { background: var(--sms-bg); }
+
+  .sms-container { display: grid; grid-template-columns: 1fr 380px; gap: 24px; align-items: start; }
+  @media (max-width: 1199px) { .sms-container { grid-template-columns: 1fr; } }
+
+  .sms-card {
+    background: #ffffff; border: 1px solid var(--sms-border);
+    border-radius: var(--sms-radius); box-shadow: var(--sms-shadow);
+    overflow: hidden; transition: var(--sms-transition);
+  }
+  .sms-card:hover { box-shadow: 0 12px 40px rgba(31, 41, 102, 0.12); }
+  .sms-card-body { padding: 24px 26px 26px; }
+
+  .sms-tabs {
+    display: flex; gap: 2px; background: #F0F2F8;
+    border-radius: 10px; padding: 4px; margin-bottom: 22px;
+  }
+  .sms-tabs .tab {
+    flex: 1; padding: 8px 14px; border: none; border-radius: 8px;
+    background: transparent; font-weight: 600; font-size: 0.82rem;
+    color: var(--sms-muted); cursor: pointer; transition: var(--sms-transition); text-align: center;
+    text-decoration: none;
+  }
+  .sms-tabs .tab:hover { color: var(--sms-text); background: rgba(255,255,255,0.5); text-decoration: none; }
+  .sms-tabs .tab.active { background: #ffffff; color: var(--sms-primary); box-shadow: 0 2px 8px rgba(31, 41, 102, 0.06); }
+  .sms-tab-panel { display: none; animation: fadeIn 0.3s ease; }
+  .sms-tab-panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .sms-field { margin-bottom: 18px; }
+  .sms-field label {
+    font-weight: 600; font-size: 0.85rem; color: var(--sms-text);
+    margin-bottom: 5px; display: flex; align-items: center; gap: 6px;
+  }
+  .sms-field label .badge-required {
+    background: var(--sms-danger); color: #fff; font-size: 0.6rem;
+    padding: 1px 8px; border-radius: 20px;
+  }
+  .sms-help {
+    font-size: 0.76rem; color: var(--sms-muted); margin-top: 5px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+
+  .form-control {
+    border: 1.5px solid var(--sms-border); border-radius: 10px;
+    font-size: 0.9rem; color: var(--sms-text); transition: var(--sms-transition);
+  }
+  .form-control:focus { border-color: var(--sms-primary); box-shadow: 0 0 0 4px rgba(52, 82, 225, 0.12); }
+  textarea.textarea-code {
+    min-height: 120px; font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.82rem; line-height: 1.6; background: #FBFBFE; tab-size: 2;
+  }
+
+  .sms-auto-section {
+    background: #FAFAFD; border: 1.5px dashed var(--sms-border);
+    border-radius: 12px; padding: 14px 18px; margin-bottom: 16px;
+  }
+  .sms-auto-section .section-title {
+    font-weight: 700; font-size: 0.85rem; color: var(--sms-primary);
+    margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+  }
+
+  .btn {
+    border-radius: 10px; font-weight: 600; font-size: 0.86rem;
+    padding: 0.55rem 1.2rem; transition: var(--sms-transition);
+    border: none; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+  .btn:active { transform: translateY(0); }
+  .btn-outline-primary { background: #fff; color: var(--sms-primary); border: 1.5px solid var(--sms-primary); }
+  .btn-outline-primary:hover { background: var(--sms-primary-light); color: var(--sms-primary-dark); }
+  .btn-success { background: var(--sms-success); color: #fff; box-shadow: 0 6px 16px rgba(23, 166, 115, 0.28); }
+  .btn-success:hover { background: #13895D; }
+  .btn-success:disabled { background: #B9C0CC; box-shadow: none; cursor: not-allowed; transform: none; }
+  .btn-primary { background: var(--sms-primary); color: #fff; }
+  .btn-primary:hover { background: var(--sms-primary-dark); }
+  .btn-outline-secondary { background: #fff; color: var(--sms-muted); border: 1.5px solid var(--sms-border); }
+  .btn-outline-secondary:hover { background: #F0F2F8; color: var(--sms-text); }
+  .btn-danger { background: var(--sms-danger); color: #fff; box-shadow: 0 6px 16px rgba(226, 76, 75, 0.25); }
+  .btn-danger:hover { background: #C0392B; }
+  .btn-sm { padding: 0.35rem 0.8rem; font-size: 0.78rem; }
+  .btn-warning { background: var(--sms-warning); color: #fff; }
+  .btn-warning:hover { background: #A06700; }
+
+  .sms-side { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+  .sms-stats {
+    background: #fff; border: 1px solid var(--sms-border);
+    border-radius: var(--sms-radius); padding: 16px 18px; box-shadow: var(--sms-shadow);
+  }
+  .sms-stats .row { display: flex; justify-content: space-between; font-size: 0.82rem; padding: 5px 0; }
+  .sms-stats .row + .row { border-top: 1px dashed var(--sms-border); }
+  .sms-stats .label { color: var(--sms-muted); }
+  .sms-stats .value { font-weight: 700; color: var(--sms-text); }
+  .sms-stats .value.success { color: var(--sms-success); }
+  .sms-stats .value.danger { color: var(--sms-danger); }
+  .sms-stats .value.warning { color: var(--sms-warning); }
+  .sms-stats .value.primary { color: var(--sms-primary); }
+
+  #smsToastArea {
+    position: fixed; top: 0.6rem; right: 0.6rem; z-index: 9999;
+    display: flex; flex-direction: column; gap: 1px; max-width: 220px; width: 100%;
+  }
+  .sms-toast {
+    background: #fff; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+    padding: 10px 12px; border-left: 5px solid var(--sms-primary);
+    animation: slideIn 0.3s ease; display: flex; align-items: flex-start; gap: 12px;
+  }
+  .sms-toast.success { border-left-color: var(--sms-success); }
+  .sms-toast.danger { border-left-color: var(--sms-danger); }
+  .sms-toast.warning { border-left-color: var(--sms-warning); }
+  .sms-toast.info { border-left-color: var(--sms-info); }
+  .sms-toast .icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 2px; }
+  .sms-toast .content { flex: 1; font-size: 0.88rem; color: var(--sms-text); }
+  .sms-toast .close-btn {
+    background: none; border: none; font-size: 1.2rem;
+    color: var(--sms-muted); cursor: pointer; padding: 0 4px;
+  }
+  .sms-toast .close-btn:hover { color: var(--sms-text); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(30px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .spinner-sm {
+    display: inline-block; width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 999px;
+  }
+  .status-pill.idle { color: var(--sms-muted); background: #F1F3F8; }
+  .status-pill.loading { color: var(--sms-primary); background: var(--sms-primary-light); }
+  .status-pill.ok { color: var(--sms-success); background: var(--sms-success-bg); }
+  .status-pill.err { color: var(--sms-danger); background: var(--sms-danger-bg); }
+
+  .result-box {
+    margin-top: 16px; padding: 16px 20px; border-radius: 10px;
+    display: none; border: 1px solid var(--sms-border);
+  }
+  .result-box.visible { display: block; }
+  .result-box.success { background: var(--sms-success-bg); border-color: #BEEBDA; }
+  .result-box.error { background: var(--sms-danger-bg); border-color: #FBD6D7; }
+  .result-box .result-content { font-size: 0.9rem; }
+
+  .switch-sm {
+    position: relative; display: inline-block; width: 44px; height: 24px;
+  }
+  .switch-sm input { opacity: 0; width: 0; height: 0; }
+  .slider-sm {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc; transition: 0.3s; border-radius: 24px;
+  }
+  .slider-sm:before {
+    position: absolute; content: ""; height: 18px; width: 18px;
+    left: 3px; bottom: 3px; background-color: white; transition: 0.3s; border-radius: 50%;
+  }
+  input:checked + .slider-sm { background-color: var(--sms-primary); }
+  input:checked + .slider-sm:before { transform: translateX(20px); }
+
+  #columnsInfoProg { display:none;padding:10px;background:var(--sms-primary-light);border-radius:10px;margin:12px 0; }
+
+  .sms-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .sms-stat-item {
+    background: var(--sms-bg);
+    padding: 12px 16px;
+    border-radius: 10px;
+    text-align: center;
+  }
+  .sms-stat-item .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--sms-primary);
+    display: block;
+  }
+  .sms-stat-item .stat-label {
+    font-size: 0.75rem;
+    color: var(--sms-muted);
+  }
+
+  @media (max-width: 768px) {
+    .sms-card-body { padding: 16px; }
+    .sms-side { position: relative; }
+    .sms-stats-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div id="smsToastArea"></div>
+
+<div class="sms-container">
+  <div class="sms-card">
+    <div class="sms-card-body">
+
+      <!-- TABS CON ENLACES -->
+      <div class="sms-tabs" id="smsTabs">
+        <a href="/auto-campaigns/form" class="tab"><i class="fas fa-paper-plane"></i> Enviar</a>
+        <button class="tab active" data-tab="schedule"><i class="fas fa-clock"></i> Programar</button>
+      </div>
+
+      <!-- PANEL PROGRAMAR -->
+      <div class="sms-tab-panel active" id="panel-schedule">
+        <div class="sms-auto-section">
+          <div class="section-title">
+            <i class="fas fa-clock"></i> Programar envío a Wolkvox
+          </div>
+
+          <!-- DATOS DE LA PROGRAMACIÓN -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+            <div class="sms-field" style="margin-bottom:0;">
+              <label>Nombre <span class="text-danger">*</span></label>
+              <input class="form-control form-control-sm" id="progNombre" placeholder="Ej: Cobro Septiembre">
+            </div>
+            <div class="sms-field" style="margin-bottom:0;">
+              <label>Campaign ID <span class="text-danger">*</span></label>
+              <input class="form-control form-control-sm" id="progCampaignId" placeholder="Ej: 20213">
+            </div>
+            <div class="sms-field" style="margin-bottom:0;">
+              <label>Servidor <span class="text-danger">*</span></label>
+              <select class="form-control form-control-sm" id="progServerName">
+                <option value="">Seleccionar servidor</option>
+                {% for server in servers %}
+                  <option value="{{ server.name }}">{{ server.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="sms-field" style="margin-bottom:0;">
+              <label>Tipo <span class="text-danger">*</span></label>
+              <select class="form-control form-control-sm" id="progCampaignType">
+                <option value="predictive">Predictivo</option>
+                <option value="preview">Vista previa</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- CONSULTA SQL -->
+          <div class="sms-field" style="margin-top:12px;">
+            <label for="progQuery">Consulta SQL <span class="badge-required">requerido</span></label>
+            <textarea id="progQuery" class="form-control textarea-code" placeholder="SELECT telefono, nombre FROM..." rows="4"></textarea>
+            <div class="sms-help">
+              <span>Incluye columna de teléfono.</span>
+              <span id="rowCountProg" style="font-weight:600;color:var(--sms-primary);">0 filas</span>
+            </div>
+          </div>
+
+          <!-- BOTÓN VALIDAR -->
+          <div class="sms-actions" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;">
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnProgValidar">
+              <i class="fas fa-check-circle"></i> Validar consulta
+            </button>
+            <span class="status-pill idle" id="validateStatusProg">
+              <i class="fas fa-circle" style="font-size:6px;"></i> Sin validar
+            </span>
+          </div>
+
+          <div id="columnsInfoProg">
+            <small><i class="fas fa-table"></i> Columnas detectadas: <span id="detectedColumnsProg"></span></small>
+          </div>
+
+          <!-- ESTADÍSTICAS DE VALIDACIÓN -->
+          <div class="sms-stats-grid" id="statsGridProg" style="display:none;">
+            <div class="sms-stat-item">
+              <span class="stat-value" id="statTotalProg">—</span>
+              <span class="stat-label">Total destinatarios</span>
+            </div>
+            <div class="sms-stat-item">
+              <span class="stat-value success" id="statValidosProg">—</span>
+              <span class="stat-label">Válidos</span>
+            </div>
+            <div class="sms-stat-item">
+              <span class="stat-value danger" id="statInvalidosProg">—</span>
+              <span class="stat-label">Inválidos</span>
+            </div>
+            <div class="sms-stat-item">
+              <span class="stat-value warning" id="statDuplicadosProg">—</span>
+              <span class="stat-label">Duplicados hoy</span>
+            </div>
+            <div class="sms-stat-item">
+              <span class="stat-value danger" id="statBlacklistProg">—</span>
+              <span class="stat-label">Lista negra</span>
+            </div>
+            <div class="sms-stat-item" style="background:var(--sms-primary-light);">
+              <span class="stat-value" style="color:var(--sms-primary);font-size:1.8rem;" id="statAEnviarProg">—</span>
+              <span class="stat-label" style="font-weight:700;">A ENVIAR</span>
+            </div>
+          </div>
+
+          <!-- FECHA/HORA SIMPLE -->
+          <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-top:12px;">
+            <div style="flex:1;min-width:140px;">
+              <label style="font-size:0.72rem;">📅 Fecha</label>
+              <input type="date" id="progFecha" class="form-control form-control-sm">
+            </div>
+            <div style="flex:1;min-width:120px;">
+              <label style="font-size:0.72rem;">⏰ Hora</label>
+              <input type="time" id="progHora" class="form-control form-control-sm" value="08:00">
+            </div>
+            <div style="flex:1;min-width:120px;">
+              <label style="font-size:0.72rem;">⏰ Hora de terminar</label>
+              <input type="time" id="progHorater" class="form-control form-control-sm" placeholder="HH:MM">
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnProgramarSimple">
+              <i class="fas fa-clock"></i> Programar Simple
+            </button>
+          </div>
+
+          <!-- RECURRENTE -->
+          <div style="margin-top:16px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <label class="switch-sm">
+                <input type="checkbox" id="progEsRecurrente">
+                <span class="slider-sm"></span>
+              </label>
+              <span style="font-size:0.8rem;font-weight:600;">Programación recurrente diaria</span>
+            </div>
+
+            <div id="progRecurrenteOpciones" style="display:none;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                  <label style="font-size:0.72rem;">⏰ Hora de envío</label>
+                  <input type="time" id="progHoraRecurrente" class="form-control form-control-sm" value="08:00">
+                </div>
+                <div>
+                  <label style="font-size:0.72rem;">📅 Fecha fin (opcional)</label>
+                  <input type="date" id="progFechaFin" class="form-control form-control-sm">
+                </div>
+              </div>
+              <button type="button" class="btn btn-primary btn-sm" id="btnProgramarRecurrente" style="margin-top:12px;">
+                <i class="fas fa-sync-alt"></i> Programar Recurrente
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RESULTADO -->
+        <div id="resultBoxProg" class="result-box">
+          <div id="resultContentProg" class="result-content"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- COLUMNA DERECHA: ESTADÍSTICAS DETALLADAS -->
+  <div class="sms-side">
+    <div class="sms-stats">
+      <div class="row"><span class="label"><i class="fas fa-users"></i> Total destinatarios</span><span class="value" id="statTotalSide">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-check-circle" style="color:var(--sms-success);"></i> Válidos</span><span class="value success" id="statValidosSide">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-exclamation-circle" style="color:var(--sms-danger);"></i> Inválidos</span><span class="value danger" id="statInvalidosSide">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-copy" style="color:var(--sms-warning);"></i> Duplicados (hoy)</span><span class="value warning" id="statDuplicadosSide">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-ban" style="color:var(--sms-danger);"></i> Lista negra</span><span class="value danger" id="statBlacklistSide">—</span></div>
+      <div class="row" style="border-top:2px solid var(--sms-border);padding-top:8px;margin-top:4px;">
+        <span class="label" style="font-weight:700;">📤 A enviar</span>
+        <span class="value primary" id="statAEnviarSide" style="font-size:1.1rem;color:var(--sms-primary);">—</span>
+      </div>
+    </div>
+
+    <div class="sms-stats" id="validationDetailProg" style="display:none;">
+      <div style="font-weight:700;font-size:0.9rem;margin-bottom:10px;color:var(--sms-primary);">
+        <i class="fas fa-shield-alt"></i> Detalle de validación
+      </div>
+      <div class="row"><span class="label">📊 Total consulta</span><span class="value" id="valTotalConsulta">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-check-circle" style="color:var(--sms-success);"></i> Válidos</span><span class="value success" id="valValidos">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-times-circle" style="color:var(--sms-danger);"></i> Inválidos</span><span class="value danger" id="valInvalidos">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-copy" style="color:var(--sms-warning);"></i> Duplicados hoy</span><span class="value warning" id="valDuplicados">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-ban" style="color:var(--sms-danger);"></i> Lista negra</span><span class="value danger" id="valBlacklist">—</span></div>
+      <div class="row" style="border-top:2px solid var(--sms-primary);padding-top:8px;margin-top:4px;">
+        <span class="label" style="font-weight:700;font-size:0.9rem;">📤 A ENVIAR</span>
+        <span class="value primary" id="valAEnviar" style="font-size:1.2rem;color:var(--sms-primary);font-weight:700;">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  'use strict';
+
+  const resultBox = document.getElementById('resultBoxProg');
+  const resultContent = document.getElementById('resultContentProg');
+
+  // ========== CONTADOR DE FILAS SQL ==========
+  const queryTextarea = document.getElementById('progQuery');
+  const rowCountEl = document.getElementById('rowCountProg');
+
+  function updateRowCount() {
+    const lines = queryTextarea.value.split('\n').filter(l => l.trim() !== '');
+    const hasSelect = /select/i.test(queryTextarea.value);
+    if (hasSelect) {
+      const dataLines = lines.filter(l => /^\s*(SELECT|'|\d|from)/i.test(l.trim()));
+      rowCountEl.textContent = dataLines.length + ' filas';
+    } else {
+      rowCountEl.textContent = '0 filas';
+    }
+  }
+
+  queryTextarea.addEventListener('input', updateRowCount);
+  updateRowCount();
+
+  // ========== TOAST ==========
+  function showToast(message, type) {
+    const area = document.getElementById('smsToastArea');
+    const toast = document.createElement('div');
+    toast.className = 'sms-toast ' + (type || '');
+    const iconMap = {
+      success: 'fa-check-circle',
+      danger: 'fa-exclamation-circle',
+      warning: 'fa-exclamation-triangle',
+      info: 'fa-info-circle'
+    };
+    const icon = iconMap[type] || iconMap.info;
+    toast.innerHTML = `<span class="icon"><i class="fas ${icon}"></i></span><div class="content">${message}</div><button class="close-btn" onclick="this.parentElement.remove()">&times;</button>`;
+    area.appendChild(toast);
+    setTimeout(() => { if (toast.parentElement) toast.remove(); }, 5000);
+  }
+
+  function showResult(success, message, extraData) {
+    resultBox.className = 'result-box visible';
+    resultBox.classList.add(success ? 'success' : 'error');
+
+    let html = message;
+
+    if (extraData) {
+      html += `
+        <div style="margin-top:12px;padding:12px;background:#FFF3CD;border-radius:8px;border:1px solid #FFC107;">
+          <strong>📊 Estadísticas:</strong><br>
+          <span style="color:#28a745;">✅ Válidos: ${extraData.validos || 0}</span><br>
+          <span style="color:#dc3545;">🚫 Bloqueados: ${extraData.lista_negra || 0}</span><br>
+          <span style="color:#6c757d;">📋 Total: ${extraData.total_consulta || 0}</span>
+        </div>
+      `;
+    }
+
+    resultContent.innerHTML = html;
+
+    if (success) {
+      setTimeout(() => { resultBox.className = 'result-box'; }, 10000);
+    }
+  }
+
+  function setLoading(btn, loading) {
+    if (loading) {
+      btn._orig = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-sm"></span> Procesando...';
+    } else {
+      btn.disabled = false;
+      if (btn._orig) btn.innerHTML = btn._orig;
+    }
+  }
+
+  function updateStats(data) {
+    document.getElementById('statsGridProg').style.display = 'grid';
+    
+    // Stats en la grid
+    document.getElementById('statTotalProg').textContent = data.total_consulta || 0;
+    document.getElementById('statValidosProg').textContent = data.validos || 0;
+    document.getElementById('statInvalidosProg').textContent = data.invalidos || 0;
+    document.getElementById('statDuplicadosProg').textContent = data.duplicados || 0;
+    document.getElementById('statBlacklistProg').textContent = data.lista_negra || 0;
+    document.getElementById('statAEnviarProg').textContent = data.a_enviar || 0;
+
+    // Stats en el sidebar
+    document.getElementById('statTotalSide').textContent = data.total_consulta || 0;
+    document.getElementById('statValidosSide').textContent = data.validos || 0;
+    document.getElementById('statInvalidosSide').textContent = data.invalidos || 0;
+    document.getElementById('statDuplicadosSide').textContent = data.duplicados || 0;
+    document.getElementById('statBlacklistSide').textContent = data.lista_negra || 0;
+    document.getElementById('statAEnviarSide').textContent = data.a_enviar || 0;
+
+    // Detalle de validación
+    document.getElementById('valTotalConsulta').textContent = data.total_consulta || 0;
+    document.getElementById('valValidos').textContent = data.validos || 0;
+    document.getElementById('valInvalidos').textContent = data.invalidos || 0;
+    document.getElementById('valDuplicados').textContent = data.duplicados || 0;
+    document.getElementById('valBlacklist').textContent = data.lista_negra || 0;
+    document.getElementById('valAEnviar').textContent = data.a_enviar || 0;
+    document.getElementById('validationDetailProg').style.display = 'block';
+  }
+
+  // ========== TOGGLE RECURRENTE ==========
+  const progEsRecurrente = document.getElementById('progEsRecurrente');
+  const progRecurrenteOpciones = document.getElementById('progRecurrenteOpciones');
+
+  if (progEsRecurrente) {
+    progEsRecurrente.addEventListener('change', function() {
+      progRecurrenteOpciones.style.display = this.checked ? 'block' : 'none';
+    });
+  }
+
+  // ========== VALIDAR CONSULTA ==========
+  document.getElementById('btnProgValidar').addEventListener('click', async () => {
+    const query = document.getElementById('progQuery').value.trim();
+    if (!query) {
+      showToast('⚠️ Escribe una consulta SQL primero.', 'warning');
+      return;
+    }
+
+    const statusEl = document.getElementById('validateStatusProg');
+    statusEl.className = 'status-pill loading';
+    statusEl.innerHTML = '<span class="spinner-sm"></span> Validando...';
+
+    try {
+      // Paso 1: Validar columnas
+      try {
+        const respColumns = await fetch('/auto-campaigns/validate-query-fields', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: query })
+        });
+        const dataColumns = await respColumns.json();
+
+        if (dataColumns.success) {
+          const columns = dataColumns.detected_columns || [];
+          statusEl.className = 'status-pill ok';
+          statusEl.innerHTML = '✅ ' + columns.length + ' columnas';
+          document.getElementById('columnsInfoProg').style.display = 'block';
+          document.getElementById('detectedColumnsProg').textContent = columns.join(', ');
+        } else {
+          statusEl.className = 'status-pill err';
+          statusEl.innerHTML = '❌ ' + dataColumns.message;
+        }
+      } catch (e) {
+        console.log('⚠️ Error validando columnas:', e);
+      }
+
+      // Paso 2: Validar estadísticas
+      const respStats = await fetch('/api/wolkvox/validar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: query })
+      });
+      const dataStats = await respStats.json();
+
+      if (dataStats.success) {
+        updateStats(dataStats);
+        showToast('✅ Validación completa: ' + dataStats.a_enviar + ' a enviar', 'success');
+        showResult(true, '✅ Validación completada', dataStats);
+      } else {
+        showToast('❌ ' + dataStats.message, 'danger');
+        showResult(false, '❌ Error: ' + dataStats.message);
+      }
+    } catch (e) {
+      statusEl.className = 'status-pill err';
+      statusEl.innerHTML = '❌ Error';
+      document.getElementById('validationDetailProg').style.display = 'none';
+      showToast('❌ Error: ' + e.message, 'danger');
+      showResult(false, '❌ Error: ' + e.message);
+    }
+  });
+
+  // ========== PROGRAMAR SIMPLE ==========
+  document.getElementById('btnProgramarSimple').addEventListener('click', async () => {
+    const nombre = document.getElementById('progNombre').value.trim();
+    const campaignId = document.getElementById('progCampaignId').value.trim();
+    const serverName = document.getElementById('progServerName').value;
+    const campaignType = document.getElementById('progCampaignType').value;
+    const query = document.getElementById('progQuery').value.trim();
+    const fecha = document.getElementById('progFecha').value;
+    const hora = document.getElementById('progHora').value || '08:00';
+    const hora_terminar = document.getElementById('progHorater').value;
+
+    // Validaciones
+    if (!nombre) {
+      showToast('⚠️ El nombre es obligatorio', 'warning');
+      return;
+    }
+    if (!campaignId) {
+      showToast('⚠️ El Campaign ID es obligatorio', 'warning');
+      return;
+    }
+    if (!serverName) {
+      showToast('⚠️ El servidor es obligatorio', 'warning');
+      return;
+    }
+    if (!query) {
+      showToast('⚠️ La consulta SQL es obligatoria', 'warning');
+      return;
+    }
+    if (!fecha) {
+      showToast('⚠️ La fecha es obligatoria', 'warning');
+      return;
+    }
+    if (!hora_terminar) {
+      showToast('⚠️ La hora de terminación es obligatoria', 'warning');
+      return;
+    }
+
+    const fechaCompleta = `${fecha}T${hora}`;
+
+    try {
+      setLoading(document.getElementById('btnProgramarSimple'), true);
+      const resp = await fetch('/auto-campaigns/programar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: nombre,
+          bigquery_query: query,
+          wolkvox_campaign_id: campaignId,
+          server_name: serverName,
+          campaign_type: campaignType,
+          fecha_programada: fechaCompleta,
+          hora_fin: hora_terminar
+        })
+      });
+      const data = await resp.json();
+
+      if (data.success) {
+        showToast(`✅ Programado correctamente (ID: ${data.id})`, 'success');
+        showResult(true, `✅ Programación simple creada exitosamente<br><strong>ID:</strong> ${data.id}<br><strong>Fecha:</strong> ${data.fecha_programada || fechaCompleta}`);
+        
+        // Limpiar campos
+        document.getElementById('progNombre').value = '';
+        document.getElementById('progCampaignId').value = '';
+        document.getElementById('progQuery').value = '';
+        document.getElementById('progFecha').value = '';
+        document.getElementById('progHora').value = '08:00';
+        document.getElementById('progHorater').value = '';
+        document.getElementById('rowCountProg').textContent = '0 filas';
+        document.getElementById('columnsInfoProg').style.display = 'none';
+        document.getElementById('statsGridProg').style.display = 'none';
+        document.getElementById('validationDetailProg').style.display = 'none';
+        document.getElementById('validateStatusProg').className = 'status-pill idle';
+        document.getElementById('validateStatusProg').innerHTML = '<i class="fas fa-circle" style="font-size:6px;"></i> Sin validar';
+      } else {
+        showToast('❌ ' + data.message, 'danger');
+        showResult(false, '❌ Error: ' + data.message);
+      }
+    } catch (e) {
+      showToast('❌ Error: ' + e.message, 'danger');
+      showResult(false, '❌ Error: ' + e.message);
+    } finally {
+      setLoading(document.getElementById('btnProgramarSimple'), false);
+    }
+  });
+
+  // ========== PROGRAMAR RECURRENTE ==========
+  document.getElementById('btnProgramarRecurrente').addEventListener('click', async () => {
+    const nombre = document.getElementById('progNombre').value.trim();
+    const campaignId = document.getElementById('progCampaignId').value.trim();
+    const serverName = document.getElementById('progServerName').value;
+    const campaignType = document.getElementById('progCampaignType').value;
+    const query = document.getElementById('progQuery').value.trim();
+    const hora = document.getElementById('progHoraRecurrente').value;
+    const fechaFin = document.getElementById('progFechaFin').value;
+
+    // Validaciones
+    if (!nombre) {
+      showToast('⚠️ El nombre es obligatorio', 'warning');
+      return;
+    }
+    if (!campaignId) {
+      showToast('⚠️ El Campaign ID es obligatorio', 'warning');
+      return;
+    }
+    if (!serverName) {
+      showToast('⚠️ El servidor es obligatorio', 'warning');
+      return;
+    }
+    if (!query) {
+      showToast('⚠️ La consulta SQL es obligatoria', 'warning');
+      return;
+    }
+    if (!hora) {
+      showToast('⚠️ La hora de envío es obligatoria', 'warning');
+      return;
+    }
+
+    try {
+      setLoading(document.getElementById('btnProgramarRecurrente'), true);
+      const resp = await fetch('/auto-campaigns/programar-recurrente', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: nombre,
+          bigquery_query: query,
+          wolkvox_campaign_id: campaignId,
+          server_name: serverName,
+          campaign_type: campaignType,
+          hora_inicio: hora,
+          fecha_fin: fechaFin || null
+        })
+      });
+      const data = await resp.json();
+
+      if (data.success) {
+        showToast(`✅ Recurrente creada (ID: ${data.id})`, 'success');
+        showResult(true, `✅ Programación recurrente creada exitosamente<br><strong>ID:</strong> ${data.id}<br><strong>Hora:</strong> ${hora}`);
+        
+        // Limpiar campos
+        document.getElementById('progNombre').value = '';
+        document.getElementById('progCampaignId').value = '';
+        document.getElementById('progQuery').value = '';
+        document.getElementById('progHoraRecurrente').value = '08:00';
+        document.getElementById('progFechaFin').value = '';
+        document.getElementById('rowCountProg').textContent = '0 filas';
+        document.getElementById('columnsInfoProg').style.display = 'none';
+        document.getElementById('statsGridProg').style.display = 'none';
+        document.getElementById('validationDetailProg').style.display = 'none';
+        document.getElementById('validateStatusProg').className = 'status-pill idle';
+        document.getElementById('validateStatusProg').innerHTML = '<i class="fas fa-circle" style="font-size:6px;"></i> Sin validar';
+        progEsRecurrente.checked = false;
+        progRecurrenteOpciones.style.display = 'none';
+      } else {
+        showToast('❌ ' + data.message, 'danger');
+        showResult(false, '❌ Error: ' + data.message);
+      }
+    } catch (e) {
+      showToast('❌ Error: ' + e.message, 'danger');
+      showResult(false, '❌ Error: ' + e.message);
+    } finally {
+      setLoading(document.getElementById('btnProgramarRecurrente'), false);
+    }
+  });
+
+  // ========== TABS ==========
+  document.querySelectorAll('.sms-tabs .tab').forEach(tab => {
+    tab.addEventListener('click', function(e) {
+      // Si es un enlace (a), no hacer nada
+      if (this.tagName === 'A') return;
+      
+      e.preventDefault();
+      document.querySelectorAll('.sms-tabs .tab').forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+
+})();
+</script>
+{% endblock %}

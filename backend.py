@@ -8,7 +8,7 @@ from collections import deque
 import requests
 from datetime import datetime
 from pathlib import Path
-from flask import Flask
+from flask import Flask, current_app
 from database import db, init_db, Campaign, ScheduledCSV, APIEndpoint, ScheduledQuery
 from auto_campaigns import check_auto_campaigns_schedule
 from werkzeug.utils import secure_filename
@@ -22,6 +22,9 @@ from general_params import (
     get_console_message_interval_seconds,
     get_log_retention_hours,
 )
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from servers import get_server
 
 # - ScheduledCSV: Modelo para tareas CSV programadas
@@ -103,25 +106,79 @@ _activity_log: deque[str] = deque(maxlen=ACTIVITY_LOG_MAX_LINES)
 _activity_lock = threading.Lock()
 
 
+# ============================================================
+# NUEVO: ActivityLogHandler para capturar logs automáticamente
+# ============================================================
+class ActivityLogHandler(logging.Handler):
+    """Envía los logs al panel del dashboard mediante _activity_log."""
+
+    def emit(self, record):
+        try:
+            message = self.format(record)
+
+            with _activity_lock:
+                _activity_log.append(message)
+
+        except Exception:
+            self.handleError(record)
+
+
 def _configure_logging() -> None:
     formatter = logging.Formatter(LOG_FORMAT, datefmt=LOG_DATEFMT)
 
     root = logging.getLogger()
     root.setLevel(logging.INFO)
-    if not any(isinstance(h, logging.StreamHandler) for h in root.handlers):
+
+    # -----------------------------
+    # Consola
+    # -----------------------------
+    if not any(
+        isinstance(h, logging.StreamHandler)
+        and not isinstance(h, logging.FileHandler)
+        for h in root.handlers
+    ):
         console = logging.StreamHandler()
         console.setFormatter(formatter)
         root.addHandler(console)
 
+    # -----------------------------
+    # Dashboard (NUEVO)
+    # -----------------------------
+    if not any(
+        isinstance(h, ActivityLogHandler)
+        for h in root.handlers
+    ):
+        activity_handler = ActivityLogHandler()
+        activity_handler.setFormatter(formatter)
+        root.addHandler(activity_handler)
+
+    # ==================================================
+    # LOGGER EXECUTION
+    # ==================================================
     execution_logger = logging.getLogger("execution")
     execution_logger.setLevel(logging.INFO)
     execution_logger.propagate = False
-    if not any(isinstance(h, logging.FileHandler) for h in execution_logger.handlers):
-        file_handler = logging.FileHandler(str(LOG_FILE), encoding="utf-8")
+
+    if not any(
+        isinstance(h, logging.FileHandler)
+        for h in execution_logger.handlers
+    ):
+        file_handler = logging.FileHandler(
+            str(LOG_FILE),
+            encoding="utf-8"
+        )
+
         file_handler.setFormatter(formatter)
         execution_logger.addHandler(file_handler)
 
-    for noisy in ("apscheduler", "apscheduler.scheduler", "werkzeug"):
+    # ==================================================
+    # LOGGERS RUIDOSOS
+    # ==================================================
+    for noisy in (
+        "apscheduler",
+        "apscheduler.scheduler",
+        "werkzeug"
+    ):
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
 
@@ -201,7 +258,10 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 init_db(app)
 scheduler = BackgroundScheduler()
 scheduler.start()
-
+for job in scheduler.get_jobs():
+    if job.id.startswith('wolkvox_'):
+        scheduler.remove_job(job.id)
+        print(f"🗑️ Job viejo eliminado: {job.id}")
 UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 DOWNLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 load_config()
@@ -462,7 +522,7 @@ def cleanup_old_log_files() -> list[str]:
     return deleted
 
 
-def read_recent_log_lines(limit: int = 20) -> list[str]:
+def read_recent_log_lines(limit: int = 200) -> list[str]:
     """Últimas líneas de actividad para el tablero."""
     with _activity_lock:
         if not _activity_log:
@@ -593,6 +653,161 @@ def execute_pending_tasks():
         except Exception as e:
             log_task(f"Error revisando campañas automáticas: {e}", level="ERROR")
             db.session.rollback()
+
+
+# =============Elimina datos de las campñas============================
+def limpiar_campanas_wolkvox_diario():
+    """Limpia todas las campañas detenidas en Wolkvox a las 7 p. m."""
+    from auto_campaign_executor import _get_base_url_wolkvox
+
+    servidores = [
+        "operacion-interna",
+        "qnt_digital",
+        "qnt_juridico_blaster",
+        "qnt_cobro_blaster",
+        "Qnt_RBK_blaster",
+        "Qnt_recaudo_blaster",
+    ]
+
+    total_limpiadas = 0
+
+    with app.app_context():
+        for servidor in servidores:
+            try:
+                token = _obtener_token_servidor(servidor)
+                if not token:
+                    logger.warning(f"⚠️ Sin token para {servidor}")
+                    continue
+
+                base_url = _get_base_url_wolkvox(servidor)
+                url = f"{base_url}/api/v2/information.php?api=campaigns"
+
+                resp = requests.get(url, headers={"wolkvox-token": token}, timeout=60)
+
+                if not resp.ok:
+                    logger.warning(f"⚠️ {servidor}: HTTP {resp.status_code}")
+                    continue
+
+                campanas = resp.json().get("data", [])
+
+                for camp in campanas:
+                    campaign_id = str(camp.get("campaign_id", "")).strip()
+                    status = str(camp.get("status", "")).strip().lower()
+                    records = str(camp.get("records", "0")).strip()
+                    type_campaign = str(camp.get("type_campaign", "predictive")).strip()
+
+                    # 🆕 Solo detenidas
+                    if status != "stopped":
+                        continue
+
+                    logger.info(f"🧹 Limpiando {camp.get('campaign_name')} (ID={campaign_id})")
+
+                    clear_url = f"{base_url}/api/v2/campaign.php"
+                    clear_params = {
+                        "api": "clear_campaign",
+                        "type_campaign": type_campaign,
+                        "campaign_id": campaign_id,
+                    }
+
+                    clear_resp = requests.delete(
+                        clear_url,
+                        params=clear_params,
+                        headers={"wolkvox-token": token},
+                        timeout=60,
+                    )
+
+                    if clear_resp.ok:
+                        total_limpiadas += 1
+                        logger.info(f"✅ {camp.get('campaign_name')} limpiada")
+                    else:
+                        logger.warning(f"❌ No se pudo limpiar {campaign_id}: HTTP {clear_resp.status_code}")
+
+            except Exception as e:
+                logger.warning(f"❌ Error en {servidor}: {e}")
+
+        logger.info(f"🏁 Limpieza diaria Wolkvox finalizada. Total limpiadas: {total_limpiadas}")
+
+
+servidores = [
+        "operacion-interna",
+        "qnt_digital",
+        "qnt_juridico_blaster",
+        "qnt_cobro_blaster",
+        "Qnt_RBK_blaster",
+        "Qnt_recaudo_blaster",
+    ]
+
+def _fetch_servidor(servidor, app):
+    """Trae las campañas de UN servidor. Corre en un hilo del pool."""
+    from auto_campaign_executor import _get_base_url_wolkvox
+    with app.app_context():
+        try:
+            token = _obtener_token_servidor(servidor)
+            if not token:
+                logger.warning(f"⚠️ Sin token para {servidor}")
+                return servidor, []
+
+            base_url = _get_base_url_wolkvox(servidor)
+            url = f"{base_url}/api/v2/real_time.php?api=campaigns"
+            resp = requests.get(url, headers={"wolkvox-token": token}, timeout=20)
+
+            if not resp.ok:
+                logger.warning(f"⚠️ {servidor}: HTTP {resp.status_code}")
+                return servidor, []
+
+            campanas = resp.json().get("data", [])
+            for c in campanas:
+                c["servidor"] = servidor
+            logger.info(f"✅ {servidor}: {len(campanas)} campañas")
+            return servidor, campanas
+        except Exception as e:
+            logger.warning(f"❌ Error en {servidor}: {e}")
+            return servidor, []
+
+
+def total_campañas_hoy(app=None):
+    """Versión CONCURRENTE: consulta SOLO los servidores específicos."""
+    app = app or current_app._get_current_object()
+    
+    servidores = [
+        "operacion-interna",
+        "qnt_digital_2_dashboard",
+        "qnt_juridico_blaster",
+        "qnt_cobro_blaster",
+        "Qnt_RBK_blaster",
+        "Qnt_recaudo_blaster",
+    ]
+    
+    todas_las_campañas = []
+    servidores_activos = []
+
+    with ThreadPoolExecutor(max_workers=len(servidores)) as executor:
+        futures = {executor.submit(_fetch_servidor, s, app): s for s in servidores}
+        for future in as_completed(futures):
+            servidor, campanas = future.result()
+            if campanas:
+                todas_las_campañas.extend(campanas)
+                servidores_activos.append(servidor)
+
+    logger.info(f"📊 Total campañas: {len(todas_las_campañas)}")
+    return {
+        "campañas": todas_las_campañas,
+        "servidores": servidores_activos,
+        "total": len(todas_las_campañas),
+    }
+
+
+# ============Toker de wokvox
+def _obtener_token_servidor(server_name):
+    """Obtiene el token Wolkvox de un servidor específico."""
+    try:
+        srv = get_server(server_name)
+        if srv:
+            token = srv.get("token") or ""
+            return token.strip() or None
+    except Exception:
+        pass
+    return None
 
 
 # ========== EJECUTAR BIGQUERY_PROCESSOR ==========
@@ -741,6 +956,7 @@ def init_auto_download_on_startup():
         import traceback
         traceback.print_exc()
 
+
 # ========== INICIALIZAR SCHEDULER ==========
 _initial_interval = get_campaign_check_interval_seconds()
 _console_interval = get_console_message_interval_seconds()
@@ -757,6 +973,12 @@ scheduler.add_job(
     id=CONSOLE_MESSAGE_JOB_ID,
     replace_existing=True,
     next_run_time=_now,
+)
+scheduler.add_job(
+    limpiar_campanas_wolkvox_diario,
+    trigger=CronTrigger(hour=20, minute=0),
+    id="limpiar_campanas_wolkvox_diario",
+    replace_existing=True,
 )
 logger.info(
     f"Scheduler de campañas iniciado: cada {_initial_interval} segundos"
