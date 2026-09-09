@@ -106,25 +106,79 @@ _activity_log: deque[str] = deque(maxlen=ACTIVITY_LOG_MAX_LINES)
 _activity_lock = threading.Lock()
 
 
+# ============================================================
+# NUEVO: ActivityLogHandler para capturar logs automáticamente
+# ============================================================
+class ActivityLogHandler(logging.Handler):
+    """Envía los logs al panel del dashboard mediante _activity_log."""
+
+    def emit(self, record):
+        try:
+            message = self.format(record)
+
+            with _activity_lock:
+                _activity_log.append(message)
+
+        except Exception:
+            self.handleError(record)
+
+
 def _configure_logging() -> None:
     formatter = logging.Formatter(LOG_FORMAT, datefmt=LOG_DATEFMT)
 
     root = logging.getLogger()
     root.setLevel(logging.INFO)
-    if not any(isinstance(h, logging.StreamHandler) for h in root.handlers):
+
+    # -----------------------------
+    # Consola
+    # -----------------------------
+    if not any(
+        isinstance(h, logging.StreamHandler)
+        and not isinstance(h, logging.FileHandler)
+        for h in root.handlers
+    ):
         console = logging.StreamHandler()
         console.setFormatter(formatter)
         root.addHandler(console)
 
+    # -----------------------------
+    # Dashboard (NUEVO)
+    # -----------------------------
+    if not any(
+        isinstance(h, ActivityLogHandler)
+        for h in root.handlers
+    ):
+        activity_handler = ActivityLogHandler()
+        activity_handler.setFormatter(formatter)
+        root.addHandler(activity_handler)
+
+    # ==================================================
+    # LOGGER EXECUTION
+    # ==================================================
     execution_logger = logging.getLogger("execution")
     execution_logger.setLevel(logging.INFO)
     execution_logger.propagate = False
-    if not any(isinstance(h, logging.FileHandler) for h in execution_logger.handlers):
-        file_handler = logging.FileHandler(str(LOG_FILE), encoding="utf-8")
+
+    if not any(
+        isinstance(h, logging.FileHandler)
+        for h in execution_logger.handlers
+    ):
+        file_handler = logging.FileHandler(
+            str(LOG_FILE),
+            encoding="utf-8"
+        )
+
         file_handler.setFormatter(formatter)
         execution_logger.addHandler(file_handler)
 
-    for noisy in ("apscheduler", "apscheduler.scheduler", "werkzeug"):
+    # ==================================================
+    # LOGGERS RUIDOSOS
+    # ==================================================
+    for noisy in (
+        "apscheduler",
+        "apscheduler.scheduler",
+        "werkzeug"
+    ):
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
 
@@ -468,7 +522,7 @@ def cleanup_old_log_files() -> list[str]:
     return deleted
 
 
-def read_recent_log_lines(limit: int = 20) -> list[str]:
+def read_recent_log_lines(limit: int = 200) -> list[str]:
     """Últimas líneas de actividad para el tablero."""
     with _activity_lock:
         if not _activity_log:
@@ -600,7 +654,8 @@ def execute_pending_tasks():
             log_task(f"Error revisando campañas automáticas: {e}", level="ERROR")
             db.session.rollback()
 
-#=============Elimina datos de las campñas============================
+
+# =============Elimina datos de las campñas============================
 def limpiar_campanas_wolkvox_diario():
     """Limpia todas las campañas detenidas en Wolkvox a las 7 p. m."""
     from auto_campaign_executor import _get_base_url_wolkvox
@@ -673,7 +728,6 @@ def limpiar_campanas_wolkvox_diario():
         logger.info(f"🏁 Limpieza diaria Wolkvox finalizada. Total limpiadas: {total_limpiadas}")
 
 
-
 servidores = [
         "operacion-interna",
         "qnt_digital",
@@ -742,7 +796,8 @@ def total_campañas_hoy(app=None):
         "total": len(todas_las_campañas),
     }
 
-#============Toker de wokvox
+
+# ============Toker de wokvox
 def _obtener_token_servidor(server_name):
     """Obtiene el token Wolkvox de un servidor específico."""
     try:
@@ -901,6 +956,7 @@ def init_auto_download_on_startup():
         import traceback
         traceback.print_exc()
 
+
 # ========== INICIALIZAR SCHEDULER ==========
 _initial_interval = get_campaign_check_interval_seconds()
 _console_interval = get_console_message_interval_seconds()
@@ -920,7 +976,7 @@ scheduler.add_job(
 )
 scheduler.add_job(
     limpiar_campanas_wolkvox_diario,
-    trigger=CronTrigger(hour=19, minute=0),
+    trigger=CronTrigger(hour=20, minute=0),
     id="limpiar_campanas_wolkvox_diario",
     replace_existing=True,
 )

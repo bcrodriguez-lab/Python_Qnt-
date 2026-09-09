@@ -2792,20 +2792,21 @@ def Cargue_Wolkvox(campaign, token):
     
     # 2. Formatear registros
     records = []
+    
+    def formatear_telefono(telefono):
+        telefono = re.sub(r'[^0-9]', '', str(telefono))
+        if not telefono:
+            return "91570000000000"
+        if telefono.startswith('57'):
+            telefono = telefono[2:]
+        if telefono.startswith('+57'):
+            telefono = telefono[3:]
+        if telefono.startswith('9157'):
+            return telefono
+        return f"9157{telefono}"
+    
     for idx, row in enumerate(registros_validos):
-        
-        def formatear_telefono(telefono):
-            telefono = re.sub(r'[^0-9]', '', str(telefono))
-            if not telefono:
-                return "91570000000000"
-            if telefono.startswith('57'):
-                telefono = telefono[2:]
-            if telefono.startswith('+57'):
-                telefono = telefono[3:]
-            if telefono.startswith('9157'):
-                return telefono
-            return f"9157{telefono}"
-        
+        logger.info(f"🔍 Columnas disponibles: {list(row.keys())}")
         customer_id = str(row.get('customer_id', '')).strip()
         if not customer_id or customer_id in ('nan', 'None'):
             customer_id = str(row.get('tel1', f"CLI-{idx}")).strip()
@@ -2826,6 +2827,56 @@ def Cargue_Wolkvox(campaign, token):
         if email in ('nan', 'None'):
             email = ''
         
+        opt1_valor = str(row.get('fecha_pago', '')).strip()
+        if opt1_valor in ('nan', 'None', ''):
+            opt1_valor = '424'
+        
+        opt2_valor = str(row.get('valor_pagar', '')).strip()
+        if opt2_valor in ('nan', 'None'):
+            opt2_valor = ''
+        
+        opt3_valor = str(row.get('segmento', '')).strip()
+        if opt3_valor in ('nan', 'None'):
+            opt3_valor = ''
+        
+        opt4_valor = str(row.get('empresa', '')).strip()
+        if opt4_valor in ('nan', 'None'):
+            opt4_valor = ''
+        
+        opt5_valor = str(row.get('fecha_pago_2', '')).strip()
+        if opt5_valor in ('nan', 'None'):
+            opt5_valor = ''
+        
+        opt6_valor = str(row.get('valor_pagar_2', '')).strip()
+        if opt6_valor in ('nan', 'None'):
+            opt6_valor = ''
+        
+        opt7_valor = str(row.get('valor_oferta_esp', '')).strip()
+        if opt7_valor in ('nan', 'None'):
+            opt7_valor = ''
+        
+        opt8_valor = str(row.get('valor_oferta_esp_2', '')).strip()
+        if opt8_valor in ('nan', 'None'):
+            opt8_valor = ''
+        
+        opt9_valor = str(row.get('cuotas', '')).strip()
+        if opt9_valor in ('nan', 'None'):
+            opt9_valor = ''
+        
+        opt10_valor = str(row.get('porcentaje', '')).strip()
+        if opt10_valor in ('nan', 'None'):
+            opt10_valor = ''
+        
+        opt11_valor = str(row.get('porcentaje_2', '')).strip()
+        if opt11_valor in ('nan', 'None'):
+            opt11_valor = ''
+        
+        opt12_valor = str(row.get('link_pago', '')).strip()
+        if opt12_valor in ('nan', 'None'):
+            opt12_valor = ''
+
+        logger.info(f"Procesando registro {idx+1}: {nombre} {apellido}")
+        
         record = {
             "customer_name": nombre,
             "customer_last_name": apellido,
@@ -2838,62 +2889,100 @@ def Cargue_Wolkvox(campaign, token):
             "email": email,
             "age": "", "gender": "", "country": "", "state": "",
             "city": "", "zone": "", "address": "",
-            "opt1": str(row.get('fecha_pago', '')),
-            "opt2": str(row.get('valor_pagar', '')),
-            "opt3": str(row.get('segmento', '')),
-            "opt4": str(row.get('empresa', '')),
-            "opt5": str(row.get('fecha_pago_2', '')),
-            "opt6": str(row.get('valor_pagar_2', '')),
-            "opt7": str(row.get('valor_oferta_esp', '')),
-            "opt8": str(row.get('valor_oferta_esp_2', '')),
-            "opt9": str(row.get('cuotas', '')),
-            "opt10": str(row.get('porcentaje', '')),
-            "opt11": str(row.get('porcentaje_2', '')),
-            "opt12": str(row.get('link_pago', '')),
+            "opt1": opt1_valor,
+            "opt2": opt2_valor,
+            "opt3": opt3_valor,
+            "opt4": opt4_valor,
+            "opt5": opt5_valor,
+            "opt6": opt6_valor,
+            "opt7": opt7_valor,
+            "opt8": opt8_valor,
+            "opt9": opt9_valor,
+            "opt10": opt10_valor,
+            "opt11": opt11_valor,
+            "opt12": opt12_valor,
             "recall_date": "",
             "recall_telephone": ""
         }
         records.append(record)
-        # 2.1 COONSTRUIR SEÑUELOS
-
+    
+    # 2.1 CONSTRUIR SEÑUELOS (CORREGIDO)
     senuelos_data_ = [
-        
-        #("Camilo", "3015007868","10000000000"),
-        ]
-    logger.info(f"Agregando {len(senuelos_data_)} señuelos a la campaña {campaign.name} (ID: {campaign.id})")
+        # ("Camilo", "3015007868", "10000000000"),
+    ]
+    
+    logger_programacion.info(f"Agregando {len(senuelos_data_)} señuelos a la campaña {campaign.name} (ID: {campaign.id})")
+    
+
+    if senuelos_data_ and records:
+        primer_registro = records[0]
+        apellido_ref = primer_registro.get('customer_last_name', '')
+        email_ref = primer_registro.get('email', '')
+        opt1_ref = primer_registro.get('opt1', '424')
+        opt2_ref = primer_registro.get('opt2', '')
+        opt3_ref = primer_registro.get('opt3', '')
+        opt4_ref = primer_registro.get('opt4', '')
+        opt5_ref = primer_registro.get('opt5', '')
+        opt6_ref = primer_registro.get('opt6', '')
+        opt7_ref = primer_registro.get('opt7', '')
+        opt8_ref = primer_registro.get('opt8', '')
+        opt9_ref = primer_registro.get('opt9', '')
+        opt10_ref = primer_registro.get('opt10', '')
+        opt11_ref = primer_registro.get('opt11', '')
+        opt12_ref = primer_registro.get('opt12', '')
+    else:
+        # Valores por defecto si no hay registros
+        apellido_ref = ''
+        email_ref = ''
+        opt1_ref = '424'
+        opt2_ref = ''
+        opt3_ref = ''
+        opt4_ref = ''
+        opt5_ref = ''
+        opt6_ref = ''
+        opt7_ref = ''
+        opt8_ref = ''
+        opt9_ref = ''
+        opt10_ref = ''
+        opt11_ref = ''
+        opt12_ref = ''
+    
     start_id = len(records) + 1
     for i, (nombre, telefono, customer_id) in enumerate(senuelos_data_, start=start_id):
-
-            telefono_formateado = formatear_telefono(telefono)
-            Señuelos = {
-                "customer_name": nombre,
-                "customer_last_name": apellido,
-                "id_type": "CC",
-                "customer_id": customer_id,
-                "tel1": telefono_formateado,
-                "tel2": "", "tel3": "", "tel4": "", "tel5": "",
-                "tel6": "", "tel7": "", "tel8": "", "tel9": "", "tel10": "",
-                "tel_extra": "",
-                "email": email,
-                "age": "", "gender": "", "country": "", "state": "",
-                "city": "", "zone": "", "address": "",
-                "opt1": str(row.get('fecha_pago', '')),
-                "opt2": str(row.get('valor_pagar', '')),
-                "opt3": str(row.get('segmento', '')),
-                "opt4": str(row.get('empresa', '')),
-                "opt5": str(row.get('fecha_pago_2', '')),
-                "opt6": str(row.get('valor_pagar_2', '')),
-                "opt7": str(row.get('valor_oferta_esp', '')),
-                "opt8": str(row.get('valor_oferta_esp_2', '')),
-                "opt9": str(row.get('cuotas', '')),
-                "opt10": str(row.get('porcentaje', '')),
-                "opt11": str(row.get('porcentaje_2', '')),
-                "opt12": str(row.get('link_pago', '')),
-                "recall_date": "",
-                "recall_telephone": ""
-            }
-            records.append(Señuelos)
-            logger.info(f"Señuelo agregado: {nombre}, {telefono_formateado}, {customer_id}")
+        
+        telefono_formateado = formatear_telefono(telefono)
+        
+        senuelo = {
+            "customer_name": nombre,
+            "customer_last_name": apellido_ref,
+            "id_type": "CC",
+            "customer_id": customer_id,
+            "tel1": telefono_formateado,
+            "tel2": "", "tel3": "", "tel4": "", "tel5": "",
+            "tel6": "", "tel7": "", "tel8": "", "tel9": "", "tel10": "",
+            "tel_extra": "",
+            "email": email_ref,
+            "age": "", "gender": "", "country": "", "state": "",
+            "city": "", "zone": "", "address": "",
+            "opt1": opt1_ref,
+            "opt2": opt2_ref,
+            "opt3": opt3_ref,
+            "opt4": opt4_ref,
+            "opt5": opt5_ref,
+            "opt6": opt6_ref,
+            "opt7": opt7_ref,
+            "opt8": opt8_ref,
+            "opt9": opt9_ref,
+            "opt10": opt10_ref,
+            "opt11": opt11_ref,
+            "opt12": opt12_ref,
+            "recall_date": "",
+            "recall_telephone": ""
+        }
+        records.append(senuelo)
+        logger_programacion.info(f"Señuelo agregado: {nombre}, {telefono_formateado}, {customer_id}")
+    
+    # 3. Limpiar campaña antes de cargar
     try:
         base_url = _get_base_url_wolkvox(campaign.server_name)
         clear_url = f"{base_url}/api/v2/campaign.php"
@@ -2908,13 +2997,14 @@ def Cargue_Wolkvox(campaign, token):
             timeout=60,
         )
         if clear_resp.ok:
-            logger.info(f"🧹 Campaña {campaign.wolkvox_campaign_id} limpiada antes de cargar")
+            logger_programacion.info(f"🧹 Campaña {campaign.wolkvox_campaign_id} limpiada antes de cargar")
         else:
-            logger.warning(f"No se pudo limpiar campaña: HTTP {clear_resp.status_code}")
+            logger_programacion.warning(f"No se pudo limpiar campaña: HTTP {clear_resp.status_code}")
             
     except Exception as e:
-        logger.warning(f"Error limpiando campaña: {e}")
-    # 3. Construir URL de Wolkvox
+        logger_programacion.warning(f"Error limpiando campaña: {e}")
+    
+    # 4. Construir URL de Wolkvox
     server_mapping = {
         "operacion-interna": "https://wv0016.wolkvox.com",
         "qnt_digital": "https://wv0010.wolkvox.com/",
@@ -2933,7 +3023,7 @@ def Cargue_Wolkvox(campaign, token):
         "campaign_status": "1"
     }
     
-    # 4. Enviar en lotes
+    # 5. Enviar en lotes
     headers = {"wolkvox-token": token, "Content-Type": "application/json"}
     batch_size = 100
     total_enviados = 0
@@ -2945,22 +3035,25 @@ def Cargue_Wolkvox(campaign, token):
             response = requests.post(url, params=params, headers=headers, json=batch, timeout=60)
             if response.status_code in [200, 201]:
                 total_enviados += len(batch)
+                logger_programacion.info(f"✅ Lote {i//batch_size + 1}: {len(batch)} registros enviados")
             else:
                 errores.append({
                     "status": response.status_code,
                     "response": response.text[:500]
                 })
+                logger_programacion.warning(f"❌ Lote {i//batch_size + 1}: HTTP {response.status_code}")
         except Exception as e:
             errores.append({"error": str(e)})
+            logger_programacion.warning(f"❌ Lote {i//batch_size + 1}: Error {str(e)}")
     
-    # 5. Guardar en WolkvoxLog
+    # 6. Guardar en WolkvoxLog
     if records:
         try:
             guardar_wolkvox_log(bq_client, records, campaign, usuario='sistema')
         except Exception as e:
-            logger.warning(f"Error guardando WolkvoxLog: {e}")
+            logger_programacion.warning(f"Error guardando WolkvoxLog: {e}")
     
-    # 6. Devolver resultado
+    # 7. Devolver resultado
     return {
         "success": len(errores) == 0,
         "records_sent": total_enviados,
@@ -2972,6 +3065,9 @@ def Cargue_Wolkvox(campaign, token):
         "errors": errores,
         "message": f"{total_enviados} registros cargados. {validacion['lista_negra']} bloqueados."
     }
+
+
+
 
 @app.route("/api/wolkvox/validar", methods=["POST"])
 def wolkvox_validar():
@@ -3873,7 +3969,7 @@ def api_dashboard_refresh():
 
 @app.route("/api/recent_logs", methods=["GET"])
 def api_recent_logs():
-    return jsonify(read_recent_log_lines(50))
+    return jsonify(read_recent_log_lines(200))
 
 
 @app.route("/downloads/<filename>", methods=["GET"])

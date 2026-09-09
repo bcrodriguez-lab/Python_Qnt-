@@ -7,9 +7,11 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
-
+from logging import getLogger
 import requests
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+logger = getLogger(__name__)
 
 from auto_campaigns import calculate_next_run
 from conexion_bigquery import get_bigquery_client
@@ -27,6 +29,7 @@ MAX_RECORDS_WOLKVOX = 50000
 
 _running_lock = threading.Lock()
 running_campaigns: dict[int, dict] = {}
+bq_client = get_bigquery_client()
 
 # ===========================================================================
 # UTILIDADES
@@ -92,40 +95,20 @@ def _response_summary(response: requests.Response) -> dict:
 # BIGQUERY
 # ===========================================================================
 
-def fetch_data_from_bigquery(query: str, params=None) -> list[dict]:
-    """Ejecuta una consulta BigQuery y valida campos requeridos."""
-    del params
-    query_text = _render_query(query).strip().rstrip(";")
-    if not re.match(r"^(SELECT|WITH)\b", query_text, re.IGNORECASE):
-        raise ValueError(
-            "Solo se permiten consultas SELECT o WITH para campañas automáticas."
-        )
-
-    client = get_bigquery_client()
-    if client is None:
-        raise RuntimeError("Cliente BigQuery no disponible.")
-
-    rows = []
-    for row in client.query(query_text).result():
-        rows.append(
-            {key: _normalize_bigquery_value(value) for key, value in dict(row).items()}
-        )
-
-    success, normalized_rows, error_msg = validate_and_normalize(rows)
-    if not success:
-        raise ValueError(f"Validación de consulta fallida: {error_msg}")
-
-    if len(normalized_rows) > MAX_RECORDS_WOLKVOX:
-        _log(
-            f"ADVERTENCIA: La consulta retorna {len(normalized_rows)} registros, "
-            f"pero la licencia Wolkvox solo permite {MAX_RECORDS_WOLKVOX}. "
-            f"Se limitará a los primeros {MAX_RECORDS_WOLKVOX} registros.",
-            level="WARN"
-        )
-        normalized_rows = normalized_rows[:MAX_RECORDS_WOLKVOX]
-
-    return normalized_rows
-
+def fetch_data_from_bigquery(query):
+    """
+    Ejecuta BigQuery y devuelve TODAS las columnas de la consulta.
+    """
+    try:
+        df = bq_client.query(query).to_dataframe()
+      
+        records = df.to_dict('records')
+        logger.info(f"✅ {len(records)} registros obtenidos de BigQuery")
+        logger.info(f"🔍 Columnas disponibles: {list(records[0].keys()) if records else []}")
+        return records
+    except Exception as e:
+        logger.error(f"❌ Error en BigQuery: {e}")
+        raise ValueError(f"Error ejecutando consulta: {e}")
 
 # ===========================================================================
 # MAPEO Y CSV

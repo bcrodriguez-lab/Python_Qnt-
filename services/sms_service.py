@@ -234,35 +234,51 @@ def preparar_sms(rows: List[Dict], plantilla: str) -> Tuple[List[Dict], Dict]:
             f"Variables no encontradas en la consulta: {', '.join(missing)}. "
             "Verifique los nombres de las variables en la plantilla."
         )
-
+    
     seen = set()
     prepared = []
     invalid_numbers = 0
-    
-    for row in rows:
-        phone = limpiar_numero(row.get(phone_column))
-        if not phone:
-            invalid_numbers += 1
-            continue
-            print(f"📱 Fila: {row.get(phone_column)} -> Limpiado: '{phone}'")
-        # Eliminar duplicados dentro del mismo lote
-        if phone in seen:
-            continue
-        seen.add(phone)
+    señuelos = [
         
+        ("3144051619", "john","10000000000"),
+]
+
+    for (telefono, nombre, customer_id) in señuelos:
+        row = {
+            "nombre": nombre,
+            "customer_id": customer_id,
+            "telefono": telefono
+        }
         prepared.append({
-            "phone": phone,
+            "phone": telefono,
             "text": construir_mensaje(row, plantilla, variables),
             "row": row
         })
-    
+    for row in rows:
+            phone = limpiar_numero(row.get(phone_column))
+            if not phone:
+                invalid_numbers += 1
+                continue
+            logger.info(f"Preparando mensaje para {phone} (fila {row})")
+            # Eliminar duplicados dentro del mismo lote
+            if phone in seen:
+                continue
+            seen.add(phone)
+            
+            prepared.append({
+                "phone": phone,
+                "text": construir_mensaje(row, plantilla, variables),
+                "row": row
+            })
+        
     return prepared, {
-        "phone_column": phone_column,
-        "invalid_numbers": invalid_numbers,
-        "duplicates": len(rows) - invalid_numbers - len(prepared),
-        "empty_variables": empty_variables,
-        "total_validos": len(prepared)
-    }
+            "phone_column": phone_column,
+            "invalid_numbers": invalid_numbers,
+            "duplicates": len(rows) - invalid_numbers - len(prepared),
+            "empty_variables": empty_variables,
+            "total_validos": len(prepared)
+        }
+
 
 
 def preview_sms(rows: List[Dict], plantilla: str, limit: int = 3) -> Dict:
