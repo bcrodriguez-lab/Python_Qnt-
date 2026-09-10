@@ -29,7 +29,7 @@ from bigquery import (
 )
 from services.sms_service import (
     SCHEDULE_TABLE, SMS_LOG_TABLE, SmsServiceError, aplicar_validaciones,
-    enviar_sms_desde_filas, guardar_programacion, preview_sms,
+    enviar_sms_desde_filas, guardar_programacion, leer_bulkids_guardados, preview_sms,
     verificar_lista_negra, limpiar_numero, obtener_lista_negra,
 )
 from campaigns import (
@@ -4072,8 +4072,513 @@ def api_list_programaciones():
         "total": len(data),
         "data": data
     }), 200
-# ==================== MAIN ====================
 
+
+# ==================================================
+# 📊 DASHBOARD - ENDPOINTS
+# ==================================================
+
+import os
+import json
+from datetime import datetime
+
+# Archivos de configuración
+CACHE_FILE = "dashboard_cache.json"
+NOTIFICACIONES_FILE = "notificaciones.txt"
+
+
+def guardar_cache(datos):
+    """Guarda los datos del dashboard en caché"""
+    try:
+        with open(CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump({
+                "timestamp": datetime.now().isoformat(),
+                "data": datos
+            }, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.error(f"Error guardando cache: {e}")
+
+
+def cargar_cache():
+    """Carga los datos del dashboard desde caché"""
+    try:
+        if os.path.exists(CACHE_FILE):
+            with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                cache = json.load(f)
+            return cache.get("data"), cache.get("timestamp")
+    except Exception as e:
+        logger.error(f"Error cargando cache: {e}")
+    return None, None
+
+
+def leer_bulkids_guardados():
+    """Lee el archivo bulk_ids_registrados.txt"""
+    archivo = "bulk_ids_registrados.txt"
+    try:
+        with open(archivo, "r", encoding="utf-8") as f:
+            lineas = f.readlines()
+        bulkids = []
+        for linea in lineas:
+            linea = linea.strip()
+            if not linea:
+                continue
+            datos = {}
+            partes = linea.split(" | ")
+            for parte in partes:
+                if ": " in parte:
+                    clave, valor = parte.split(": ", 1)
+                    datos[clave.strip()] = valor.strip()
+            if "BULK_ID" in datos:
+                bulkids.append({
+                    "bulk_id": datos.get("BULK_ID", ""),
+                    "campana": datos.get("CAMPAÑA", ""),
+                    "usuario": datos.get("USUARIO", ""),
+                    "total": int(datos.get("TOTAL", 0)),
+                    "fecha_envio": datos.get("FECHA_ENVIO", ""),
+                    "estado": datos.get("ESTADO", "PENDIENTE")
+                })
+        return bulkids
+    except FileNotFoundError:
+        return []
+    except Exception as e:
+        logger.error(f"Error leyendo archivo: {e}")
+        return []
+
+
+def actualizar_estado_bulkid(bulk_id, nuevo_estado):
+    """Actualiza el estado de un bulkId en el archivo .txt"""
+    archivo = "bulk_ids_registrados.txt"
+    try:
+        with open(archivo, "r", encoding="utf-8") as f:
+            lineas = f.readlines()
+        for i, linea in enumerate(lineas):
+            if f"BULK_ID: {bulk_id}" in linea:
+                if "| ESTADO:" in linea:
+                    partes = linea.split("| ESTADO:")
+                    lineas[i] = partes[0] + f"| ESTADO: {nuevo_estado}\n"
+                else:
+                    lineas[i] = linea.strip() + f" | ESTADO: {nuevo_estado}\n"
+                break
+        with open(archivo, "w", encoding="utf-8") as f:
+            f.writelines(lineas)
+    except Exception as e:
+        logger.error(f"Error actualizando estado: {e}")
+
+
+def eliminar_bulkid(bulk_id):
+    """Elimina un bulkId del archivo"""
+    archivo = "bulk_ids_registrados.txt"
+    try:
+        with open(archivo, "r", encoding="utf-8") as f:
+            lineas = f.readlines()
+        nuevas_lineas = [l for l in lineas if f"BULK_ID: {bulk_id}" not in l]
+        with open(archivo, "w", encoding="utf-8") as f:
+            f.writelines(nuevas_lineas)
+        return True
+    except Exception as e:
+        logger.error(f"Error eliminando bulkId: {e}")
+        return False
+
+
+def cargar_notificaciones():
+    """Lee las notificaciones guardadas"""
+    try:
+        if os.path.exists(NOTIFICACIONES_FILE):
+            with open(NOTIFICACIONES_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        return []
+    except Exception as e:
+        logger.error(f"Error cargando notificaciones: {e}")
+        return []
+
+
+def guardar_notificaciones(notificaciones):
+    """Guarda las notificaciones"""
+    try:
+        with open(NOTIFICACIONES_FILE, "w", encoding="utf-8") as f:
+            json.dump(notificaciones, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.error(f"Error guardando notificaciones: {e}")
+
+
+# ==================================================
+# 📊 ENDPOINT PRINCIPAL - DASHBOARD CON FILTROS
+# ==================================================
+# ==================================================
+# 📊 ENDPOINTS DEL DASHBOARD (con S para evitar conflicto)
+# ==================================================
+
+@app.route("/dashboards", methods=["GET"])
+def dashboards_page():
+    """Página del dashboard"""
+    return render_template("dashboard.html")
+
+
+@app.route("/api/dashboards", methods=["GET"])
+def get_dashboards():
+    """
+    Endpoint para obtener los datos del dashboard.
+    Ruta: /api/dashboards
+    """
+    try:
+        logger.info("📊 Consultando dashboard...")
+        
+        # Parámetros de filtros
+        search = request.args.get("search", "").strip().lower()
+        desde = request.args.get("desde", "").strip()
+        hasta = request.args.get("hasta", "").strip()
+        campana_filtro = request.args.get("campana", "").strip()
+        estado_filtro = request.args.get("estado", "").strip().lower()
+        page = int(request.args.get("page", 1))
+        per_page = int(request.args.get("per_page", 10))
+        orden = request.args.get("orden", "fecha_envio")
+        direccion = request.args.get("direccion", "desc").lower()
+
+        # 🔍 DEBUG: Verificar archivo
+        archivo = "bulk_ids_registrados.txt"
+        logger.info(f"📂 Buscando archivo: {os.path.abspath(archivo)}")
+        logger.info(f"📂 ¿Existe?: {os.path.exists(archivo)}")
+        
+        if os.path.exists(archivo):
+            with open(archivo, "r", encoding="utf-8") as f:
+                contenido = f.read()
+            logger.info(f"📂 Tamaño del archivo: {len(contenido)} bytes")
+            logger.info(f"📂 Primeras líneas: {contenido[:200]}")
+        
+        # Cargar caché
+        cache_data, _ = cargar_cache()
+
+        # Leer bulkIds
+        bulkids = leer_bulkids_guardados()
+        logger.info(f"📦 BulkIds encontrados: {len(bulkids)}")
+        
+        if not bulkids:
+            logger.warning("📭 No hay bulkIds en el archivo")
+            return jsonify({
+                "success": True,
+                "data": {
+                    "total_envios": 0, "total_mensajes": 0,
+                    "entregados": 0, "fallidos": 0, "pendientes": 0,
+                    "tasa_entrega": 0, "envios": [],
+                    "paginacion": {"page": 1, "per_page": per_page, "total_registros": 0, "total_paginas": 0, "hay_siguiente": False, "hay_anterior": False},
+                    "filtros_aplicados": {"search": search, "desde": desde, "hasta": hasta, "campana": campana_filtro, "estado": estado_filtro},
+                    "opciones_filtros": {"campanas": [], "fechas": []},
+                    "debug": {
+                        "archivo_existe": os.path.exists(archivo),
+                        "mensaje": "No se encontraron bulkIds en el archivo"
+                    }
+                }
+            })
+
+        # Config Infobip
+        infobip_config = (CONFIG or load_config()).get("infobip", {})
+        api_key = infobip_config.get("api_key", "").strip()
+        base_url = infobip_config.get("base_url", "").strip()
+
+        envios = []
+        total_mensajes = total_entregados = total_fallidos = total_pendientes = 0
+
+        for item in bulkids:
+            bulk_id = item.get("bulk_id", "")
+            if not bulk_id:
+                continue
+
+            envio_cache = None
+            if cache_data and cache_data.get("envios"):
+                for e in cache_data["envios"]:
+                    if e.get("bulk_id") == bulk_id:
+                        envio_cache = e
+                        break
+
+            url = f"{base_url}/sms/3/reports?bulkId={bulk_id}"
+            headers = {"Authorization": f"App {api_key}", "Accept": "application/json"}
+
+            try:
+                response = requests.get(url, headers=headers, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    resultados = data.get("results", [])
+
+                    if resultados:
+                        entregados = fallidos = pendientes = 0
+                        detalles = []
+                        for msg in resultados:
+                            status = msg.get("status", {})
+                            gn = status.get("groupName", "UNKNOWN")
+                            if gn == "DELIVERED":
+                                entregados += 1
+                                est = "ENTREGADO"
+                            elif gn in ["PENDING", "ACCEPTED"]:
+                                pendientes += 1
+                                est = "PENDIENTE"
+                            else:
+                                fallidos += 1
+                                est = "FALLIDO"
+                            detalles.append({
+                                "telefono": msg.get("to", ""),
+                                "estado": est,
+                                "group_name": gn,
+                                "sent_at": msg.get("sentAt", ""),
+                                "done_at": msg.get("doneAt", ""),
+                                "precio": msg.get("price", {}).get("pricePerMessage", 0),
+                                "currency": msg.get("price", {}).get("currency", "COP")
+                            })
+                        total = len(resultados)
+                        tasa = (entregados / total * 100) if total > 0 else 0
+                        envio = {
+                            "bulk_id": bulk_id,
+                            "campana": item.get("campana", ""),
+                            "usuario": item.get("usuario", ""),
+                            "fecha_envio": item.get("fecha_envio", ""),
+                            "total": total, "entregados": entregados,
+                            "fallidos": fallidos, "pendientes": pendientes,
+                            "tasa_entrega": round(tasa, 2),
+                            "detalles": detalles,
+                            "estado_reporte": "completo"
+                        }
+                        envios.append(envio)
+                        total_mensajes += total
+                        total_entregados += entregados
+                        total_fallidos += fallidos
+                        total_pendientes += pendientes
+                        actualizar_estado_bulkid(bulk_id, "CONSULTADO")
+                    elif envio_cache:
+                        envios.append(envio_cache)
+                        total_mensajes += envio_cache.get("total", 0)
+                        total_entregados += envio_cache.get("entregados", 0)
+                        total_fallidos += envio_cache.get("fallidos", 0)
+                        total_pendientes += envio_cache.get("pendientes", 0)
+                    else:
+                        envios.append({
+                            "bulk_id": bulk_id,
+                            "campana": item.get("campana", ""),
+                            "usuario": item.get("usuario", ""),
+                            "fecha_envio": item.get("fecha_envio", ""),
+                            "total": 0, "entregados": 0, "fallidos": 0, "pendientes": 0,
+                            "tasa_entrega": 0, "detalles": [], "estado_reporte": "pendiente"
+                        })
+                elif envio_cache:
+                    envios.append(envio_cache)
+            except Exception as e:
+                logger.error(f"Error consultando {bulk_id}: {e}")
+                if envio_cache:
+                    envios.append(envio_cache)
+                else:
+                    envios.append({
+                        "bulk_id": bulk_id, "campana": item.get("campana", ""),
+                        "usuario": item.get("usuario", ""), "fecha_envio": item.get("fecha_envio", ""),
+                        "total": 0, "entregados": 0, "fallidos": 0, "pendientes": 0,
+                        "tasa_entrega": 0, "detalles": [], "estado_reporte": "error"
+                    })
+
+        guardar_cache({
+            "total_envios": len(envios), "total_mensajes": total_mensajes,
+            "entregados": total_entregados, "fallidos": total_fallidos,
+            "pendientes": total_pendientes, "envios": envios
+        })
+
+        # Filtros
+        campanas_disponibles = sorted(list(set(e.get("campana", "") for e in envios if e.get("campana"))))
+        fechas_disponibles = sorted(list(set(e.get("fecha_envio", "")[:10] for e in envios if e.get("fecha_envio"))), reverse=True)
+
+        envios_filtrados = envios
+        if search:
+            envios_filtrados = [e for e in envios_filtrados if (
+                search in e.get("bulk_id", "").lower() or
+                search in e.get("campana", "").lower() or
+                search in e.get("usuario", "").lower()
+            )]
+        if desde:
+            envios_filtrados = [e for e in envios_filtrados if e.get("fecha_envio", "")[:10] >= desde]
+        if hasta:
+            envios_filtrados = [e for e in envios_filtrados if e.get("fecha_envio", "")[:10] <= hasta]
+        if campana_filtro:
+            envios_filtrados = [e for e in envios_filtrados if e.get("campana", "") == campana_filtro]
+        if estado_filtro:
+            if estado_filtro == "entregado":
+                envios_filtrados = [e for e in envios_filtrados if e.get("entregados", 0) > 0]
+            elif estado_filtro == "fallido":
+                envios_filtrados = [e for e in envios_filtrados if e.get("fallidos", 0) > 0]
+            elif estado_filtro == "pendiente":
+                envios_filtrados = [e for e in envios_filtrados if e.get("pendientes", 0) > 0]
+
+        # Ordenamiento
+        reverse = direccion == "desc"
+        if orden == "bulk_id":
+            envios_filtrados.sort(key=lambda x: x.get("bulk_id", ""), reverse=reverse)
+        elif orden == "campana":
+            envios_filtrados.sort(key=lambda x: x.get("campana", ""), reverse=reverse)
+        elif orden == "total":
+            envios_filtrados.sort(key=lambda x: x.get("total", 0), reverse=reverse)
+        elif orden == "tasa_entrega":
+            envios_filtrados.sort(key=lambda x: x.get("tasa_entrega", 0), reverse=reverse)
+        else:
+            envios_filtrados.sort(key=lambda x: x.get("fecha_envio", ""), reverse=reverse)
+
+        total_registros = len(envios_filtrados)
+        total_paginas = (total_registros + per_page - 1) // per_page if per_page > 0 else 1
+        page = max(1, min(page, total_paginas)) if total_paginas > 0 else 1
+        inicio = (page - 1) * per_page
+        fin = inicio + per_page
+        envios_paginados = envios_filtrados[inicio:fin]
+
+        tf_mensajes = sum(e.get("total", 0) for e in envios_filtrados)
+        tf_entregados = sum(e.get("entregados", 0) for e in envios_filtrados)
+        tf_fallidos = sum(e.get("fallidos", 0) for e in envios_filtrados)
+        tf_pendientes = sum(e.get("pendientes", 0) for e in envios_filtrados)
+        tf_tasa = (tf_entregados / tf_mensajes * 100) if tf_mensajes > 0 else 0
+
+        logger.info(f"✅ Dashboard generado: {len(envios_filtrados)} envíos filtrados")
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "total_envios": len(envios_filtrados),
+                "total_mensajes": tf_mensajes,
+                "entregados": tf_entregados,
+                "fallidos": tf_fallidos,
+                "pendientes": tf_pendientes,
+                "tasa_entrega": round(tf_tasa, 2),
+                "envios": envios_paginados,
+                "paginacion": {
+                    "page": page, "per_page": per_page,
+                    "total_registros": total_registros, "total_paginas": total_paginas,
+                    "hay_siguiente": page < total_paginas,
+                    "hay_anterior": page > 1
+                },
+                "filtros_aplicados": {"search": search, "desde": desde, "hasta": hasta, "campana": campana_filtro, "estado": estado_filtro},
+                "opciones_filtros": {"campanas": campanas_disponibles, "fechas": fechas_disponibles[:30]},
+                "ultima_actualizacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+        })
+    except Exception as e:
+        logger.error(f"❌ Error en dashboard: {e}")
+        import traceback
+        traceback.print_exc()
+        cache_data, _ = cargar_cache()
+        if cache_data:
+            return jsonify({"success": True, "data": cache_data, "usando_cache": True})
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@app.route("/api/dashboards/detalles/<bulk_id>", methods=["GET"])
+def get_detalles_dashboard(bulk_id):
+    """Devuelve todos los detalles de un bulkId"""
+    try:
+        cache_data, _ = cargar_cache()
+        if cache_data and cache_data.get("envios"):
+            for envio in cache_data["envios"]:
+                if envio.get("bulk_id") == bulk_id:
+                    return jsonify({"success": True, "data": envio, "detalles": envio.get("detalles", [])})
+        return jsonify({"success": False, "message": "BulkId no encontrado"}), 404
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@app.route("/api/dashboards/eliminar/<bulk_id>", methods=["DELETE"])
+def eliminar_envio_dashboard(bulk_id):
+    """Elimina un bulkId del dashboard"""
+    try:
+        if eliminar_bulkid(bulk_id):
+            cache_data, _ = cargar_cache()
+            if cache_data and cache_data.get("envios"):
+                cache_data["envios"] = [e for e in cache_data["envios"] if e.get("bulk_id") != bulk_id]
+                guardar_cache(cache_data)
+            return jsonify({"success": True, "message": "Envío eliminado"})
+        return jsonify({"success": False, "message": "No se pudo eliminar"}), 500
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@app.route("/api/dashboards/comparar", methods=["GET"])
+def comparar_campanas_dashboard():
+    """Compara todas las campañas"""
+    try:
+        cache_data, _ = cargar_cache()
+        if not cache_data or not cache_data.get("envios"):
+            return jsonify({"success": True, "data": []})
+        
+        campanas = {}
+        for envio in cache_data["envios"]:
+            nombre = envio.get("campana", "Sin campaña") or "Sin campaña"
+            if nombre not in campanas:
+                campanas[nombre] = {
+                    "campana": nombre, "envios": 0, "total": 0,
+                    "entregados": 0, "fallidos": 0, "pendientes": 0,
+                    "precio_total": 0, "tasa_entrega": 0
+                }
+            c = campanas[nombre]
+            c["envios"] += 1
+            c["total"] += envio.get("total", 0)
+            c["entregados"] += envio.get("entregados", 0)
+            c["fallidos"] += envio.get("fallidos", 0)
+            c["pendientes"] += envio.get("pendientes", 0)
+            for d in envio.get("detalles", []):
+                c["precio_total"] += float(d.get("precio", 0) or 0)
+        
+        for nombre, c in campanas.items():
+            c["tasa_entrega"] = round((c["entregados"] / c["total"] * 100), 2) if c["total"] > 0 else 0
+        
+        campanas_lista = sorted(campanas.values(), key=lambda x: x["tasa_entrega"], reverse=True)
+        return jsonify({"success": True, "data": campanas_lista})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@app.route("/api/dashboards/exportar", methods=["GET"])
+def exportar_dashboard_csv():
+    """Exporta los datos a CSV"""
+    try:
+        bulk_id = request.args.get("bulk_id", "").strip()
+        cache_data, _ = cargar_cache()
+        if not cache_data or not cache_data.get("envios"):
+            return jsonify({"success": False, "message": "No hay datos"}), 404
+        
+        from io import StringIO
+        import csv
+        output = StringIO()
+        writer = csv.writer(output)
+        
+        if bulk_id:
+            writer.writerow(["Telefono", "Estado", "Enviado", "Entregado", "Precio", "Moneda"])
+            for envio in cache_data["envios"]:
+                if envio.get("bulk_id") == bulk_id:
+                    for d in envio.get("detalles", []):
+                        writer.writerow([d.get("telefono", ""), d.get("estado", ""), d.get("sent_at", ""), d.get("done_at", ""), d.get("precio", 0), d.get("currency", "COP")])
+        else:
+            writer.writerow(["Bulk ID", "Campaña", "Usuario", "Fecha Envío", "Total", "Entregados", "Fallidos", "Pendientes", "Tasa %"])
+            for envio in cache_data["envios"]:
+                writer.writerow([envio.get("bulk_id", ""), envio.get("campana", ""), envio.get("usuario", ""), envio.get("fecha_envio", ""), envio.get("total", 0), envio.get("entregados", 0), envio.get("fallidos", 0), envio.get("pendientes", 0), envio.get("tasa_entrega", 0)])
+        
+        from flask import Response
+        return Response(
+            output.getvalue(),
+            mimetype="text/csv",
+            headers={"Content-Disposition": f"attachment;filename=dashboard_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"}
+        )
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@app.route("/api/dashboards/notificaciones", methods=["GET", "POST"])
+def notificaciones_dashboard():
+    """Obtiene o marca notificaciones como leídas"""
+    try:
+        if request.method == "GET":
+            notifs = cargar_notificaciones()
+            no_leidas = [n for n in notifs if not n.get("leida", False)]
+            return jsonify({"success": True, "notificaciones": no_leidas, "total": len(no_leidas)})
+        else:
+            data = request.get_json() or {}
+            notif_id = data.get("id")
+            notifs = cargar_notificaciones()
+            for n in notifs:
+                if n.get("id") == notif_id:
+                    n["leida"] = True
+            guardar_notificaciones(notifs)
+            return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()

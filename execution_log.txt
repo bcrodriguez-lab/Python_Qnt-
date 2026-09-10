@@ -169,3 +169,13 @@
 2026-09-07 09:35:18 - INFO - [SMS] Campaña='Tdr' Usuario='CATA' Total=2 Enviados=500 Fallidos=0 Estado=exitoso
 2026-09-07 09:38:21 - INFO - [SMS] Campaña='Tdr' Usuario='CATA' Total=2 Enviados=500 Fallidos=0 Estado=exitoso
 2026-09-09 15:46:12 - INFO - [SMS] Campaña='' Usuario='' Total=3 Enviados=500 Fallidos=0 Estado=exitoso
+2026-09-09 15:54:01 - INFO - [SMS] Campaña='' Usuario='' Total=3 Enviados=500 Fallidos=0 Estado=exitoso
+2026-09-09 15:54:45 - INFO - [SMS] Campaña='' Usuario='' Total=3 Enviados=500 Fallidos=0 Estado=exitoso
+2026-09-09 16:21:08 - INFO - [SMS] Campaña='prueba dashboard' Usuario='bryan' Total=3 Enviados=500 Fallidos=0 Estado=exitoso
+2026-09-09 16:26:27 - INFO - [SMS] Campaña='prueba dashboard' Usuario='bryan' Total=3 Enviados=500 Fallidos=0 Estado=exitoso
+2026-09-09 16:26:47 - INFO - [SMS] Campaña='prueba dashboard' Usuario='bryan' Total=3 Enviados=500 Fallidos=0 Estado=exitoso
+2026-09-09 18:05:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-09-09...
+2026-09-09 18:05:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-09-09...
+2026-09-09 18:07:09 - ERROR - ❌ bigquery_processor.py falló con código 1
+2026-09-09 18:07:11 - ERROR - ❌ bigquery_processor.py falló con código 1
+2026-09-10 07:41:21 - INFO - [SMS] Campaña='prueba dashboard' Usuario='bryan' Total=3 Enviados=500 Fallidos=0 Estado=exitoso

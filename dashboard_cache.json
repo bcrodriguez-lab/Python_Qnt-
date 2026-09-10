@@ -1,0 +1,160 @@
+{
+  "timestamp": "2026-09-10T08:39:31.715955",
+  "data": {
+    "total_envios": 7,
+    "total_mensajes": 6,
+    "entregados": 5,
+    "fallidos": 1,
+    "pendientes": 0,
+    "envios": [
+      {
+        "bulk_id": "178898677128107951098937",
+        "campana": "",
+        "usuario": "",
+        "fecha_envio": "2026-09-09 15:46:10",
+        "total": 0,
+        "entregados": 0,
+        "fallidos": 0,
+        "pendientes": 0,
+        "tasa_entrega": 0,
+        "detalles": [],
+        "estado_reporte": "pendiente"
+      },
+      {
+        "bulk_id": "178898724040807950985266",
+        "campana": "",
+        "usuario": "",
+        "fecha_envio": "2026-09-09 15:53:59",
+        "total": 0,
+        "entregados": 0,
+        "fallidos": 0,
+        "pendientes": 0,
+        "tasa_entrega": 0,
+        "detalles": [],
+        "estado_reporte": "pendiente"
+      },
+      {
+        "bulk_id": "178898728378807951000444",
+        "campana": "",
+        "usuario": "",
+        "fecha_envio": "2026-09-09 15:54:43",
+        "total": 0,
+        "entregados": 0,
+        "fallidos": 0,
+        "pendientes": 0,
+        "tasa_entrega": 0,
+        "detalles": [],
+        "estado_reporte": "pendiente"
+      },
+      {
+        "bulk_id": "178898886658007950448611",
+        "campana": "prueba dashboard",
+        "usuario": "bryan",
+        "fecha_envio": "2026-09-09 16:21:05",
+        "total": 0,
+        "entregados": 0,
+        "fallidos": 0,
+        "pendientes": 0,
+        "tasa_entrega": 0,
+        "detalles": [],
+        "estado_reporte": "pendiente"
+      },
+      {
+        "bulk_id": "178898916671907952315956",
+        "campana": "prueba dashboard",
+        "usuario": "bryan",
+        "fecha_envio": "2026-09-09 16:26:05",
+        "total": 2,
+        "entregados": 2,
+        "fallidos": 0,
+        "pendientes": 0,
+        "tasa_entrega": 100.0,
+        "detalles": [
+          {
+            "telefono": "573144051619",
+            "estado": "ENTREGADO",
+            "group_name": "DELIVERED",
+            "sent_at": "2026-09-09T21:26:06.721+0000",
+            "done_at": "2026-09-09T21:26:12.991+0000",
+            "precio": 2.7,
+            "currency": "COP"
+          },
+          {
+            "telefono": "573223189873",
+            "estado": "ENTREGADO",
+            "group_name": "DELIVERED",
+            "sent_at": "2026-09-09T21:26:06.721+0000",
+            "done_at": "2026-09-09T21:26:15.955+0000",
+            "precio": 2.7,
+            "currency": "COP"
+          }
+        ],
+        "estado_reporte": "completo"
+      },
+      {
+        "bulk_id": "178898920673407950409033",
+        "campana": "prueba dashboard",
+        "usuario": "bryan",
+        "fecha_envio": "2026-09-09 16:26:45",
+        "total": 3,
+        "entregados": 2,
+        "fallidos": 1,
+        "pendientes": 0,
+        "tasa_entrega": 66.67,
+        "detalles": [
+          {
+            "telefono": "3144051619",
+            "estado": "FALLIDO",
+            "group_name": "REJECTED",
+            "sent_at": "2026-09-09T21:26:46.736+0000",
+            "done_at": "2026-09-09T21:26:46.737+0000",
+            "precio": 0.0,
+            "currency": "COP"
+          },
+          {
+            "telefono": "573223189873",
+            "estado": "ENTREGADO",
+            "group_name": "DELIVERED",
+            "sent_at": "2026-09-09T21:26:46.736+0000",
+            "done_at": "2026-09-09T21:26:51.577+0000",
+            "precio": 2.7,
+            "currency": "COP"
+          },
+          {
+            "telefono": "573144051619",
+            "estado": "ENTREGADO",
+            "group_name": "DELIVERED",
+            "sent_at": "2026-09-09T21:26:46.737+0000",
+            "done_at": "2026-09-09T21:26:52.364+0000",
+            "precio": 2.7,
+            "currency": "COP"
+          }
+        ],
+        "estado_reporte": "completo"
+      },
+      {
+        "bulk_id": "178904408036107951481659",
+        "campana": "prueba dashboard",
+        "usuario": "bryan",
+        "fecha_envio": "2026-09-10 07:41:19",
+        "total": 1,
+        "entregados": 1,
+        "fallidos": 0,
+        "pendientes": 0,
+        "tasa_entrega": 100.0,
+        "detalles": [
+          {
+            "telefono": "573223189873",
+            "estado": "ENTREGADO",
+            "group_name": "DELIVERED",
+            "sent_at": "2026-09-10T12:41:20.369+0000",
+            "done_at": "2026-09-10T13:05:06.528+0000",
+            "precio": 2.7,
+            "currency": "COP"
+          }
+        ],
+        "estado_reporte": "completo"
+      }
+    ]
+  }
+}

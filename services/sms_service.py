@@ -517,9 +517,275 @@ def enviar_sms_desde_filas(
         "archivo_guardado": "bulk_ids_registrados.txt" if bulk_ids else None
     }
 
+def leer_bulkids_guardados():
+    """
+    Lee el archivo bulk_ids_registrados.txt y devuelve una lista
+    con todos los bulkIds guardados.
+    
+    Returns:
+        Lista de diccionarios con: bulk_id, campana, usuario, total, fecha_envio, estado
+    """
+    archivo = "bulk_ids_registrados.txt"
+    
+    try:
+        with open(archivo, "r", encoding="utf-8") as f:
+            lineas = f.readlines()
+        
+        bulkids = []
+        for linea in lineas:
+            linea = linea.strip()
+            if not linea:
+                continue
+            
+            # Parsear la línea: BULK_ID: xxx | CAMPAÑA: xxx | USUARIO: xxx | TOTAL: xxx | FECHA_ENVIO: xxx | ESTADO: xxx
+            datos = {}
+            partes = linea.split(" | ")
+            for parte in partes:
+                if ": " in parte:
+                    clave, valor = parte.split(": ", 1)
+                    datos[clave.strip()] = valor.strip()
+            
+            if "BULK_ID" in datos:
+                bulkids.append({
+                    "bulk_id": datos.get("BULK_ID", ""),
+                    "campana": datos.get("CAMPAÑA", ""),
+                    "usuario": datos.get("USUARIO", ""),
+                    "total": int(datos.get("TOTAL", 0)),
+                    "fecha_envio": datos.get("FECHA_ENVIO", ""),
+                    "estado": datos.get("ESTADO", "PENDIENTE")
+                })
+        
+        return bulkids
+    except FileNotFoundError:
+        print("📭 No hay archivo de bulkIds aún. Ejecuta un envío primero.")
+        return []
+    except Exception as e:
+        print(f"⚠️ Error leyendo archivo: {e}")
+        return []
 
+def consultar_todos_los_reportes():
+    """
+    Consulta los reportes de TODOS los bulkIds guardados en el archivo.
+    Retorna una lista con los resultados completos.
+    """
+    # 1. Leer bulkIds del archivo
+    bulkids = leer_bulkids_guardados()
+    
+    if not bulkids:
+        print("📭 No hay bulkIds guardados para consultar")
+        return []
+    
+    print(f"\n📊 CONSULTANDO REPORTES DE {len(bulkids)} ENVÍOS...")
+    print("-"*50)
+    
+    # Obtener configuración de Infobip
+    infobip_config = (CONFIG or load_config()).get("infobip", {})
+    api_key = infobip_config.get("api_key", "").strip()
+    base_url = infobip_config.get("base_url", "").strip()
+    
+    if not api_key or not base_url:
+        print("❌ Error: No se encontró configuración de Infobip")
+        return []
+    
+    resultados = []
+    
+    for idx, item in enumerate(bulkids):
+        bulk_id = item["bulk_id"]
+        campana = item["campana"]
+        total_esperado = item["total"]
+        
+        print(f"\n📦 [{idx+1}/{len(bulkids)}] {bulk_id}")
+        print(f"   📝 Campaña: {campana}")
+        print(f"   📱 Mensajes: {total_esperado}")
+        
+        # 2. Consultar reporte a Infobip
+        url = f"{base_url}/sms/3/reports?bulkId={bulk_id}"
+        headers = {
+            "Authorization": f"App {api_key}",
+            "Accept": "application/json"
+        }
+        
+        try:
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                data = response.json()
+                resultados_reporte = data.get("results", [])
+                
+                # 3. Procesar estadísticas
+                entregados = 0
+                fallidos = 0
+                pendientes = 0
+                detalles = []
+                precio_total = 0.0
+                
+                for msg in resultados_reporte:
+                    status = msg.get("status", {})
+                    group_name = status.get("groupName", "UNKNOWN")
+                    
+                    if group_name == "DELIVERED":
+                        entregados += 1
+                        estado = "ENTREGADO"
+                    elif group_name in ["PENDING", "ACCEPTED"]:
+                        pendientes += 1
+                        estado = "PENDIENTE"
+                    else:
+                        fallidos += 1
+                        estado = "FALLIDO"
+                    
+                    precio = msg.get("price", {}).get("pricePerMessage", 0)
+                    if precio:
+                        precio_total += float(precio) if isinstance(precio, (int, float)) else 0
+                    
+                    detalles.append({
+                        "telefono": msg.get("to", ""),
+                        "estado": estado,
+                        "group_name": group_name,
+                        "sent_at": msg.get("sentAt", ""),
+                        "done_at": msg.get("doneAt", ""),
+                        "precio": precio,
+                        "currency": msg.get("price", {}).get("currency", "COP"),
+                        "error": msg.get("error", {}).get("description", "")
+                    })
+                
+                total = len(resultados_reporte)
+                tasa = (entregados / total * 100) if total > 0 else 0
+                
+                resultado = {
+                    "bulk_id": bulk_id,
+                    "campana": campana,
+                    "usuario": item.get("usuario", ""),
+                    "fecha_envio": item["fecha_envio"],
+                    "total": total,
+                    "entregados": entregados,
+                    "fallidos": fallidos,
+                    "pendientes": pendientes,
+                    "tasa_entrega": tasa,
+                    "precio_total": precio_total,
+                    "detalles": detalles
+                }
+                
+                resultados.append(resultado)
+                
+                print(f"   ✅ Total: {total} | Entregados: {entregados} | Fallidos: {fallidos} | Pendientes: {pendientes}")
+                print(f"   📈 Tasa: {tasa:.1f}% | 💰 Total: {precio_total:.2f} COP")
+                
+                # Actualizar estado en el archivo
+                actualizar_estado_bulkid(bulk_id, "CONSULTADO")
+                
+            else:
+                print(f"   ❌ Error consultando reporte: {response.status_code}")
+                
+        except Exception as e:
+            print(f"   ❌ Error: {e}")
+    
+    print(f"\n✅ Consulta completada. {len(resultados)} reportes obtenidos.")
+    return resultados
 
+def actualizar_estado_bulkid(bulk_id, nuevo_estado):
+    """
+    Actualiza el estado de un bulkId en el archivo .txt
+    """
+    archivo = "bulk_ids_registrados.txt"
+    
+    try:
+        with open(archivo, "r", encoding="utf-8") as f:
+            lineas = f.readlines()
+        
+        for i, linea in enumerate(lineas):
+            if f"BULK_ID: {bulk_id}" in linea:
+                # Reemplazar ESTADO
+                if "| ESTADO:" in linea:
+                    partes = linea.split("| ESTADO:")
+                    nueva_linea = partes[0] + f"| ESTADO: {nuevo_estado}\n"
+                    lineas[i] = nueva_linea
+                else:
+                    lineas[i] = linea.strip() + f" | ESTADO: {nuevo_estado}\n"
+                break
+        
+        with open(archivo, "w", encoding="utf-8") as f:
+            f.writelines(lineas)
+            
+    except Exception as e:
+        print(f"⚠️ Error actualizando estado: {e}")
 
+def mostrar_dashboard():
+    """
+    Muestra el dashboard completo con todos los envíos y sus reportes.
+    """
+    print("\n" + "="*70)
+    print("📊 DASHBOARD DE REPORTES SMS")
+    print("="*70)
+    print(f"🕐 Actualización: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("="*70)
+    
+    # Obtener reportes de todos los bulkIds
+    resultados = consultar_todos_los_reportes()
+    
+    if not resultados:
+        print("\n📭 No hay datos para mostrar")
+        print("   💡 Ejecuta un envío primero para generar bulkIds")
+        return
+    
+    # ============================================================
+    # RESUMEN GENERAL
+    # ============================================================
+    total_envios = len(resultados)
+    total_mensajes = sum(r["total"] for r in resultados)
+    total_entregados = sum(r["entregados"] for r in resultados)
+    total_fallidos = sum(r["fallidos"] for r in resultados)
+    total_pendientes = sum(r["pendientes"] for r in resultados)
+    total_precio = sum(r["precio_total"] for r in resultados)
+    tasa_general = (total_entregados / total_mensajes * 100) if total_mensajes > 0 else 0
+    
+    print(f"\n📊 RESUMEN GENERAL")
+    print("-"*70)
+    print(f"   📦 Envíos totales: {total_envios}")
+    print(f"   📱 Mensajes totales: {total_mensajes}")
+    print(f"   ✅ Entregados: {total_entregados} ({tasa_general:.1f}%)")
+    print(f"   ❌ Fallidos: {total_fallidos} ({(total_fallidos/total_mensajes*100) if total_mensajes > 0 else 0:.1f}%)")
+    print(f"   ⏳ Pendientes: {total_pendientes} ({(total_pendientes/total_mensajes*100) if total_mensajes > 0 else 0:.1f}%)")
+    print(f"   💰 Costo total: {total_precio:.2f} COP")
+    
+    # ============================================================
+    # DETALLE POR ENVÍO
+    # ============================================================
+    print(f"\n📋 DETALLE POR ENVÍO")
+    print("-"*70)
+    
+    for idx, r in enumerate(resultados):
+        print(f"\n📦 [{idx+1}] Bulk ID: {r['bulk_id']}")
+        print(f"   📝 Campaña: {r['campana']}")
+        print(f"   👤 Usuario: {r['usuario']}")
+        print(f"   📅 Fecha envío: {r['fecha_envio']}")
+        print(f"   📊 Total: {r['total']} | ✅ Entregados: {r['entregados']} | ❌ Fallidos: {r['fallidos']} | ⏳ Pendientes: {r['pendientes']}")
+        print(f"   📈 Tasa de entrega: {r['tasa_entrega']:.1f}%")
+        print(f"   💰 Costo: {r['precio_total']:.2f} COP")
+        
+        # Mostrar fallidos (si los hay)
+        fallidos = [d for d in r['detalles'] if d['estado'] == 'FALLIDO']
+        if fallidos:
+            print(f"   🔴 Fallidos ({len(fallidos)}):")
+            for f in fallidos[:5]:  # Mostrar hasta 5
+                print(f"      📱 {f['telefono']} - {f['error'] if f['error'] else 'Sin razón'}")
+            if len(fallidos) > 5:
+                print(f"      ... y {len(fallidos)-5} más")
+        
+        # Mostrar pendientes (si los hay)
+        pendientes = [d for d in r['detalles'] if d['estado'] == 'PENDIENTE']
+        if pendientes:
+            print(f"   ⏳ Pendientes ({len(pendientes)}):")
+            for p in pendientes[:3]:
+                print(f"      📱 {p['telefono']}")
+            if len(pendientes) > 3:
+                print(f"      ... y {len(pendientes)-3} más")
+    
+    # ============================================================
+    # PIE DE PÁGINA
+    # ============================================================
+    print("\n" + "="*70)
+    print("✅ Dashboard actualizado")
+    print("="*70)
 
 def guardar_sms_log(
     client, 
