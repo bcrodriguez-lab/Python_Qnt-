@@ -6,7 +6,7 @@ import shutil
 import threading
 from collections import deque
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta  # 🔥 CORREGIDO: timedelta desde datetime
 from pathlib import Path
 from flask import Flask, current_app
 from database import db, init_db, Campaign, ScheduledCSV, APIEndpoint, ScheduledQuery
@@ -14,7 +14,7 @@ from auto_campaigns import check_auto_campaigns_schedule
 from werkzeug.utils import secure_filename
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.cron import CronTrigger  # 🔥 CORREGIDO: sin timedelta
 from bigquery import count_query_results, escribir_resultados_campana
 from conexion_bigquery import client, get_bigquery_client
 from general_params import (
@@ -930,15 +930,14 @@ def init_auto_download_on_startup():
         else:
             logger.info("⏭️ Descargas CDR desactivadas en config.py")
         
-        # 🔥 INICIAR AMD - ESTA ES LA PARTE QUE FALLA
+        # 🔥 INICIAR AMD
         if DESCARGAR_AMD:
             spec = importlib.util.find_spec("download_campaign_detail")
             if spec is not None:
                 from download_campaign_detail import iniciar_scheduler_amd, estado_scheduler_amd
                 logger.info("🔄 Activando descargas automáticas AMD...")
                 
-                # 🔥 EJECUTAR EL SCHEDULER
-                resultado = iniciar_scheduler_amd()  # ← ESTO DEBE CORRER
+                resultado = iniciar_scheduler_amd()
                 
                 if resultado:
                     logger.info("✅ Descargas automáticas AMD ACTIVADAS")
@@ -955,6 +954,70 @@ def init_auto_download_on_startup():
         logger.error(f"Error inicializando descargas automáticas: {e}")
         import traceback
         traceback.print_exc()
+
+
+# ==================================================
+# 🔄 POLLING DE ESTADOS SMS (CORREGIDO)
+# ==================================================
+
+def polling_estados_sms():
+    """
+    Consulta el estado de los SMS pendientes y actualiza BigQuery.
+    Se ejecuta cada 10 minutos.
+    """
+    try:
+        logger.info("="*60)
+        logger.info("🔄 POLLING DE ESTADOS SMS")
+        logger.info("="*60)
+        
+        # Obtener configuración de Infobip
+        config = load_config()
+        infobip_config = config.get("infobip", {})
+        api_key = infobip_config.get("api_key", "").strip()
+        base_url = infobip_config.get("base_url", "").strip()
+        
+        if not api_key or not base_url:
+            logger.error("❌ Configuración de Infobip incompleta")
+            return
+        
+        # Obtener cliente de BigQuery
+        from conexion_bigquery import get_bigquery_client
+        client = get_bigquery_client()
+        
+        if not client:
+            logger.error("❌ No se pudo conectar a BigQuery")
+            return
+        
+        # 🔥 Importar la función CORRECTA desde sms_service
+        from services.sms_service import actualizar_estados_pendientes
+        
+        # Ejecutar polling
+        resultado = actualizar_estados_pendientes(
+            api_key=api_key,
+            base_url=base_url,
+            client=client
+        )
+        
+        logger.info(f"📊 Resultado del polling: {resultado}")
+        logger.info("="*60)
+        
+    except Exception as e:
+        logger.exception(f"❌ Error en polling de estados: {e}")
+
+
+# ==================================================
+#  POLLING DE ESTADOS SMS - CADA 10 MINUTOS
+# ==================================================
+
+scheduler.add_job(
+    polling_estados_sms,
+    trigger=IntervalTrigger(minutes=1),  
+    id="sms_polling_estados",
+    replace_existing=True,
+    next_run_time=datetime.now() + timedelta(seconds=60)  # Primera en 60s
+)
+
+logger.info("✅ Polling de estados SMS programado cada 10 minutos")
 
 
 # ========== INICIALIZAR SCHEDULER ==========

@@ -179,3 +179,18 @@
 2026-09-09 18:07:09 - ERROR - ❌ bigquery_processor.py falló con código 1
 2026-09-09 18:07:11 - ERROR - ❌ bigquery_processor.py falló con código 1
 2026-09-10 07:41:21 - INFO - [SMS] Campaña='prueba dashboard' Usuario='bryan' Total=3 Enviados=500 Fallidos=0 Estado=exitoso
+2026-09-10 09:11:38 - INFO - [SMS] Campaña='Envio cata y brayan' Usuario='Brayan' Total=3 Enviados=500 Fallidos=0 Estado=exitoso
+2026-09-10 09:14:52 - INFO - [SMS] Campaña='PRORAMACION' Usuario='BRYNA' Total=3 Enviados=500 Fallidos=0 Estado=exitoso
+2026-09-10 10:46:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-09-10...
+2026-09-10 10:46:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-09-10...
+2026-09-10 10:47:22 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-09-10
+2026-09-10 10:47:24 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-09-10
+2026-09-10 14:34:09 - INFO - [SMS] Campaña='' Usuario='' Total=3 Enviados=500 Fallidos=0 Estado=exitoso
+2026-09-10 14:34:44 - INFO - [SMS] Campaña='' Usuario='' Total=3 Enviados=500 Fallidos=0 Estado=exitoso
+2026-09-10 14:38:21 - INFO - [SMS] Campaña='PRUEBA ENVIO 1' Usuario='BRAYAN' Total=3 Enviados=500 Fallidos=0 Estado=exitoso
+2026-09-10 14:39:40 - INFO - [SMS] Campaña='PRUEBA ENVIO 3' Usuario='BRAYAN' Total=3 Enviados=500 Fallidos=0 Estado=exitoso
+2026-09-10 14:46:53 - INFO - [SMS] Campaña='PRUEBA ENVIO 3' Usuario='BRAYAN' Total=3 Enviados=500 Fallidos=0 Estado=exitoso
+2026-09-10 18:05:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-09-10...
+2026-09-10 18:05:00 - INFO - 🔄 Ejecutando bigquery_processor.py para 2026-09-10...
+2026-09-10 18:06:54 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-09-10
+2026-09-10 18:06:56 - INFO - ✅ bigquery_processor.py completado exitosamente para 2026-09-10

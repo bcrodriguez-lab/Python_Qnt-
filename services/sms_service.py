@@ -1,10 +1,6 @@
 ﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Servicio de envío de SMS con BigQuery e Infobip.
-VERSIÓN CORREGIDA - Con acortamiento de URLs y callbackData.
-"""
 from datetime import timedelta
 
 import json
@@ -33,9 +29,16 @@ SMS_LOG_TABLE = "capable-arbor-209819.Temporal.SmsLog"
 SCHEDULE_TABLE = "capable-arbor-209819.Temporal.ProgramacionSMS"
 BLACKLIST_TABLE = "capable-arbor-209819.Tablas_Reporteria.Telefonos_Tutela"
 
+# 🔥 NUEVO: Tabla para reportes de entrega
+SMS_DELIVERY_REPORTS_TABLE = "capable-arbor-209819.Temporal.SmsDeliveryReports"
+
 BATCH_SIZE = 100
 MAX_WORKERS = 3
 MAX_REINTENTOS = 2
+
+# 🔥 NUEVO: Configuración de polling
+POLLING_BATCH_SIZE = 1000
+POLLING_MAX_HOURS = 48  # Solo consultar mensajes de las últimas 48h
 
 
 class SmsServiceError(Exception):
@@ -91,6 +94,7 @@ class InfobipSenderV2:
                     time.sleep(2 * intento)
         return None
 
+
 # ==================================================
 # 📱 LIMPIEZA DE NÚMEROS
 # ==================================================
@@ -125,6 +129,7 @@ def limpiar_numero(value: Any) -> Optional[str]:
     # Caso 5: Muy corto, inválido
     logger.debug(f"Número inválido (muy corto): {num}")
     return None
+
 
 # ==================================================
 # 🧠 MANEJO DE VARIABLES
@@ -240,7 +245,8 @@ def preparar_sms(rows: List[Dict], plantilla: str) -> Tuple[List[Dict], Dict]:
     invalid_numbers = 0
     señuelos = [
         
-        ("3144051619", "john","10000000000"),
+        ("573144051619", "Brayan","10000000000"),
+        ("573223189873", "Catalina","10000000000"),
 ]
 
     for (telefono, nombre, customer_id) in señuelos:
@@ -259,7 +265,6 @@ def preparar_sms(rows: List[Dict], plantilla: str) -> Tuple[List[Dict], Dict]:
             if not phone:
                 invalid_numbers += 1
                 continue
-            logger.info(f"Preparando mensaje para {phone} (fila {row})")
             # Eliminar duplicados dentro del mismo lote
             if phone in seen:
                 continue
@@ -278,7 +283,6 @@ def preparar_sms(rows: List[Dict], plantilla: str) -> Tuple[List[Dict], Dict]:
             "empty_variables": empty_variables,
             "total_validos": len(prepared)
         }
-
 
 
 def preview_sms(rows: List[Dict], plantilla: str, limit: int = 3) -> Dict:
@@ -325,6 +329,7 @@ def enviar_sms_desde_filas(
 ) -> Dict:
     """
     Función principal: valida, genera mensajes, envía por lotes con callbackData.
+    🔥 MODIFICADO: Ahora captura y guarda message_id individual.
     """
     api_key = (config.get("api_key") or "").strip()
     base_url = (config.get("base_url") or "").strip()
@@ -429,10 +434,25 @@ def enviar_sms_desde_filas(
     failed = [r for r in results if not r.get("success")]
     bulk_ids = []
     
+    # 🔥 NUEVO: Mapear message_id con teléfono
     for r in successful:
         data = r.get("data", {})
-        if data.get("bulkId"):
-            bulk_ids.append(data["bulkId"])
+        bulk_id = data.get("bulkId")
+        if bulk_id:
+            bulk_ids.append(bulk_id)
+        
+        # Mapear message_id con cada teléfono
+        messages_response = data.get("messages", [])
+        for msg_resp in messages_response:
+            message_id = msg_resp.get("messageId")
+            telefono = msg_resp.get("to")
+            
+            # Buscar el mensaje en preparados y asignarle el message_id
+            for item in prepared:
+                if item["phone"] == telefono:
+                    item["message_id"] = message_id  # 🔥 ASIGNAR
+                    logger.info(f"   🔗 message_id asignado: {telefono} → {message_id}")
+                    break
     
     # ============================================================
     # GUARDAR BULKID EN ARCHIVO .TXT
@@ -493,7 +513,7 @@ def enviar_sms_desde_filas(
                 usuario=usuario,
                 bulk_ids=bulk_ids, 
                 reenvios=set(), 
-                status="enviado", 
+                status="PENDIENTE",  # 🔥 MODIFICADO: Estado inicial
                 plantilla=plantilla
             )
         except Exception as e:
@@ -503,7 +523,7 @@ def enviar_sms_desde_filas(
     fallidos = len(failed) * batch_size
     
     # ============================================================
-    # 🔥 NUEVO: Agregar bulk_ids al resultado
+    # NUEVO: Agregar bulk_ids al resultado
     # ============================================================
     return {
         "total_preparados": len(messages),
@@ -516,6 +536,7 @@ def enviar_sms_desde_filas(
         "details": details,
         "archivo_guardado": "bulk_ids_registrados.txt" if bulk_ids else None
     }
+
 
 def leer_bulkids_guardados():
     """
@@ -563,124 +584,6 @@ def leer_bulkids_guardados():
         print(f"⚠️ Error leyendo archivo: {e}")
         return []
 
-def consultar_todos_los_reportes():
-    """
-    Consulta los reportes de TODOS los bulkIds guardados en el archivo.
-    Retorna una lista con los resultados completos.
-    """
-    # 1. Leer bulkIds del archivo
-    bulkids = leer_bulkids_guardados()
-    
-    if not bulkids:
-        print("📭 No hay bulkIds guardados para consultar")
-        return []
-    
-    print(f"\n📊 CONSULTANDO REPORTES DE {len(bulkids)} ENVÍOS...")
-    print("-"*50)
-    
-    # Obtener configuración de Infobip
-    infobip_config = (CONFIG or load_config()).get("infobip", {})
-    api_key = infobip_config.get("api_key", "").strip()
-    base_url = infobip_config.get("base_url", "").strip()
-    
-    if not api_key or not base_url:
-        print("❌ Error: No se encontró configuración de Infobip")
-        return []
-    
-    resultados = []
-    
-    for idx, item in enumerate(bulkids):
-        bulk_id = item["bulk_id"]
-        campana = item["campana"]
-        total_esperado = item["total"]
-        
-        print(f"\n📦 [{idx+1}/{len(bulkids)}] {bulk_id}")
-        print(f"   📝 Campaña: {campana}")
-        print(f"   📱 Mensajes: {total_esperado}")
-        
-        # 2. Consultar reporte a Infobip
-        url = f"{base_url}/sms/3/reports?bulkId={bulk_id}"
-        headers = {
-            "Authorization": f"App {api_key}",
-            "Accept": "application/json"
-        }
-        
-        try:
-            response = requests.get(url, headers=headers, timeout=30)
-            
-            if response.status_code == 200:
-                data = response.json()
-                resultados_reporte = data.get("results", [])
-                
-                # 3. Procesar estadísticas
-                entregados = 0
-                fallidos = 0
-                pendientes = 0
-                detalles = []
-                precio_total = 0.0
-                
-                for msg in resultados_reporte:
-                    status = msg.get("status", {})
-                    group_name = status.get("groupName", "UNKNOWN")
-                    
-                    if group_name == "DELIVERED":
-                        entregados += 1
-                        estado = "ENTREGADO"
-                    elif group_name in ["PENDING", "ACCEPTED"]:
-                        pendientes += 1
-                        estado = "PENDIENTE"
-                    else:
-                        fallidos += 1
-                        estado = "FALLIDO"
-                    
-                    precio = msg.get("price", {}).get("pricePerMessage", 0)
-                    if precio:
-                        precio_total += float(precio) if isinstance(precio, (int, float)) else 0
-                    
-                    detalles.append({
-                        "telefono": msg.get("to", ""),
-                        "estado": estado,
-                        "group_name": group_name,
-                        "sent_at": msg.get("sentAt", ""),
-                        "done_at": msg.get("doneAt", ""),
-                        "precio": precio,
-                        "currency": msg.get("price", {}).get("currency", "COP"),
-                        "error": msg.get("error", {}).get("description", "")
-                    })
-                
-                total = len(resultados_reporte)
-                tasa = (entregados / total * 100) if total > 0 else 0
-                
-                resultado = {
-                    "bulk_id": bulk_id,
-                    "campana": campana,
-                    "usuario": item.get("usuario", ""),
-                    "fecha_envio": item["fecha_envio"],
-                    "total": total,
-                    "entregados": entregados,
-                    "fallidos": fallidos,
-                    "pendientes": pendientes,
-                    "tasa_entrega": tasa,
-                    "precio_total": precio_total,
-                    "detalles": detalles
-                }
-                
-                resultados.append(resultado)
-                
-                print(f"   ✅ Total: {total} | Entregados: {entregados} | Fallidos: {fallidos} | Pendientes: {pendientes}")
-                print(f"   📈 Tasa: {tasa:.1f}% | 💰 Total: {precio_total:.2f} COP")
-                
-                # Actualizar estado en el archivo
-                actualizar_estado_bulkid(bulk_id, "CONSULTADO")
-                
-            else:
-                print(f"   ❌ Error consultando reporte: {response.status_code}")
-                
-        except Exception as e:
-            print(f"   ❌ Error: {e}")
-    
-    print(f"\n✅ Consulta completada. {len(resultados)} reportes obtenidos.")
-    return resultados
 
 def actualizar_estado_bulkid(bulk_id, nuevo_estado):
     """
@@ -709,83 +612,10 @@ def actualizar_estado_bulkid(bulk_id, nuevo_estado):
     except Exception as e:
         print(f"⚠️ Error actualizando estado: {e}")
 
-def mostrar_dashboard():
-    """
-    Muestra el dashboard completo con todos los envíos y sus reportes.
-    """
-    print("\n" + "="*70)
-    print("📊 DASHBOARD DE REPORTES SMS")
-    print("="*70)
-    print(f"🕐 Actualización: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("="*70)
-    
-    # Obtener reportes de todos los bulkIds
-    resultados = consultar_todos_los_reportes()
-    
-    if not resultados:
-        print("\n📭 No hay datos para mostrar")
-        print("   💡 Ejecuta un envío primero para generar bulkIds")
-        return
-    
-    # ============================================================
-    # RESUMEN GENERAL
-    # ============================================================
-    total_envios = len(resultados)
-    total_mensajes = sum(r["total"] for r in resultados)
-    total_entregados = sum(r["entregados"] for r in resultados)
-    total_fallidos = sum(r["fallidos"] for r in resultados)
-    total_pendientes = sum(r["pendientes"] for r in resultados)
-    total_precio = sum(r["precio_total"] for r in resultados)
-    tasa_general = (total_entregados / total_mensajes * 100) if total_mensajes > 0 else 0
-    
-    print(f"\n📊 RESUMEN GENERAL")
-    print("-"*70)
-    print(f"   📦 Envíos totales: {total_envios}")
-    print(f"   📱 Mensajes totales: {total_mensajes}")
-    print(f"   ✅ Entregados: {total_entregados} ({tasa_general:.1f}%)")
-    print(f"   ❌ Fallidos: {total_fallidos} ({(total_fallidos/total_mensajes*100) if total_mensajes > 0 else 0:.1f}%)")
-    print(f"   ⏳ Pendientes: {total_pendientes} ({(total_pendientes/total_mensajes*100) if total_mensajes > 0 else 0:.1f}%)")
-    print(f"   💰 Costo total: {total_precio:.2f} COP")
-    
-    # ============================================================
-    # DETALLE POR ENVÍO
-    # ============================================================
-    print(f"\n📋 DETALLE POR ENVÍO")
-    print("-"*70)
-    
-    for idx, r in enumerate(resultados):
-        print(f"\n📦 [{idx+1}] Bulk ID: {r['bulk_id']}")
-        print(f"   📝 Campaña: {r['campana']}")
-        print(f"   👤 Usuario: {r['usuario']}")
-        print(f"   📅 Fecha envío: {r['fecha_envio']}")
-        print(f"   📊 Total: {r['total']} | ✅ Entregados: {r['entregados']} | ❌ Fallidos: {r['fallidos']} | ⏳ Pendientes: {r['pendientes']}")
-        print(f"   📈 Tasa de entrega: {r['tasa_entrega']:.1f}%")
-        print(f"   💰 Costo: {r['precio_total']:.2f} COP")
-        
-        # Mostrar fallidos (si los hay)
-        fallidos = [d for d in r['detalles'] if d['estado'] == 'FALLIDO']
-        if fallidos:
-            print(f"   🔴 Fallidos ({len(fallidos)}):")
-            for f in fallidos[:5]:  # Mostrar hasta 5
-                print(f"      📱 {f['telefono']} - {f['error'] if f['error'] else 'Sin razón'}")
-            if len(fallidos) > 5:
-                print(f"      ... y {len(fallidos)-5} más")
-        
-        # Mostrar pendientes (si los hay)
-        pendientes = [d for d in r['detalles'] if d['estado'] == 'PENDIENTE']
-        if pendientes:
-            print(f"   ⏳ Pendientes ({len(pendientes)}):")
-            for p in pendientes[:3]:
-                print(f"      📱 {p['telefono']}")
-            if len(pendientes) > 3:
-                print(f"      ... y {len(pendientes)-3} más")
-    
-    # ============================================================
-    # PIE DE PÁGINA
-    # ============================================================
-    print("\n" + "="*70)
-    print("✅ Dashboard actualizado")
-    print("="*70)
+
+# ==================================================
+# 🔥 NUEVO: GUARDAR SMS LOG CON MESSAGE_ID
+# ==================================================
 
 def guardar_sms_log(
     client, 
@@ -798,50 +628,10 @@ def guardar_sms_log(
     status: str, 
     plantilla: str = ""
 ) -> None:
-    """Guarda registros en SmsLog."""
-    now = datetime.now(timezone.utc).isoformat()
-    bulk_id = bulk_ids[0] if bulk_ids else None
-    
-    records = []
-    for item in mensajes:
-        records.append({
-            "telefono": item["phone"],
-            "mensaje": item["text"],
-            "plantilla": plantilla,
-            "consulta_sql": "",
-            "fecha_envio": now,
-            "resultado": status,
-            "bulk_id": bulk_id,
-            "error": "",
-            "campana": campaign or "",
-            "usuario": usuario or "",
-            "es_reenvio": item["phone"] in reenvios,
-            "fecha_creacion": now,
-            "fecha_actualizacion": now,
-        })
-    
-    if records and client:
-        try:
-            errors = client.insert_rows_json(SMS_LOG_TABLE, records)
-            if errors:
-                logger.error(f"Error guardando logs: {errors}")
-            else:
-                logger.info(f"✅ {len(records)} registros guardados en SmsLog")
-        except Exception as e:
-            logger.error(f"Error guardando logs: {e}")
-
-def guardar_sms_log(
-    client, 
-    mensajes: List[Dict], 
-    *, 
-    campaign: str, 
-    usuario: str,
-    bulk_ids: List[str], 
-    reenvios: set, 
-    status: str, 
-    plantilla: str = ""
-) -> None:
-    """Guarda registros en SmsLog vía INSERT (query job, no streaming insert)."""
+    """
+    🔥 MODIFICADO: Ahora incluye message_id individual.
+    Guarda registros en SmsLog vía INSERT (query job, no streaming insert).
+    """
     from google.cloud import bigquery
 
     now = datetime.now(timezone.utc).isoformat()
@@ -853,7 +643,7 @@ def guardar_sms_log(
     insert_sql = f"""
         INSERT INTO `{SMS_LOG_TABLE}` (
             telefono, mensaje, plantilla, consulta_sql, fecha_envio,
-            resultado, bulk_id, error, campana, usuario, es_reenvio,
+            resultado, bulk_id, message_id, error, campana, usuario, es_reenvio,
             fecha_creacion, fecha_actualizacion
         )
         VALUES
@@ -864,7 +654,7 @@ def guardar_sms_log(
     for i, item in enumerate(mensajes):
         value_rows.append(
             f"(@telefono_{i}, @mensaje_{i}, @plantilla_{i}, @consulta_sql_{i}, @fecha_envio_{i}, "
-            f"@resultado_{i}, @bulk_id_{i}, @error_{i}, @campana_{i}, @usuario_{i}, @es_reenvio_{i}, "
+            f"@resultado_{i}, @bulk_id_{i}, @message_id_{i}, @error_{i}, @campana_{i}, @usuario_{i}, @es_reenvio_{i}, "
             f"@fecha_creacion_{i}, @fecha_actualizacion_{i})"
         )
         parameters.extend([
@@ -875,6 +665,7 @@ def guardar_sms_log(
             bigquery.ScalarQueryParameter(f"fecha_envio_{i}", "TIMESTAMP", now),
             bigquery.ScalarQueryParameter(f"resultado_{i}", "STRING", status),
             bigquery.ScalarQueryParameter(f"bulk_id_{i}", "STRING", bulk_id),
+            bigquery.ScalarQueryParameter(f"message_id_{i}", "STRING", item.get("message_id", "")),  # 🔥 NUEVO
             bigquery.ScalarQueryParameter(f"error_{i}", "STRING", ""),
             bigquery.ScalarQueryParameter(f"campana_{i}", "STRING", campaign or ""),
             bigquery.ScalarQueryParameter(f"usuario_{i}", "STRING", usuario or ""),
@@ -892,6 +683,250 @@ def guardar_sms_log(
     except Exception as e:
         logger.error(f"Error guardando logs: {e}")
 
+
+# ==================================================
+# 🔥 NUEVO: FUNCIONES DE POLLING Y ACTUALIZACIÓN DE ESTADOS
+# ==================================================
+
+def consultar_reporte_infobip(bulk_id: str, api_key: str, base_url: str) -> List[Dict]:
+    """
+    🔥 NUEVO: Consulta TODOS los datos de un bulkId manejando la paginación.
+    El endpoint /sms/2/reports solo devuelve 1000 registros por petición.
+    
+    Args:
+        bulk_id: ID del lote
+        api_key: API key de Infobip
+        base_url: URL base de Infobip
+    
+    Returns:
+        Lista con TODOS los resultados
+    """
+    todos_los_resultados = []
+    offset = 0
+    limite = 1000
+    max_paginas = 50
+    pagina = 0
+    
+    while pagina < max_paginas:
+        url = f"{base_url}/sms/3/reports"  # 🔥 MODIFICADO: v3
+        headers = {
+            "Authorization": f"App {api_key}",
+            "Accept": "application/json"
+        }
+        params = {
+            "bulkId": bulk_id,
+            "limit": limite,
+            "offset": offset
+        }
+        
+        try:
+            response = requests.get(url, headers=headers, params=params, timeout=30)
+            
+            if response.status_code != 200:
+                logger.error(f"❌ Error {response.status_code} consultando {bulk_id}: {response.text[:200]}")
+                break
+            
+            data = response.json()
+            resultados = data.get("results", [])
+            
+            if not resultados:
+                break
+            
+            todos_los_resultados.extend(resultados)
+            
+            # Si obtuvimos menos del límite, ya no hay más
+            if len(resultados) < limite:
+                break
+            
+            offset += limite
+            pagina += 1
+            
+        except Exception as e:
+            logger.error(f"❌ Error en paginación de {bulk_id}: {e}")
+            break
+    
+    logger.info(f"📊 {bulk_id}: {len(todos_los_resultados)} registros obtenidos")
+    return todos_los_resultados
+
+
+def actualizar_estados_pendientes(api_key: str, base_url: str, client=None):
+    """
+    🔥 NUEVO: Consulta el estado de mensajes PENDIENTES en BigQuery.
+    Guarda los resultados en SmsDeliveryReports y actualiza SmsLog.
+    
+    Esta función debe ejecutarse periódicamente (cada 10 minutos).
+    """
+    from google.cloud import bigquery
+    
+    if client is None:
+        logger.error("❌ Se requiere cliente de BigQuery")
+        return {"success": False, "message": "Cliente de BigQuery requerido"}
+    
+    logger.info("🔄 Iniciando polling de estados pendientes...")
+    
+    # 1. Buscar mensajes pendientes en SmsLog (últimas 48h)
+    query_pendientes = f"""
+        SELECT DISTINCT message_id, telefono, bulk_id, campana, usuario
+        FROM `{SMS_LOG_TABLE}`
+        WHERE resultado IN ('PENDIENTE', 'enviado', 'SIN_REPORTE')
+          AND message_id IS NOT NULL
+          AND message_id != ''
+          AND fecha_envio >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL {POLLING_MAX_HOURS} HOUR)
+        LIMIT {POLLING_BATCH_SIZE}
+    """
+    
+    try:
+        pendientes = list(client.query(query_pendientes).result())
+    except Exception as e:
+        logger.error(f"❌ Error consultando pendientes: {e}")
+        return {"success": False, "message": str(e)}
+    
+    if not pendientes:
+        logger.info("✅ No hay mensajes pendientes")
+        return {"success": True, "actualizados": 0, "sin_cambios": 0}
+    
+    logger.info(f"📋 {len(pendientes)} mensajes pendientes encontrados")
+    
+    # 2. Agrupar por bulkId para optimizar consultas
+    por_bulk = {}
+    for p in pendientes:
+        bulk_id = p.bulk_id
+        if bulk_id not in por_bulk:
+            por_bulk[bulk_id] = []
+        por_bulk[bulk_id].append(p)
+    
+    total_actualizados = 0
+    total_sin_cambios = 0
+    total_errores = 0
+    
+    # 3. Consultar cada bulkId a Infobip
+    for bulk_id, mensajes in por_bulk.items():
+        logger.info(f"🔍 Consultando bulkId: {bulk_id} ({len(mensajes)} mensajes)")
+        
+        todos_los_datos = consultar_reporte_infobip(bulk_id, api_key, base_url)
+        
+        if not todos_los_datos:
+            logger.warning(f"⚠️ Sin datos para {bulk_id}")
+            continue
+        
+        # 4. Guardar en SmsDeliveryReports
+        registros = []
+        for item in todos_los_datos:
+            status = item.get("status", {})
+            error = item.get("error", {})
+            price = item.get("price", {})
+            
+            registros.append({
+                "message_id": item.get("messageId"),
+                "bulk_id": bulk_id,
+                "telefono": item.get("to"),
+                "estado": status.get("groupName", "PENDING"),
+                "status_name": status.get("name", ""),
+                "status_description": status.get("description", ""),
+                "error_name": error.get("name", ""),
+                "error_description": error.get("description", ""),
+                "sent_at": item.get("sentAt"),
+                "done_at": item.get("doneAt"),
+                "precio": price.get("pricePerMessage", 0),
+                "currency": price.get("currency", "COP"),
+                "fecha_consulta": datetime.now(timezone.utc).isoformat(),
+                "campana": mensajes[0].campana if mensajes else "",
+                "usuario": mensajes[0].usuario if mensajes else "",
+                "fecha_creacion": datetime.now(timezone.utc).isoformat(),
+            })
+        
+        if registros:
+            try:
+                errors = client.insert_rows_json(SMS_DELIVERY_REPORTS_TABLE, registros)
+                if errors:
+                    logger.error(f"Error guardando reportes: {errors}")
+                    total_errores += 1
+                else:
+                    logger.info(f"✅ {len(registros)} reportes guardados en SmsDeliveryReports")
+            except Exception as e:
+                logger.error(f"Error guardando reportes: {e}")
+                total_errores += 1
+        
+        # 5. Actualizar estado en SmsLog
+        actualizados = actualizar_estados_sms_log(client, todos_los_datos)
+        total_actualizados += actualizados
+        total_sin_cambios += len(todos_los_datos) - actualizados
+    
+    logger.info(f"✅ Polling completado: {total_actualizados} actualizados, {total_sin_cambios} sin cambios, {total_errores} errores")
+    
+    return {
+        "success": True,
+        "actualizados": total_actualizados,
+        "sin_cambios": total_sin_cambios,
+        "errores": total_errores,
+        "bulkids_procesados": len(por_bulk)
+    }
+
+
+def actualizar_estados_sms_log(client, resultados: List[Dict]) -> int:
+    """
+    🔥 NUEVO: Actualiza el estado en SmsLog basándose en los reportes.
+    
+    Returns:
+        Número de registros actualizados
+    """
+    from google.cloud import bigquery
+    
+    if not resultados:
+        return 0
+    
+    actualizados = 0
+    
+    for item in resultados:
+        message_id = item.get("messageId")
+        status = item.get("status", {})
+        group_name = status.get("groupName", "PENDING")
+        error = item.get("error", {})
+        
+        # Mapear estado
+        if group_name == "DELIVERED":
+            resultado = "ENTREGADO"
+            error_msg = ""
+        elif group_name in ["UNDELIVERABLE", "REJECTED", "EXPIRED"]:
+            resultado = "FALLIDO"
+            error_msg = error.get("description", "")
+        elif group_name in ["PENDING", "ACCEPTED"]:
+            resultado = "PENDIENTE"
+            error_msg = ""
+        else:
+            resultado = "SIN_REPORTE"
+            error_msg = ""
+        
+        # Actualizar
+        update_sql = f"""
+            UPDATE `{SMS_LOG_TABLE}`
+            SET resultado = @resultado,
+                error = @error,
+                fecha_actualizacion = CURRENT_TIMESTAMP()
+            WHERE message_id = @message_id
+              AND resultado != @resultado
+        """
+        
+        job_config = bigquery.QueryJobConfig(query_parameters=[
+            bigquery.ScalarQueryParameter("resultado", "STRING", resultado),
+            bigquery.ScalarQueryParameter("error", "STRING", error_msg),
+            bigquery.ScalarQueryParameter("message_id", "STRING", message_id),
+        ])
+        
+        try:
+            job = client.query(update_sql, job_config=job_config)
+            job.result()
+            if job.num_dml_affected_rows > 0:
+                actualizados += 1
+        except Exception as e:
+            logger.error(f"Error actualizando {message_id}: {e}")
+    
+    return actualizados
+
+
+# ==================================================
+# FUNCIONES EXISTENTES (SIN CAMBIOS)
+# ==================================================
 
 def guardar_programacion(
     query: str,
@@ -1114,6 +1149,7 @@ def obtener_lista_negra(client) -> List[Dict]:
     except Exception as e:
         logger.error(f"Error obteniendo lista negra: {e}")
         return []
+
 
 # ==================================================
 #  MENSAJES AUTOMÁTICOS POR OPERACIÓN

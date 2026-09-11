@@ -1,64 +1,13 @@
 {
-  "timestamp": "2026-09-10T08:39:31.715955",
+  "timestamp": "2026-09-10T11:18:01.396819",
   "data": {
-    "total_envios": 7,
-    "total_mensajes": 6,
-    "entregados": 5,
-    "fallidos": 1,
+    "total_envios": 5,
+    "total_mensajes": 10,
+    "entregados": 8,
+    "fallidos": 2,
     "pendientes": 0,
+    "tasa_entrega": 80.0,
     "envios": [
-      {
-        "bulk_id": "178898677128107951098937",
-        "campana": "",
-        "usuario": "",
-        "fecha_envio": "2026-09-09 15:46:10",
-        "total": 0,
-        "entregados": 0,
-        "fallidos": 0,
-        "pendientes": 0,
-        "tasa_entrega": 0,
-        "detalles": [],
-        "estado_reporte": "pendiente"
-      },
-      {
-        "bulk_id": "178898724040807950985266",
-        "campana": "",
-        "usuario": "",
-        "fecha_envio": "2026-09-09 15:53:59",
-        "total": 0,
-        "entregados": 0,
-        "fallidos": 0,
-        "pendientes": 0,
-        "tasa_entrega": 0,
-        "detalles": [],
-        "estado_reporte": "pendiente"
-      },
-      {
-        "bulk_id": "178898728378807951000444",
-        "campana": "",
-        "usuario": "",
-        "fecha_envio": "2026-09-09 15:54:43",
-        "total": 0,
-        "entregados": 0,
-        "fallidos": 0,
-        "pendientes": 0,
-        "tasa_entrega": 0,
-        "detalles": [],
-        "estado_reporte": "pendiente"
-      },
-      {
-        "bulk_id": "178898886658007950448611",
-        "campana": "prueba dashboard",
-        "usuario": "bryan",
-        "fecha_envio": "2026-09-09 16:21:05",
-        "total": 0,
-        "entregados": 0,
-        "fallidos": 0,
-        "pendientes": 0,
-        "tasa_entrega": 0,
-        "detalles": [],
-        "estado_reporte": "pendiente"
-      },
       {
         "bulk_id": "178898916671907952315956",
         "campana": "prueba dashboard",
@@ -149,6 +98,70 @@
             "group_name": "DELIVERED",
             "sent_at": "2026-09-10T12:41:20.369+0000",
             "done_at": "2026-09-10T13:05:06.528+0000",
+            "precio": 2.7,
+            "currency": "COP"
+          }
+        ],
+        "estado_reporte": "completo"
+      },
+      {
+        "bulk_id": "178904949683807950405977",
+        "campana": "Envio cata y brayan",
+        "usuario": "Brayan",
+        "fecha_envio": "2026-09-10 09:11:36",
+        "total": 3,
+        "entregados": 2,
+        "fallidos": 1,
+        "pendientes": 0,
+        "tasa_entrega": 66.67,
+        "detalles": [
+          {
+            "telefono": "3144051619",
+            "estado": "FALLIDO",
+            "group_name": "REJECTED",
+            "sent_at": "2026-09-10T14:11:36.839+0000",
+            "done_at": "2026-09-10T14:11:36.841+0000",
+            "precio": 0.0,
+            "currency": "COP"
+          },
+          {
+            "telefono": "573223189873",
+            "estado": "ENTREGADO",
+            "group_name": "DELIVERED",
+            "sent_at": "2026-09-10T14:11:36.839+0000",
+            "done_at": "2026-09-10T14:11:41.503+0000",
+            "precio": 2.7,
+            "currency": "COP"
+          },
+          {
+            "telefono": "573144051619",
+            "estado": "ENTREGADO",
+            "group_name": "DELIVERED",
+            "sent_at": "2026-09-10T14:11:36.840+0000",
+            "done_at": "2026-09-10T14:11:42.088+0000",
+            "precio": 2.7,
+            "currency": "COP"
+          }
+        ],
+        "estado_reporte": "completo"
+      },
+      {
+        "bulk_id": "178904969127007950971181",
+        "campana": "PRORAMACION",
+        "usuario": "BRYNA",
+        "fecha_envio": "2026-09-10 09:14:50",
+        "total": 1,
+        "entregados": 1,
+        "fallidos": 0,
+        "pendientes": 0,
+        "tasa_entrega": 100.0,
+        "detalles": [
+          {
+            "telefono": "573144051619",
+            "estado": "ENTREGADO",
+            "group_name": "DELIVERED",
+            "sent_at": "2026-09-10T14:14:51.272+0000",
+            "done_at": "2026-09-10T14:16:13.268+0000",
             "precio": 2.7,
             "currency": "COP"
           }

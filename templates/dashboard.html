@@ -18,6 +18,7 @@
         .btn-success { background: #28a745; }
         .btn-success:hover { background: #218838; }
         .btn-warning { background: #ffc107; color: #333; }
+        .btn-warning:hover { background: #e0a800; }
         .btn-danger { background: #dc3545; }
         .btn-danger:hover { background: #c82333; }
         .btn-sm { padding: 5px 12px; font-size: 12px; }
@@ -63,6 +64,7 @@
         .summary-card.pending .number { color: #ffc107; }
         .summary-card.total .number { color: #4a6cf7; }
         .summary-card.rate .number { color: #17a2b8; }
+        .summary-card.money .number { color: #6f42c1; }
         
         /* Tabla */
         .table-container { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
@@ -96,17 +98,21 @@
         /* Modal */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
         .modal-overlay.show { display: flex; }
-        .modal { background: white; border-radius: 12px; width: 90%; max-width: 900px; max-height: 90vh; display: flex; flex-direction: column; }
+        .modal { background: white; border-radius: 12px; width: 95%; max-width: 1200px; max-height: 90vh; display: flex; flex-direction: column; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid #e9ecef; }
         .modal-header h2 { font-size: 18px; color: #1a1a2e; }
+        .modal-header .info { font-size: 13px; color: #6c757d; margin-top: 5px; }
         .modal-close { cursor: pointer; font-size: 24px; color: #6c757d; background: none; border: none; }
         .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
-        .modal-footer { padding: 15px 20px; border-top: 1px solid #e9ecef; display: flex; justify-content: flex-end; gap: 10px; }
-        .modal-filtros { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .modal-footer { padding: 15px 20px; border-top: 1px solid #e9ecef; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+        .modal-filtros { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
         .modal-filtros input, .modal-filtros select { padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 6px; font-size: 13px; }
+        .modal-stats { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        .modal-stat { background: #f8f9fa; border-radius: 8px; padding: 10px 15px; font-size: 13px; }
+        .modal-stat strong { color: #1a1a2e; }
         
         /* Reporte Campaña */
-        .reporte-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .reporte-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .reporte-card { background: white; border-radius: 12px; padding: 18px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); border-left: 4px solid #4a6cf7; }
         .reporte-card h4 { font-size: 15px; color: #1a1a2e; margin-bottom: 10px; }
         .reporte-card .stat { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; color: #495057; }
@@ -126,6 +132,10 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         
+        .detalles-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+        .detalles-table th { background: #e9ecef; color: #1a1a2e; padding: 8px 12px; font-size: 12px; position: sticky; top: 0; z-index: 10; }
+        .detalles-table td { padding: 6px 12px; border-bottom: 1px solid #dee2e6; }
+        
         @media (max-width: 768px) {
             .summary-grid { grid-template-columns: repeat(2, 1fr); }
             .graficos-grid { grid-template-columns: 1fr; }
@@ -142,7 +152,8 @@
             <h1>📊 Dashboard de Reportes SMS</h1>
             <div>
                 <span style="color:#28a745;font-size:14px;font-weight:600;margin-right:15px;">🔴 EN VIVO (10s)</span>
-                <button class="btn btn-primary" onclick="cargarDashboard(1)">🔄 Actualizar</button>
+                <button class="btn btn-warning" onclick="actualizarEstados()" id="btnActualizarEstados">🔄 Actualizar Estados</button>
+                <button class="btn btn-primary" onclick="cargarDashboard(1)">🔄 Refrescar</button>
                 <button class="btn btn-success" onclick="exportarDatos()">📥 Exportar CSV</button>
             </div>
         </div>
@@ -229,10 +240,14 @@
     <div class="modal-overlay" id="modal-overlay">
         <div class="modal">
             <div class="modal-header">
-                <h2 id="modal-titulo">Detalles del Envío</h2>
+                <div>
+                    <h2 id="modal-titulo">Detalles del Envío</h2>
+                    <div class="info" id="modal-info"></div>
+                </div>
                 <button class="modal-close" onclick="cerrarModal()">×</button>
             </div>
             <div class="modal-body">
+                <div class="modal-stats" id="modal-stats"></div>
                 <div class="modal-filtros">
                     <input type="text" id="modal-search" placeholder="🔍 Buscar teléfono..." oninput="filtrarModal()">
                     <select id="modal-estado" onchange="filtrarModal()">
@@ -241,11 +256,15 @@
                         <option value="FALLIDO">❌ Fallidos</option>
                         <option value="PENDIENTE">⏳ Pendientes</option>
                     </select>
+                    <span id="modal-contador" style="font-size:13px;color:#6c757d;"></span>
                 </div>
                 <div id="modal-content"></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-success btn-sm" onclick="exportarDetalleActual()">📥 Exportar este envío</button>
+                <div>
+                    <button class="btn btn-success btn-sm" onclick="descargarReporteCompleto()">📥 Descargar reporte completo (CSV)</button>
+                    <button class="btn btn-primary btn-sm" onclick="exportarDetalleActual()">📥 Exportar desde BD</button>
+                </div>
                 <button class="btn btn-primary btn-sm" onclick="cerrarModal()">Cerrar</button>
             </div>
         </div>
@@ -259,7 +278,9 @@
         let ordenActual = { campo: 'fecha_envio', direccion: 'desc' };
         let bulkIdModalActual = null;
         let datosModalActual = null;
+        let datosModalFiltrados = [];
         let graficos = { pastel: null, barras: null, linea: null };
+        let ultimoHashDatos = '';
 
         // ============ NOTIFICACIONES TOAST ============
         function mostrarToast(titulo, mensaje, tipo = 'info') {
@@ -297,6 +318,37 @@
             if (tab === 'comparacion') cargarComparacion();
         }
 
+        // ============ ACTUALIZAR ESTADOS MANUALMENTE ============
+        function actualizarEstados() {
+            if (!confirm('¿Consultar el estado de los SMS pendientes a Infobip?\n\nEsto puede tardar unos segundos.')) return;
+            
+            const btn = document.getElementById('btnActualizarEstados');
+            btn.disabled = true;
+            btn.textContent = '⏳ Actualizando...';
+            
+            mostrarToast('Consultando', 'Actualizando estados de SMS pendientes...', 'info');
+            
+            fetch('/api/dashboards/actualizar-estados', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    btn.disabled = false;
+                    btn.textContent = '🔄 Actualizar Estados';
+                    
+                    if (data.success) {
+                        const actualizados = data.resultado?.actualizados || 0;
+                        mostrarToast('Actualizado', `${actualizados} mensajes actualizados`, 'success');
+                        cargarDashboard(1);
+                    } else {
+                        mostrarToast('Error', data.message || 'Error desconocido', 'error');
+                    }
+                })
+                .catch(err => {
+                    btn.disabled = false;
+                    btn.textContent = '🔄 Actualizar Estados';
+                    mostrarToast('Error', err.message, 'error');
+                });
+        }
+
         // ============ CARGAR DASHBOARD ============
         function cargarDashboard(page = 1) {
             const search = document.getElementById('filtro-search').value;
@@ -316,6 +368,12 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success && data.data) {
+                        // Detectar cambios
+                        const hash = JSON.stringify(data.data.envios);
+                        if (hash !== ultimoHashDatos) {
+                            ultimoHashDatos = hash;
+                        }
+                        
                         datosDashboard = data.data;
                         renderizarResumen(datosDashboard);
                         renderizarGraficos(datosDashboard);
@@ -465,6 +523,7 @@
                         <td><div style="display:flex;align-items:center;gap:6px;"><span style="font-size:12px;">${tasa}%</span><div class="progress-bar"><div class="fill ${barClass}" style="width:${tasa}%"></div></div></div></td>
                         <td>
                             <button class="btn btn-primary btn-sm" onclick="abrirModal('${e.bulk_id}')">📋 Ver</button>
+                            <button class="btn btn-success btn-sm" onclick="descargarReporteCompletoById('${e.bulk_id}')">📥</button>
                             <button class="btn btn-danger btn-sm" onclick="eliminarEnvio('${e.bulk_id}')">🗑️</button>
                         </td>
                     </tr>`;
@@ -532,33 +591,102 @@
             cargarDashboard(1);
             mostrarToast('Filtros limpiados', 'Se eliminaron todos los filtros', 'info');
         }
-
-        // ============ MODAL DETALLES ============
         function abrirModal(bulkId) {
             bulkIdModalActual = bulkId;
-            fetch(`/api/dashboards/detalles/${bulkId}`)
-                .then(r => r.json())
+            const content = document.getElementById('modal-content');
+            content.innerHTML = '<div class="loading">⏳ Cargando detalles...</div>';
+            document.getElementById('modal-overlay').classList.add('show');
+            
+            console.log('📋 Consultando detalles para bulkId:', bulkId);
+            
+            fetch(`/api/dashboards/detalles/${encodeURIComponent(bulkId)}`)
+                .then(response => {
+                    console.log('📡 Status:', response.status);
+                    console.log('📡 Content-Type:', response.headers.get('content-type'));
+                    
+                    // 🔥 Verificar si es JSON
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        // Si no es JSON, leer como texto para ver el error
+                        return response.text().then(text => {
+                            console.error('❌ Servidor devolvió:', text.substring(0, 500));
+                            throw new Error(`El servidor devolvió ${response.status}: ${text.substring(0, 200)}`);
+                        });
+                    }
+                    
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('✅ Datos recibidos:', data);
+                    
                     if (data.success) {
                         datosModalActual = data.detalles || [];
-                        document.getElementById('modal-titulo').textContent = `Detalles: ${bulkId.slice(-12)}`;
+                        datosModalFiltrados = [...datosModalActual];
+                        
+                        const envio = data.data || {};
+                        document.getElementById('modal-titulo').textContent = `📦 Envío: ${bulkId.slice(-12)}`;
+                        document.getElementById('modal-info').innerHTML = `
+                            📝 ${envio.campana || 'Sin campaña'} | 
+                            👤 ${envio.usuario || 'Sin usuario'} | 
+                            📅 ${envio.fecha_envio || 'Sin fecha'}
+                        `;
+                        
+                        const entregados = datosModalActual.filter(d => d.estado === 'ENTREGADO').length;
+                        const fallidos = datosModalActual.filter(d => d.estado === 'FALLIDO').length;
+                        const pendientes = datosModalActual.filter(d => d.estado === 'PENDIENTE').length;
+                        
+                        document.getElementById('modal-stats').innerHTML = `
+                            <div class="modal-stat">📱 Total: <strong>${datosModalActual.length}</strong></div>
+                            <div class="modal-stat" style="color:#28a745;">✅ Entregados: <strong>${entregados}</strong></div>
+                            <div class="modal-stat" style="color:#dc3545;">❌ Fallidos: <strong>${fallidos}</strong></div>
+                            <div class="modal-stat" style="color:#ffc107;">⏳ Pendientes: <strong>${pendientes}</strong></div>
+                        `;
+                        
                         document.getElementById('modal-search').value = '';
                         document.getElementById('modal-estado').value = '';
-                        renderizarDetallesModal(datosModalActual);
-                        document.getElementById('modal-overlay').classList.add('show');
+                        renderizarDetallesModal(datosModalFiltrados);
                     } else {
-                        mostrarToast('Error', data.message || 'No se pudieron cargar los detalles', 'error');
+                        content.innerHTML = `
+                            <div class="error-msg">
+                                ❌ ${data.message || 'Error desconocido'}
+                                <br><br>
+                                <small>Bulk ID: ${bulkId}</small>
+                            </div>
+                        `;
                     }
+                })
+                .catch(err => {
+                    console.error('❌ Error:', err);
+                    content.innerHTML = `
+                        <div class="error-msg">
+                            ❌ Error: ${err.message}
+                            <br><br>
+                            <small>Bulk ID: ${bulkId}</small>
+                            <br>
+                            <small>Verifica que el bulkId exista en la base de datos</small>
+                        </div>
+                    `;
                 });
         }
+        
 
         function renderizarDetallesModal(detalles) {
+            document.getElementById('modal-contador').textContent = `Mostrando ${detalles.length} registros`;
+            
             if (!detalles || detalles.length === 0) {
                 document.getElementById('modal-content').innerHTML = '<div class="empty"><div class="icon">📭</div><p>Sin detalles disponibles</p></div>';
                 return;
             }
-            let html = `<table class="details-table" style="width:100%;font-size:13px;">
-                <thead><tr><th>Teléfono</th><th>Estado</th><th>Enviado</th><th>Entregado</th><th>Precio</th></tr></thead><tbody>`;
+            
+            let html = `<table class="detalles-table">
+                <thead><tr>
+                    <th>Teléfono</th>
+                    <th>Estado</th>
+                    <th>Enviado</th>
+                    <th>Entregado</th>
+                    <th>Error</th>
+                </tr></thead><tbody>`;
+            
             detalles.forEach(d => {
                 const badgeClass = d.estado === 'ENTREGADO' ? 'badge-success' : (d.estado === 'PENDIENTE' ? 'badge-warning' : 'badge-danger');
                 html += `<tr>
@@ -566,9 +694,10 @@
                     <td><span class="badge ${badgeClass}">${d.estado}</span></td>
                     <td>${d.sent_at ? new Date(d.sent_at).toLocaleString() : 'N/A'}</td>
                     <td>${d.done_at ? new Date(d.done_at).toLocaleString() : 'N/A'}</td>
-                    <td>${d.precio || 0} ${d.currency || 'COP'}</td>
+                    <td style="font-size:11px;color:#dc3545;">${d.error || '-'}</td>
                 </tr>`;
             });
+            
             html += `</tbody></table>`;
             document.getElementById('modal-content').innerHTML = html;
         }
@@ -576,9 +705,12 @@
         function filtrarModal() {
             const search = document.getElementById('modal-search').value.toLowerCase();
             const estado = document.getElementById('modal-estado').value;
-            let filtrados = datosModalActual;
+            
+            let filtrados = [...datosModalActual];
             if (search) filtrados = filtrados.filter(d => d.telefono.includes(search));
             if (estado) filtrados = filtrados.filter(d => d.estado === estado);
+            
+            datosModalFiltrados = filtrados;
             renderizarDetallesModal(filtrados);
         }
 
@@ -586,12 +718,23 @@
             document.getElementById('modal-overlay').classList.remove('show');
             bulkIdModalActual = null;
             datosModalActual = null;
+            datosModalFiltrados = [];
         }
 
         function exportarDetalleActual() {
             if (!bulkIdModalActual) return;
             window.location.href = `/api/dashboards/exportar?bulk_id=${bulkIdModalActual}`;
-            mostrarToast('Exportando', 'Descargando detalles del envío...', 'success');
+            mostrarToast('Exportando', 'Descargando desde la base de datos...', 'success');
+        }
+
+        function descargarReporteCompleto() {
+            if (!bulkIdModalActual) return;
+            descargarReporteCompletoById(bulkIdModalActual);
+        }
+
+        function descargarReporteCompletoById(bulkId) {
+            mostrarToast('Descargando', `Consultando TODOS los datos de ${bulkId.slice(-8)}...`, 'info');
+            window.location.href = `/api/dashboards/descargar/${bulkId}`;
         }
 
         // ============ ELIMINAR ============
@@ -644,7 +787,7 @@
                     <div class="stat"><span>✅ Entregados:</span><strong style="color:#28a745;">${c.entregados}</strong></div>
                     <div class="stat"><span>❌ Fallidos:</span><strong style="color:#dc3545;">${c.fallidos}</strong></div>
                     <div class="stat"><span>⏳ Pendientes:</span><strong style="color:#ffc107;">${c.pendientes}</strong></div>
-                    <div class="stat"><span>💰 Costo:</span><strong>${c.precio_total.toFixed(2)} COP</strong></div>
+                    <div class="stat"><span>💰 Costo:</span><strong>${(c.precio_total || 0).toFixed(2)} COP</strong></div>
                     <div style="margin-top:10px;">
                         <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
                             <span>Tasa de entrega</span><strong>${c.tasa_entrega}%</strong>

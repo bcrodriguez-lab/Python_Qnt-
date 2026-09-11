@@ -5,12 +5,12 @@
 
 {% block page_title %}
   <div class="d-flex align-items-center">
-    <div class="mr-3" style="font-size:2rem; color: #3452E1;">
+    <div class="mr-3" style="font-size:3rem;padding-right: 20px ;color: #0a9b3a;">
       <i class="fas fa-phone-volume"></i>
     </div>
     <div>
       <h1 class="m-0" style="font-weight:700;">{{ "Editar" if is_edit else "Nueva" }} campaña Wolkvox</h1>
-      <small class="text-muted">BigQuery → Wolkvox · Carga automática de registros</small>
+
     </div>
   </div>
 {% endblock %}
@@ -23,12 +23,9 @@
 {% block extra_css %}
 <style>
   :root {
-    --sms-primary: #3452E1;
-    --sms-primary-dark: #2438B0;
-    --sms-primary-light: #EEF1FD;
-    --sms-accent: #7B6EF6;
-    --sms-success: #17A673;
-    --sms-success-bg: #E7F8F1;
+    --sms-primary: #0a9b3a;
+    --sms-primary-dark: #087a2d;
+    --sms-primary-light: #E7F8F1;
     --sms-danger: #E24C4B;
     --sms-danger-bg: #FCEAEA;
     --sms-warning: #B8790A;
