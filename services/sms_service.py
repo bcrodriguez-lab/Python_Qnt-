@@ -240,13 +240,15 @@ def preparar_sms(rows: List[Dict], plantilla: str) -> Tuple[List[Dict], Dict]:
     invalid_numbers = 0
     señuelos = [
         
-        ("3144051619", "john","10000000000"),
+        ("3144051619", "Catalina","https://qnt.com.co/pagos-qnt/"),
+    
+
 ]
 
-    for (telefono, nombre, customer_id) in señuelos:
+    for (telefono, Name, Link) in señuelos:
         row = {
-            "nombre": nombre,
-            "customer_id": customer_id,
+            "Nombre Cliente": Name,
+            "Link": Link,
             "telefono": telefono
         }
         prepared.append({

@@ -914,7 +914,7 @@ def init_auto_download_on_startup():
         # ===== PROGRAMAR BIGQUERY_PROCESSOR =====
         programar_bigquery_processor()
         
-        # 🔥 INICIAR CDR
+        #  INICIAR CDR
         if DESCARGAR_CDR:
             spec = importlib.util.find_spec("download_auto")
             if spec is not None:
@@ -930,14 +930,14 @@ def init_auto_download_on_startup():
         else:
             logger.info("⏭️ Descargas CDR desactivadas en config.py")
         
-        # 🔥 INICIAR AMD - ESTA ES LA PARTE QUE FALLA
+        #  INICIAR AMD - ESTA ES LA PARTE QUE FALLA
         if DESCARGAR_AMD:
             spec = importlib.util.find_spec("download_campaign_detail")
             if spec is not None:
                 from download_campaign_detail import iniciar_scheduler_amd, estado_scheduler_amd
                 logger.info("🔄 Activando descargas automáticas AMD...")
                 
-                # 🔥 EJECUTAR EL SCHEDULER
+                #  EJECUTAR EL SCHEDULER
                 resultado = iniciar_scheduler_amd()  # ← ESTO DEBE CORRER
                 
                 if resultado:

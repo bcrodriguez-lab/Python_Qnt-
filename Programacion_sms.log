@@ -1,0 +1,35 @@
+2026-09-11 12:35:08 - INFO - 🕒 Job recurrente creado: 3 (hora=08:00, fecha_fin=None)
+2026-09-11 12:35:08 - INFO - ejecutando cada minuto para verificar si es hora de enviar.
+2026-09-11 12:35:08 - INFO - ✅ Programación recurrente creada: 3 (hora=08:00, fecha_fin=None)
+2026-09-11 12:36:08 - INFO - 🔎 Revisando programación 3 (tipo=recurrente)
+2026-09-11 12:36:08 - INFO - 🔄 Revisando recurrente 3 (hora actual=12:36, hora inicio=08:00, fecha fin=None)
+2026-09-11 12:36:08 - INFO - 📤 Ejecutando programación RECURRENTE: 3
+2026-09-11 12:36:13 - INFO - ✅ Recurrente enviado correctamente: 3
+2026-09-11 12:37:00 - INFO - 🔎 Revisando programación 1 (tipo=simple)
+2026-09-11 12:37:00 - INFO - 📤 Ejecutando programación SIMPLE: 1
+2026-09-11 12:37:05 - INFO - ✅ Simple enviado correctamente: 1
+2026-09-11 12:37:08 - INFO - 🔎 Revisando programación 3 (tipo=recurrente)
+2026-09-11 12:37:08 - INFO - 🔄 Revisando recurrente 3 (hora actual=12:37, hora inicio=08:00, fecha fin=None)
+2026-09-11 12:37:08 - INFO - ✅ 3: Ya se ejecutó hoy (2026-09-11)
+2026-09-11 12:38:08 - INFO - 🔎 Revisando programación 3 (tipo=recurrente)
+2026-09-11 12:38:08 - INFO - 🔄 Revisando recurrente 3 (hora actual=12:38, hora inicio=08:00, fecha fin=None)
+2026-09-11 12:38:08 - INFO - ✅ 3: Ya se ejecutó hoy (2026-09-11)
+2026-09-11 12:39:08 - INFO - 🔎 Revisando programación 3 (tipo=recurrente)
+2026-09-11 12:39:08 - INFO - 🔄 Revisando recurrente 3 (hora actual=12:39, hora inicio=08:00, fecha fin=None)
+2026-09-11 12:39:08 - INFO - ✅ 3: Ya se ejecutó hoy (2026-09-11)
+2026-09-11 12:40:08 - INFO - 🔎 Revisando programación 3 (tipo=recurrente)
+2026-09-11 12:40:08 - INFO - 🔄 Revisando recurrente 3 (hora actual=12:40, hora inicio=08:00, fecha fin=None)
+2026-09-11 12:40:08 - INFO - ✅ 3: Ya se ejecutó hoy (2026-09-11)
+2026-09-14 10:08:59 - INFO - 🕒 Job recurrente creado: 5 (hora=10:00, fecha_fin=2026-09-30)
+2026-09-14 10:08:59 - INFO - ejecutando cada minuto para verificar si es hora de enviar.
+2026-09-14 10:08:59 - INFO - ✅ Programación recurrente creada: 5 (hora=10:00, fecha_fin=2026-09-30)
+2026-09-14 10:09:59 - INFO - 🔎 Revisando programación 5 (tipo=recurrente)
+2026-09-14 10:09:59 - INFO - 🔄 Revisando recurrente 5 (hora actual=10:09, hora inicio=10:00, fecha fin=2026-09-30)
+2026-09-14 10:09:59 - INFO - 📤 Ejecutando programación RECURRENTE: 5
+2026-09-14 10:10:00 - INFO - 🔎 Revisando programación 4 (tipo=simple)
+2026-09-14 10:10:00 - INFO - 📤 Ejecutando programación SIMPLE: 4
+2026-09-14 10:10:05 - INFO - ✅ Recurrente enviado correctamente: 5
+2026-09-14 10:10:06 - INFO - ✅ Simple enviado correctamente: 4
+2026-09-14 10:10:59 - INFO - 🔎 Revisando programación 5 (tipo=recurrente)
+2026-09-14 10:10:59 - INFO - 🔄 Revisando recurrente 5 (hora actual=10:10, hora inicio=10:00, fecha fin=2026-09-30)
+2026-09-14 10:10:59 - INFO - ✅ 5: Ya se ejecutó hoy (2026-09-14)
