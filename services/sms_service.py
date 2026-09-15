@@ -261,7 +261,6 @@ def preparar_sms(rows: List[Dict], plantilla: str) -> Tuple[List[Dict], Dict]:
             if not phone:
                 invalid_numbers += 1
                 continue
-            logger.info(f"Preparando mensaje para {phone} (fila {row})")
             # Eliminar duplicados dentro del mismo lote
             if phone in seen:
                 continue
@@ -339,10 +338,9 @@ def enviar_sms_desde_filas(
     
     # Preparar mensajes
     prepared, details = preparar_sms(rows, plantilla)
-    print(f"🔍 DEBUG - Preparados: {len(prepared)} mensajes")
-    print(f"🔍 DEBUG - Details: {details}")
+    logger.debug(f"🔍 DEBUG - Details: {details}")
     for i, item in enumerate(prepared):
-        print(f"🔍 DEBUG - Preparado {i}: phone={item['phone']}")
+        logger.debug(f"🔍 DEBUG - Preparado {i}: phone={item['phone']}")
     # Aplicar validaciones (lista negra, duplicados)
     if client:
         phones = [item["phone"] for item in prepared]
@@ -362,13 +360,13 @@ def enviar_sms_desde_filas(
         
         prepared = allowed
     # En enviar_sms_desde_filas, después de verificar duplicados
-    print(f"🔍 DEBUG - Blocked: {blocked}")
-    print(f"🔍 DEBUG - Duplicates: {duplicates}")
-    print(f"🔍 DEBUG - Allow resend: {allow_resend}")
-    print(f"🔍 DEBUG - Allowed antes del filtro: {[item['phone'] for item in allowed]}")
+    logger.debug(f"🔍 DEBUG - Blocked: {blocked}")
+    logger.debug(f"🔍 DEBUG - Duplicates: {duplicates}")
+    logger.debug(f"🔍 DEBUG - Allow resend: {allow_resend}")
+    logger.debug(f"🔍 DEBUG - Allowed antes del filtro: {[item['phone'] for item in allowed]}")
 
-    print(f"🔍 DEBUG - Aplicando filtro de duplicados...")
-    print(f"🔍 DEBUG - Allowed después del filtro: {[item['phone'] for item in allowed]}")
+    logger.debug(f"🔍 DEBUG - Aplicando filtro de duplicados...")
+    logger.debug(f"🔍 DEBUG - Allowed después del filtro: {[item['phone'] for item in allowed]}")
     if not prepared:
         raise SmsServiceError("No hay destinatarios válidos después de aplicar las validaciones.")
     
