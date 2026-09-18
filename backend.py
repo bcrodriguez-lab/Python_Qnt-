@@ -736,7 +736,6 @@ servidores = [
         "Qnt_RBK_blaster",
         "Qnt_recaudo_blaster",
     ]
-
 def _fetch_servidor(servidor, app):
     """Trae las campañas de UN servidor. Corre en un hilo del pool."""
     from auto_campaign_executor import _get_base_url_wolkvox
@@ -764,6 +763,73 @@ def _fetch_servidor(servidor, app):
             logger.warning(f"❌ Error en {servidor}: {e}")
             return servidor, []
 
+
+def limpiar_campana_wolkvox_por_id(server_name, campaign_id, token=None):
+    """
+    Limpia TODOS los registros de una campaña específica en Wolkvox.
+    Requiere el server_name y campaign_id. Si no se pasa token, lo obtiene
+    con _obtener_token_servidor (definido en este mismo módulo).
+    """
+    from auto_campaign_executor import _get_base_url_wolkvox
+
+    campaign_id = str(campaign_id).strip()
+    if not campaign_id:
+        logger.warning("⚠️ limpiar_campana_wolkvox_por_id: campaign_id vacío")
+        return False
+
+    if not token:
+        token = _obtener_token_servidor(server_name)   # 👈 esta función ya está en backend.py
+    if not token:
+        logger.warning(f"⚠️ Sin token para limpiar campaña {campaign_id} en {server_name}")
+        return False
+
+    try:
+        base_url = _get_base_url_wolkvox(server_name)
+        clear_url = f"{base_url}/api/v2/campaign.php"
+
+        # Detectar tipo de campaña consultando la info de la campaña
+        type_campaign = "predictive"  # default
+        try:
+            info_url = f"{base_url}/api/v2/information.php?api=campaigns"
+            info_resp = requests.get(
+                info_url,
+                headers={"wolkvox-token": token},
+                timeout=30,
+            )
+            if info_resp.ok:
+                for camp in info_resp.json().get("data", []):
+                    if str(camp.get("campaign_id", "")).strip() == campaign_id:
+                        type_campaign = str(camp.get("type_campaign", "predictive")).strip()
+                        break
+        except Exception as e:
+            logger.warning(f"⚠️ No se pudo detectar tipo de campaña {campaign_id}: {e}")
+
+        clear_params = {
+            "api": "clear_campaign",
+            "type_campaign": type_campaign,
+            "campaign_id": campaign_id,
+        }
+
+        clear_resp = requests.delete(
+            clear_url,
+            params=clear_params,
+            headers={"wolkvox-token": token},
+            timeout=60,
+        )
+
+        if clear_resp.ok:
+            logger.info(f"🧹 Campaña {campaign_id} ({server_name}) limpiada antes del cargue")
+            return True
+
+        logger.warning(
+            f"❌ No se pudo limpiar campaña {campaign_id}: "
+            f"HTTP {clear_resp.status_code} - {clear_resp.text[:200]}"
+        )
+        return False
+
+    except Exception as e:
+        logger.exception(f"❌ Error limpiando campaña {campaign_id} en {server_name}: {e}")
+        return False
 
 def total_campañas_hoy(app=None):
     """Versión CONCURRENTE: consulta SOLO los servidores específicos."""
