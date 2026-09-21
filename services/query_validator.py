@@ -19,12 +19,12 @@ logger = logging.getLogger(__name__)
 FIELD_ALIASES = {
     # ═══════════ Identidad del cliente ═══════════
     "customer_name": [
-        "name",                     # ⚠️ el que lees en el cargue
+        "name",                     
         "customer_name", "nombre", "nombre_cliente",
         "nombreclient", "first_name", "initcap_nombre",
     ],
     "customer_id": [
-        "contaco__c",               # ⚠️ el que lees (con una sola "t")
+        "contaco__c",               
         "customer_id", "contacto__c", "contacto",
         "cliente_id", "id_cliente", "customer_code",
     ],
@@ -59,85 +59,85 @@ FIELD_ALIASES = {
     # ═══════════ Slots propios ═══════════
     "age": [
         "age", "edad", "años", "age_years",
-        "acudiapagocuotamensual",   # ⚠️ columna del cargue
+        "acudiapagocuotamensual",   
     ],
     "gender": [
         "gender", "sexo", "genero", "género", "sex", "male_female",
-        "acufechacuota1",           # ⚠️
+        "acufechacuota1",           
     ],
     "country": [
         "country", "pais", "país", "country_code",
-        "acufuentedeingresos",      # ⚠️
+        "acufuentedeingresos",       
     ],
     "state": [
         "state", "departamento", "depto", "provincia", "state_code",
-        "acugacs_porcentaje",       # ⚠️
-        "acugacsporcentaje",        # ⚠️ (sin guion)
+        "acugacs_porcentaje",      
+        "acugacsporcentaje",         
     ],
     "city": [
         "city", "ciudad", "municipio", "town",
-        "acugacs_porcentaje_iva",   # ⚠️
-        "acugacsporcentajeiva",     # ⚠️ (sin guion)
+        "acugacs_porcentaje_iva",   
+        "acugacsporcentajeiva",     
     ],
     "zone": [
         "zone", "zona", "area", "region",
-        "acugacs_valortotal",       # ⚠️
-        "acugacsvalortotal",        # ⚠️
+        "acugacs_valortotal",       
+        "acugacsvalortotal",        
     ],
     "address": [
         "address", "direccion", "dirección", "street", "full_address",
-        "acumotivomora",            # ⚠️
+        "acumotivomora",            
     ],
 
     # ═══════════ Opts ═══════════
     "opt1": [
         "opt1", "opcion1", "option1",
-        "acuplazoaceptado",         # ⚠️
+        "acuplazoaceptado",         
     ],
     "opt2": [
         "opt2", "opcion2", "option2",
-        "acuvrcuota1",              # ⚠️
+        "acuvrcuota1",              
     ],
     "opt3": [
         "opt3", "opcion3", "option3",
-        "acuvrcuotamensual",        # ⚠️
+        "acuvrcuotamensual",        
     ],
     "opt4": [
         "opt4", "opcion4", "option4",
-        "acuvrtotalacuerdo",        # ⚠️
+        "acuvrtotalacuerdo",        
     ],
     "opt5": [
         "opt5", "opcion5", "option5",
-        "ubicacion_contacto__c",    # ⚠️
+        "ubicacion_contacto__c",    
     ],
     "opt6": [
         "opt6", "opcion6", "option6",
-        "ubicacionname__c",         # ⚠️
+        "ubicacionname__c",        
     ],
     "opt7": [
         "opt7", "opcion7", "option7",
-        "saldo_capital_cliente",    # ⚠️
+        "saldo_capital_cliente",   
     ],
     "opt8": [
         "opt8", "opcion8", "option8",
-        "fecha_gestion__c",         # ⚠️
+        "fecha_gestion__c",        
     ],
     "opt9": [
         "opt9", "opcion9", "option9",
-        "oportunityproducts",       # ⚠️
+        "oportunityproducts",      
     ],
     "opt10": [
         "opt10", "opcion10", "option10",
-        "skill_teleamigo",          # ⚠️
+        "skill_teleamigo",         
     ],
     "opt11": [
         "opt11", "opcion11", "option11",
-        "saldo_capital_cliente",    # ⚠️ (mismo dato que opt7, en letras)
+        "saldo_capital_cliente",   
     ],
     "opt12": [
         "opt12", "opcion12", "option12",
-        "valor_oferta_texto",       # ⚠️ el que lees en el cargue
-        "valor_oferta",             # variante por si acaso
+        "valor_oferta_texto",       
+        "valor_oferta",             
     ],
 
     # ═══════════ Recall ═══════════

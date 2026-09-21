@@ -13,3 +13,435 @@
 2026-09-15 08:00:05 - INFO - Agregando 0 señuelos a la campaña DIGITAL (ID: 4)
 2026-09-15 08:00:05 - WARNING - No se pudo limpiar campaña: HTTP 404
 2026-09-15 08:00:06 - WARNING - ❌ Lote 1: HTTP 403
+2026-09-21 07:44:00 - INFO - Datos recibidos para programación simple: {'nombre': 'Mantenimiento', 'bigquery_query': 'SELECT DISTINCT\n\n    -- ═══════════ DATOS DEL CLIENTE ═══════════\n    COALESCE(\n        NULLIF(TRIM(CAST(Contacto__c AS STRING)), \'\'),\n        \'\'\n    ) AS customer_id,\n\n    COALESCE(\n        NULLIF(TRIM(Name), \'\'),\n        \'Sin Nombre\'\n    ) AS customer_name,\n\n    \'\' AS customer_last_name,\n\n    -- Teléfono con prefijo 95\n    CONCAT(\n        \'95\',\n        COALESCE(\n            NULLIF(\n                REGEXP_REPLACE(CAST(Telefono_1 AS STRING), r\'\\D\', \'\'),\n                \'\'\n            ),\n            \'\'\n        )\n    ) AS tel1,\n\n    \'\' AS tel2,\n    \'\' AS tel3,\n    \'\' AS tel4,\n    \'\' AS tel5,\n\n    COALESCE(\n        NULLIF(TRIM(email_1), \'\'),\n        \'\'\n    ) AS email,\n\n\n    -- ═══════════ DATOS GENERALES ═══════════\n    \'\' AS AcuDiaPagoCuotaMensual,\n    \'\' AS AcuFechaCuota1,\n    \'\' AS AcuFuenteDeIngresos,\n    \'\' AS AcuGacsPorcentaje,\n    \'\' AS AcuGacsPorcentajeIva,\n    \'\' AS AcuGacsValorTotal,\n    \'\' AS AcuMotivoMora,\n\n\n    -- ═══════════ OPT 1-4 ═══════════\n    \'\' AS AcuPlazoAceptado,\n    \'\' AS AcuVrCuota1,\n    \'\' AS AcuVrCuotaMensual,\n    \'\' AS AcuVrTotalAcuerdo,\n\n\n    -- ═══════════ OPT 5-9 ═══════════\n    \'\' AS Ubicacion_Contacto__c,\n    \'\' AS UbicacionName__c,\n    \'\' AS Canal__c,\n    \'\' AS Fecha_Gestion__c,\n    \'\' AS OportunityProducts,\n\n\n    -- ═══════════ OPT 10-12 ═══════════\n    \'\' AS Opt_10,\n\n    -- Saldo capital\n    COALESCE(\n        CAST(Saldo_Capital_cliente AS STRING),\n        \'\'\n    ) AS Opt_11,\n\n    -- Sin valor de oferta en esta consulta\n    \'\' AS Opt_12,\n\n\n    -- ═══════════ RECALL ═══════════\n    \'\' AS recall_date,\n    \'\' AS recall_telephone\n\n\nFROM `capable-arbor-209819.QNT_Comercial.Intradia_Mantenimiento`\n\nWHERE Operado_Por__c IN (\n    "MANTENIMIENTO-ESP-QNT",\n    "MANTENIMIENTO-QNT-MORAS-ALTAS"\n)\n\nAND AsesorConfirmacion IS NULL\n\nAND (\n    Altura_mora <> -99\n    OR Altura_mora IS NULL\n);', 'wolkvox_campaign_id': '20718', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-21T07:45', 'hora_fin': '13:43'}
+2026-09-21 07:44:15 - INFO - Datos recibidos para programación simple: {'nombre': 'Mantenimiento', 'bigquery_query': 'SELECT DISTINCT\n\n    -- ═══════════ DATOS DEL CLIENTE ═══════════\n    COALESCE(\n        NULLIF(TRIM(CAST(Contacto__c AS STRING)), \'\'),\n        \'\'\n    ) AS customer_id,\n\n    COALESCE(\n        NULLIF(TRIM(Name), \'\'),\n        \'Sin Nombre\'\n    ) AS customer_name,\n\n    \'\' AS customer_last_name,\n\n    -- Teléfono con prefijo 95\n    CONCAT(\n        \'95\',\n        COALESCE(\n            NULLIF(\n                REGEXP_REPLACE(CAST(Telefono_1 AS STRING), r\'\\D\', \'\'),\n                \'\'\n            ),\n            \'\'\n        )\n    ) AS tel1,\n\n    \'\' AS tel2,\n    \'\' AS tel3,\n    \'\' AS tel4,\n    \'\' AS tel5,\n\n    COALESCE(\n        NULLIF(TRIM(email_1), \'\'),\n        \'\'\n    ) AS email,\n\n\n    -- ═══════════ DATOS GENERALES ═══════════\n    \'\' AS AcuDiaPagoCuotaMensual,\n    \'\' AS AcuFechaCuota1,\n    \'\' AS AcuFuenteDeIngresos,\n    \'\' AS AcuGacsPorcentaje,\n    \'\' AS AcuGacsPorcentajeIva,\n    \'\' AS AcuGacsValorTotal,\n    \'\' AS AcuMotivoMora,\n\n\n    -- ═══════════ OPT 1-4 ═══════════\n    \'\' AS AcuPlazoAceptado,\n    \'\' AS AcuVrCuota1,\n    \'\' AS AcuVrCuotaMensual,\n    \'\' AS AcuVrTotalAcuerdo,\n\n\n    -- ═══════════ OPT 5-9 ═══════════\n    \'\' AS Ubicacion_Contacto__c,\n    \'\' AS UbicacionName__c,\n    \'\' AS Canal__c,\n    \'\' AS Fecha_Gestion__c,\n    \'\' AS OportunityProducts,\n\n\n    -- ═══════════ OPT 10-12 ═══════════\n    \'\' AS Opt_10,\n\n    -- Saldo capital\n    COALESCE(\n        CAST(Saldo_Capital_cliente AS STRING),\n        \'\'\n    ) AS Opt_11,\n\n    -- Sin valor de oferta en esta consulta\n    \'\' AS Opt_12,\n\n\n    -- ═══════════ RECALL ═══════════\n    \'\' AS recall_date,\n    \'\' AS recall_telephone\n\n\nFROM `capable-arbor-209819.QNT_Comercial.Intradia_Mantenimiento`\n\nWHERE Operado_Por__c IN (\n    "MANTENIMIENTO-ESP-QNT",\n    "MANTENIMIENTO-QNT-MORAS-ALTAS"\n)\n\nAND AsesorConfirmacion IS NULL\n\nAND (\n    Altura_mora <> -99\n    OR Altura_mora IS NULL\n);', 'wolkvox_campaign_id': '20718', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-21T07:47', 'hora_fin': '13:43'}
+2026-09-21 07:44:16 - INFO - Datos recibidos para programación simple: {'nombre': 'Mantenimiento', 'bigquery_query': 'SELECT DISTINCT\n\n    -- ═══════════ DATOS DEL CLIENTE ═══════════\n    COALESCE(\n        NULLIF(TRIM(CAST(Contacto__c AS STRING)), \'\'),\n        \'\'\n    ) AS customer_id,\n\n    COALESCE(\n        NULLIF(TRIM(Name), \'\'),\n        \'Sin Nombre\'\n    ) AS customer_name,\n\n    \'\' AS customer_last_name,\n\n    -- Teléfono con prefijo 95\n    CONCAT(\n        \'95\',\n        COALESCE(\n            NULLIF(\n                REGEXP_REPLACE(CAST(Telefono_1 AS STRING), r\'\\D\', \'\'),\n                \'\'\n            ),\n            \'\'\n        )\n    ) AS tel1,\n\n    \'\' AS tel2,\n    \'\' AS tel3,\n    \'\' AS tel4,\n    \'\' AS tel5,\n\n    COALESCE(\n        NULLIF(TRIM(email_1), \'\'),\n        \'\'\n    ) AS email,\n\n\n    -- ═══════════ DATOS GENERALES ═══════════\n    \'\' AS AcuDiaPagoCuotaMensual,\n    \'\' AS AcuFechaCuota1,\n    \'\' AS AcuFuenteDeIngresos,\n    \'\' AS AcuGacsPorcentaje,\n    \'\' AS AcuGacsPorcentajeIva,\n    \'\' AS AcuGacsValorTotal,\n    \'\' AS AcuMotivoMora,\n\n\n    -- ═══════════ OPT 1-4 ═══════════\n    \'\' AS AcuPlazoAceptado,\n    \'\' AS AcuVrCuota1,\n    \'\' AS AcuVrCuotaMensual,\n    \'\' AS AcuVrTotalAcuerdo,\n\n\n    -- ═══════════ OPT 5-9 ═══════════\n    \'\' AS Ubicacion_Contacto__c,\n    \'\' AS UbicacionName__c,\n    \'\' AS Canal__c,\n    \'\' AS Fecha_Gestion__c,\n    \'\' AS OportunityProducts,\n\n\n    -- ═══════════ OPT 10-12 ═══════════\n    \'\' AS Opt_10,\n\n    -- Saldo capital\n    COALESCE(\n        CAST(Saldo_Capital_cliente AS STRING),\n        \'\'\n    ) AS Opt_11,\n\n    -- Sin valor de oferta en esta consulta\n    \'\' AS Opt_12,\n\n\n    -- ═══════════ RECALL ═══════════\n    \'\' AS recall_date,\n    \'\' AS recall_telephone\n\n\nFROM `capable-arbor-209819.QNT_Comercial.Intradia_Mantenimiento`\n\nWHERE Operado_Por__c IN (\n    "MANTENIMIENTO-ESP-QNT",\n    "MANTENIMIENTO-QNT-MORAS-ALTAS"\n)\n\nAND AsesorConfirmacion IS NULL\n\nAND (\n    Altura_mora <> -99\n    OR Altura_mora IS NULL\n);', 'wolkvox_campaign_id': '20718', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-21T07:47', 'hora_fin': '13:43'}
+2026-09-21 07:45:00 - INFO - Datos recibidos para programación simple: {'nombre': 'Mantenimiento', 'bigquery_query': 'SELECT DISTINCT\n\n    -- ═══════════ DATOS DEL CLIENTE ═══════════\n    COALESCE(\n        NULLIF(TRIM(CAST(Contacto__c AS STRING)), \'\'),\n        \'\'\n    ) AS customer_id,\n\n    COALESCE(\n        NULLIF(TRIM(Name), \'\'),\n        \'Sin Nombre\'\n    ) AS customer_name,\n\n    \'\' AS customer_last_name,\n\n    -- Teléfono con prefijo 95\n    CONCAT(\n        \'95\',\n        COALESCE(\n            NULLIF(\n                REGEXP_REPLACE(CAST(Telefono_1 AS STRING), r\'\\D\', \'\'),\n                \'\'\n            ),\n            \'\'\n        )\n    ) AS tel1,\n\n    \'\' AS tel2,\n    \'\' AS tel3,\n    \'\' AS tel4,\n    \'\' AS tel5,\n\n    COALESCE(\n        NULLIF(TRIM(email_1), \'\'),\n        \'\'\n    ) AS email,\n\n\n    -- ═══════════ DATOS GENERALES ═══════════\n    \'\' AS AcuDiaPagoCuotaMensual,\n    \'\' AS AcuFechaCuota1,\n    \'\' AS AcuFuenteDeIngresos,\n    \'\' AS AcuGacsPorcentaje,\n    \'\' AS AcuGacsPorcentajeIva,\n    \'\' AS AcuGacsValorTotal,\n    \'\' AS AcuMotivoMora,\n\n\n    -- ═══════════ OPT 1-4 ═══════════\n    \'\' AS AcuPlazoAceptado,\n    \'\' AS AcuVrCuota1,\n    \'\' AS AcuVrCuotaMensual,\n    \'\' AS AcuVrTotalAcuerdo,\n\n\n    -- ═══════════ OPT 5-9 ═══════════\n    \'\' AS Ubicacion_Contacto__c,\n    \'\' AS UbicacionName__c,\n    \'\' AS Canal__c,\n    \'\' AS Fecha_Gestion__c,\n    \'\' AS OportunityProducts,\n\n\n    -- ═══════════ OPT 10-12 ═══════════\n    \'\' AS Opt_10,\n\n    -- Saldo capital\n    COALESCE(\n        CAST(Saldo_Capital_cliente AS STRING),\n        \'\'\n    ) AS Opt_11,\n\n    -- Sin valor de oferta en esta consulta\n    \'\' AS Opt_12,\n\n\n    -- ═══════════ RECALL ═══════════\n    \'\' AS recall_date,\n    \'\' AS recall_telephone\n\n\nFROM `capable-arbor-209819.QNT_Comercial.Intradia_Mantenimiento`\n\nWHERE Operado_Por__c IN (\n    "MANTENIMIENTO-ESP-QNT",\n    "MANTENIMIENTO-QNT-MORAS-ALTAS"\n)\n\nAND AsesorConfirmacion IS NULL\n\nAND (\n    Altura_mora <> -99\n    OR Altura_mora IS NULL\n);', 'wolkvox_campaign_id': '20718', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-21T07:46', 'hora_fin': '13:43'}
+2026-09-21 07:45:00 - INFO - Programando Wolkvox simple: nombre=Mantenimiento, fecha_programada=2026-09-21T07:46:00-04:56, hora_fin=13:43, campaign_id=20718, server_name=operacion-interna
+2026-09-21 07:45:00 - INFO - Campaña de programación simple guardada en DB con ID: 8
+2026-09-21 07:45:00 - INFO -  ✅ campaña programada creada para ID: 8 y se va a ejecutarse en 2026-09-21T07:46:00-04:56
+2026-09-21 07:52:13 - INFO - Datos recibidos para programación simple: {'nombre': 'Digital', 'bigquery_query': 'SELECT DISTINCT\n\n    -- ═══════════ DATOS DEL CLIENTE ═══════════\n    COALESCE(\n        NULLIF(TRIM(CAST(Contacto__c AS STRING)), \'\'),\n        \'\'\n    ) AS customer_id,\n\n    COALESCE(\n        NULLIF(TRIM(Name), \'\'),\n        \'Sin Nombre\'\n    ) AS customer_name,\n\n    \'\' AS customer_last_name,\n\n    -- Teléfono con prefijo 95\n    CONCAT(\n        \'95\',\n        COALESCE(\n            NULLIF(\n                REGEXP_REPLACE(CAST(Telefono_1 AS STRING), r\'\\D\', \'\'),\n                \'\'\n            ),\n            \'\'\n        )\n    ) AS tel1,\n\n    \'\' AS tel2,\n    \'\' AS tel3,\n    \'\' AS tel4,\n    \'\' AS tel5,\n\n    COALESCE(\n        NULLIF(TRIM(email_1), \'\'),\n        \'\'\n    ) AS email,\n\n\n    -- ═══════════ DATOS GENERALES ═══════════\n    \'\' AS AcuDiaPagoCuotaMensual,\n    \'\' AS AcuFechaCuota1,\n    \'\' AS AcuFuenteDeIngresos,\n    \'\' AS AcuGacsPorcentaje,\n    \'\' AS AcuGacsPorcentajeIva,\n    \'\' AS AcuGacsValorTotal,\n    \'\' AS AcuMotivoMora,\n\n\n    -- ═══════════ OPT 1-4 ═══════════\n    \'\' AS AcuPlazoAceptado,\n    \'\' AS AcuVrCuota1,\n    \'\' AS AcuVrCuotaMensual,\n    \'\' AS AcuVrTotalAcuerdo,\n\n\n    -- ═══════════ OPT 5-9 ═══════════\n    \'\' AS Ubicacion_Contacto__c,\n    \'\' AS UbicacionName__c,\n    \'\' AS Canal__c,\n    \'\' AS Fecha_Gestion__c,\n    \'\' AS OportunityProducts,\n\n\n    -- ═══════════ OPT 10-12 ═══════════\n    \'\' AS Opt_10,\n\n    -- Saldo capital\n    COALESCE(\n        CAST(Saldo_Capital_cliente AS STRING),\n        \'\'\n    ) AS Opt_11,\n\n    \'\' AS Opt_12,\n\n\n    -- ═══════════ RECALL ═══════════\n    \'\' AS recall_date,\n    \'\' AS recall_telephone\n\n\nFROM `capable-arbor-209819.Campanas.Campanas_intradia`\n\nWHERE Operado_Por__c IN (\n    "DIGITAL_ESPECIAL",\n    "DIGITAL_1",\n    "DIGITAL_2",\n    "DIGITAL_MONTOS_BAJOS"\n)\n\nAND localizado_historico IN ("LOCALIZADO")\n\nAND (\n    Fecha_Acuerdo_de_Pago__c_1 <= "2026-08-01"\n    OR Fecha_Acuerdo_de_Pago__c_1 IS NULL\n);', 'wolkvox_campaign_id': '20717', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-21T07:54', 'hora_fin': '07:55'}
+2026-09-21 07:52:13 - INFO - Programando Wolkvox simple: nombre=Digital, fecha_programada=2026-09-21T07:54:00-04:56, hora_fin=07:55, campaign_id=20717, server_name=operacion-interna
+2026-09-21 07:52:14 - INFO - Campaña de programación simple guardada en DB con ID: 9
+2026-09-21 07:52:14 - INFO -  ✅ campaña programada creada para ID: 9 y se va a ejecutarse en 2026-09-21T07:54:00-04:56
+2026-09-21 08:01:26 - INFO - Programación recurrente creada para ID: 10
+2026-09-21 08:02:26 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 08:02:26 - INFO - Campaña simple 1: hora_inicio=16:24, hora_fin=16:34, hora_actual=08:02, fecha_ejecucion=None
+2026-09-21 08:02:26 - INFO - Procesando campaña simple 2: prueba
+2026-09-21 08:02:26 - INFO - Campaña simple 2 ya ejecutada a las 2026-09-18 07:33:00.010031
+2026-09-21 08:02:26 - INFO - Procesando campaña simple 3: prueba
+2026-09-21 08:02:26 - INFO - Campaña simple 3: hora_inicio=16:29, hora_fin=16:33, hora_actual=08:02, fecha_ejecucion=None
+2026-09-21 08:02:26 - INFO - Procesando campaña simple 4: prueba
+2026-09-21 08:02:26 - INFO - Campaña simple 4: hora_inicio=16:32, hora_fin=16:35, hora_actual=08:02, fecha_ejecucion=None
+2026-09-21 08:02:26 - INFO - Procesando campaña simple 7: Digital licuadora
+2026-09-21 08:02:26 - INFO - Campaña simple 7: hora_inicio=08:00, hora_fin=12:32, hora_actual=08:02, fecha_ejecucion=None
+2026-09-21 08:02:26 - INFO - Campaña simple 7 lista para ejecutar: hora_inicio=08:00, hora_fin=12:32, hora_actual=08:02
+2026-09-21 08:02:26 - INFO - Ejecutando campaña simple 7: Digital licuadora (tipo: simple)
+2026-09-21 08:02:26 - INFO - 📤 Ejecutando campaña simple 7: Digital licuadora
+2026-09-21 08:08:11 - INFO - 📊 Campaña simple 7 actualizada: 11866 destinatarios
+2026-09-21 08:08:12 - INFO - Procesando campaña simple 8: Mantenimiento
+2026-09-21 08:08:12 - INFO - Campaña simple 8: hora_inicio=07:46, hora_fin=13:43, hora_actual=08:02, fecha_ejecucion=None
+2026-09-21 08:08:12 - INFO - Campaña simple 8 lista para ejecutar: hora_inicio=07:46, hora_fin=13:43, hora_actual=08:02
+2026-09-21 08:08:12 - INFO - Ejecutando campaña simple 8: Mantenimiento (tipo: simple)
+2026-09-21 08:08:12 - INFO - 📤 Ejecutando campaña simple 8: Mantenimiento
+2026-09-21 08:12:19 - INFO - 📊 Campaña simple 8 actualizada: 8596 destinatarios
+2026-09-21 08:12:19 - INFO - Procesando campaña simple 9: Digital
+2026-09-21 08:12:20 - INFO - Campaña 20717 limpiada: HTTP 202
+2026-09-21 10:57:41 - INFO - Datos recibidos para programación simple: {'nombre': 'prueba', 'bigquery_query': "SELECT\n\n    -- ═══════════════════════════════════════\n    -- DATOS PRINCIPALES\n    -- ═══════════════════════════════════════\n\n    'PRUEBA_WOLKVOX_001' AS Contaco__c,\n\n    'PRUEBA WOLKVOX' AS Name,\n\n    '91573144051619' AS tel1,\n\n    '953144051619' AS tel2,\n\n    '953144051619' AS tel3,\n\n    '953144051619' AS Telefono_Whatsapp,\n\n    'prueba@qnt.com.co' AS MailPreferente,\n\n\n    -- ═══════════════════════════════════════\n    -- DATOS PARA LOS SLOTS\n    -- ═══════════════════════════════════════\n\n    '30' AS AcuDiaPagoCuotaMensual,\n\n    'M' AS AcuFechaCuota1,\n\n    'COLOMBIA' AS AcuFuenteDeIngresos,\n\n    'CUNDINAMARCA' AS AcuGacsPorcentaje,\n\n    'BOGOTA' AS AcuGacsPorcentajeIva,\n\n    'PRUEBA' AS AcuGacsValorTotal,\n\n    'PRUEBA MORA' AS AcuMotivoMora,\n\n\n    -- ═══════════════════════════════════════\n    -- OPT 1 - 4\n    -- ═══════════════════════════════════════\n\n    '12' AS AcuPlazoAceptado,\n\n    '100000' AS AcuVrCuota1,\n\n    '200000' AS AcuVrCuotaMensual,\n\n    '1200000' AS AcuVrTotalAcuerdo,\n\n\n    -- ═══════════════════════════════════════\n    -- OPT 5 - 6\n    -- ═══════════════════════════════════════\n\n    'BOGOTA' AS Ubicacion_Contacto__c,\n\n    'BOGOTA D.C.' AS UbicacionName__c,\n\n\n    -- ═══════════════════════════════════════\n    -- OPT 7 - 10\n    -- ═══════════════════════════════════════\n\n    'PRUEBA' AS Canal__c,\n\n    CURRENT_DATETIME() AS Fecha_Gestion__c,\n\n    'PRODUCTO PRUEBA' AS OportunityProducts,\n\n\n    -- ═══════════════════════════════════════\n    -- SKILL TELEAMIGO\n    -- ═══════════════════════════════════════\n\n    '168408' AS Skill_TELEAMIGO,\n\n\n    -- ═══════════════════════════════════════\n    -- SALDO CAPITAL\n    -- ═══════════════════════════════════════\n\n    '1500000' AS Saldo_Capital_cliente;", 'wolkvox_campaign_id': '7761', 'server_name': 'qnt_digital', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-21T10:59', 'hora_fin': '03:57'}
+2026-09-21 10:57:41 - INFO - Programando Wolkvox simple: nombre=prueba, fecha_programada=2026-09-21T10:59:00-04:56, hora_fin=03:57, campaign_id=7761, server_name=qnt_digital
+2026-09-21 10:57:41 - INFO - Campaña de programación simple guardada en DB con ID: 11
+2026-09-21 10:57:41 - INFO -  ✅ campaña programada creada para ID: 11 y se va a ejecutarse en 2026-09-21T10:59:00-04:56
+2026-09-21 11:11:31 - INFO - ======================================================================
+2026-09-21 11:11:31 - INFO - 🟢 [SIMPLE-1] Petición recibida en /auto-campaigns/programar
+2026-09-21 11:11:31 - INFO - 🟢 [SIMPLE-1] Payload crudo: {'nombre': 'prueba', 'bigquery_query': "SELECT\n\n    -- ═══════════════════════════════════════\n    -- DATOS PRINCIPALES\n    -- ═══════════════════════════════════════\n\n    'PRUEBA_WOLKVOX_001' AS Contaco__c,\n\n    'PRUEBA WOLKVOX' AS Name,\n\n    '953144051619' AS tel1,\n\n    '953144051619' AS tel2,\n\n    '953144051619' AS tel3,\n\n    '953144051619' AS Telefono_Whatsapp,\n\n    'prueba@qnt.com.co' AS MailPreferente,\n\n\n    -- ═══════════════════════════════════════\n    -- DATOS PARA LOS SLOTS\n    -- ═══════════════════════════════════════\n\n    '30' AS AcuDiaPagoCuotaMensual,\n\n    'M' AS AcuFechaCuota1,\n\n    'COLOMBIA' AS AcuFuenteDeIngresos,\n\n    'CUNDINAMARCA' AS AcuGacsPorcentaje,\n\n    'BOGOTA' AS AcuGacsPorcentajeIva,\n\n    'PRUEBA' AS AcuGacsValorTotal,\n\n    'PRUEBA MORA' AS AcuMotivoMora,\n\n\n    -- ═══════════════════════════════════════\n    -- OPT 1 - 4\n    -- ═══════════════════════════════════════\n\n    '12' AS AcuPlazoAceptado,\n\n    '100000' AS AcuVrCuota1,\n\n    '200000' AS AcuVrCuotaMensual,\n\n    '1200000' AS AcuVrTotalAcuerdo,\n\n\n    -- ═══════════════════════════════════════\n    -- OPT 5 - 6\n    -- ═══════════════════════════════════════\n\n    'BOGOTA' AS Ubicacion_Contacto__c,\n\n    'BOGOTA D.C.' AS UbicacionName__c,\n\n\n    -- ═══════════════════════════════════════\n    -- OPT 7 - 10\n    -- ═══════════════════════════════════════\n\n    'PRUEBA' AS Canal__c,\n\n    CURRENT_DATETIME() AS Fecha_Gestion__c,\n\n    'PRODUCTO PRUEBA' AS OportunityProducts,\n\n\n    -- ═══════════════════════════════════════\n    -- SKILL TELEAMIGO\n    -- ═══════════════════════════════════════\n\n    '168408' AS Skill_TELEAMIGO,\n\n\n    -- ═══════════════════════════════════════\n    -- SALDO CAPITAL\n    -- ═══════════════════════════════════════\n\n    '1500000' AS Saldo_Capital_cliente;", 'wolkvox_campaign_id': '7761', 'server_name': 'qnt_digital', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-21T11:13', 'hora_fin': '13:11'}
+2026-09-21 11:11:31 - INFO - 🟢 [SIMPLE-2] Campos leídos:
+     nombre               = 'prueba'
+     wolkvox_campaign_id  = '7761'
+     server_name          = 'qnt_digital'
+     fecha_programada     = '2026-09-21T11:13'
+     hora_fin             = '13:11'
+     query (primeros 80)  = 'SELECT
+
+    -- ═══════════════════════════════════════
+    -- DATOS PRINCIPALES
+...'
+2026-09-21 11:11:31 - INFO - 🟢 [SIMPLE-3] Validaciones OK
+2026-09-21 11:11:31 - INFO - 🟢 [SIMPLE-4] Parseando fecha: '2026-09-21T11:13'
+2026-09-21 11:11:31 - INFO - 🟢 [SIMPLE-4] Fecha parseada: 2026-09-21 11:13:00 | tzinfo=None
+2026-09-21 11:11:31 - INFO - 🟢 [SIMPLE-4] Sin tzinfo → asignado COLOMBIA_TZ: 2026-09-21 11:13:00-04:56
+2026-09-21 11:11:31 - INFO - 🟢 [SIMPLE-5] Parseando hora_fin: '13:11'
+2026-09-21 11:11:31 - INFO - 🟢 [SIMPLE-5] hora_fin normalizada: '13:11'
+2026-09-21 11:11:31 - INFO - 🟢 [SIMPLE-6] Datos listos para guardar:
+     ahora             = 2026-09-21T11:11:31.842066-05:00
+     run_date (Colombia) = 2026-09-21T11:13:00-04:56
+     hora_inicio       = 11:13
+     hora_fin          = 13:11
+     fecha_programada ISO = 2026-09-21T11:13:00-04:56
+2026-09-21 11:11:31 - INFO - 🟢 [SIMPLE-7] Creando ProgramacionCampana...
+2026-09-21 11:11:31 - INFO - 🟢 [SIMPLE-7] ✅ Registro guardado en DB:
+     ID             = 12
+     estado         = pendiente
+     hora_inicio    = 11:13
+     hora_fin       = 13:11
+     fecha_programada = 2026-09-21 11:13:00
+2026-09-21 11:11:31 - INFO - 🟢 [SIMPLE-8] Registrando job 'wolkvox_simple_12' con run_date=2026-09-21T11:13:00-04:56
+2026-09-21 11:11:31 - INFO - 🟢 [SIMPLE-8] ✅ Job registrado:
+     job.id        = wolkvox_simple_12
+     next_run_time = 2026-09-21 11:13:00-04:56
+     trigger       = date[2026-09-21 11:13:00 LMT]
+2026-09-21 11:11:31 - INFO - 🟢 [SIMPLE-9] Jobs activos en el scheduler (5):
+2026-09-21 11:11:31 - INFO -      - console_message_heartbeat | next_run=2026-09-21 11:11:42.485108-05:00 | trigger=interval[0:01:00]
+2026-09-21 11:11:31 - INFO -      - execute_pending_tasks | next_run=2026-09-21 11:11:42.485163-05:00 | trigger=interval[0:01:00]
+2026-09-21 11:11:31 - INFO -      - bigquery_processor_18:00 | next_run=2026-09-21 18:05:00-05:00 | trigger=cron[hour='18', minute='5']
+2026-09-21 11:11:31 - INFO -      - limpiar_campanas_wolkvox_diario | next_run=2026-09-21 20:00:00-05:00 | trigger=cron[hour='20', minute='0']
+2026-09-21 11:11:31 - INFO -      - bigquery_processor_10:41 | next_run=2026-09-22 10:46:00-05:00 | trigger=cron[hour='10', minute='46']
+2026-09-21 11:11:31 - INFO - ✅ [SIMPLE-END] Campaña 12 creada y programada para 2026-09-21T11:13:00-04:56
+2026-09-21 11:22:06 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:22:06 - INFO - Campaña simple 1: hora_inicio=16:24, hora_fin=16:34, hora_actual=11:22, fecha_ejecucion=None
+2026-09-21 11:22:06 - INFO - Procesando campaña simple 2: prueba
+2026-09-21 11:22:06 - INFO - Campaña simple 2 ya ejecutada a las 2026-09-18 07:33:00.010031
+2026-09-21 11:22:06 - INFO - Procesando campaña simple 3: prueba
+2026-09-21 11:22:06 - INFO - Campaña simple 3: hora_inicio=16:29, hora_fin=16:33, hora_actual=11:22, fecha_ejecucion=None
+2026-09-21 11:22:06 - INFO - Procesando campaña simple 4: prueba
+2026-09-21 11:22:06 - INFO - Campaña simple 4: hora_inicio=16:32, hora_fin=16:35, hora_actual=11:22, fecha_ejecucion=None
+2026-09-21 11:22:06 - INFO - Procesando campaña simple 7: Digital licuadora
+2026-09-21 11:22:06 - INFO - Campaña simple 7 ya ejecutada a las 2026-09-21 08:02:26.681463
+2026-09-21 11:22:06 - INFO - Procesando campaña simple 8: Mantenimiento
+2026-09-21 11:22:06 - INFO - Campaña simple 8 ya ejecutada a las 2026-09-21 08:02:26.681463
+2026-09-21 11:22:06 - INFO - Procesando programación 10: Digital (tipo: recurrente)
+2026-09-21 11:22:06 - INFO - Ejecutando campaña simple 10: Digital (tipo: recurrente)
+2026-09-21 11:22:06 - INFO - 📤 Ejecutando campaña simple 10: Digital
+2026-09-21 11:22:13 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:22:13 - INFO - Campaña simple 1: hora_inicio=16:24, hora_fin=16:34, hora_actual=11:22, fecha_ejecucion=None
+2026-09-21 11:22:13 - INFO - Procesando campaña simple 2: prueba
+2026-09-21 11:22:13 - INFO - Campaña simple 2 ya ejecutada a las 2026-09-18 07:33:00.010031
+2026-09-21 11:22:13 - INFO - Procesando campaña simple 3: prueba
+2026-09-21 11:22:13 - INFO - Campaña simple 3: hora_inicio=16:29, hora_fin=16:33, hora_actual=11:22, fecha_ejecucion=None
+2026-09-21 11:22:13 - INFO - Procesando campaña simple 4: prueba
+2026-09-21 11:22:13 - INFO - Campaña simple 4: hora_inicio=16:32, hora_fin=16:35, hora_actual=11:22, fecha_ejecucion=None
+2026-09-21 11:22:13 - INFO - Procesando campaña simple 7: Digital licuadora
+2026-09-21 11:22:13 - INFO - Campaña simple 7 ya ejecutada a las 2026-09-21 08:02:26.681463
+2026-09-21 11:22:13 - INFO - Procesando campaña simple 8: Mantenimiento
+2026-09-21 11:22:13 - INFO - Campaña simple 8 ya ejecutada a las 2026-09-21 08:02:26.681463
+2026-09-21 11:22:13 - INFO - Procesando programación 10: Digital (tipo: recurrente)
+2026-09-21 11:22:13 - INFO - Ejecutando campaña simple 10: Digital (tipo: recurrente)
+2026-09-21 11:22:13 - INFO - 📤 Ejecutando campaña simple 10: Digital
+2026-09-21 11:22:15 - INFO - ======================================================================
+2026-09-21 11:22:15 - INFO - 🟢 [SIMPLE-1] Petición recibida en /auto-campaigns/programar
+2026-09-21 11:22:15 - INFO - 🟢 [SIMPLE-1] Payload crudo: {'nombre': 'prueba', 'bigquery_query': "SELECT\n\n    -- ═══════════════════════════════════════\n    -- DATOS PRINCIPALES\n    -- ═══════════════════════════════════════\n\n    'PRUEBA_WOLKVOX_001' AS Contaco__c,\n\n    'PRUEBA WOLKVOX' AS Name,\n\n    '953144051619' AS tel1,\n\n    '953144051619' AS tel2,\n\n    '953144051619' AS tel3,\n\n    '953144051619' AS Telefono_Whatsapp,\n\n    'prueba@qnt.com.co' AS MailPreferente,\n\n\n    -- ═══════════════════════════════════════\n    -- DATOS PARA LOS SLOTS\n    -- ═══════════════════════════════════════\n\n    '30' AS AcuDiaPagoCuotaMensual,\n\n    'M' AS AcuFechaCuota1,\n\n    'COLOMBIA' AS AcuFuenteDeIngresos,\n\n    'CUNDINAMARCA' AS AcuGacsPorcentaje,\n\n    'BOGOTA' AS AcuGacsPorcentajeIva,\n\n    'PRUEBA' AS AcuGacsValorTotal,\n\n    'PRUEBA MORA' AS AcuMotivoMora,\n\n\n    -- ═══════════════════════════════════════\n    -- OPT 1 - 4\n    -- ═══════════════════════════════════════\n\n    '12' AS AcuPlazoAceptado,\n\n    '100000' AS AcuVrCuota1,\n\n    '200000' AS AcuVrCuotaMensual,\n\n    '1200000' AS AcuVrTotalAcuerdo,\n\n\n    -- ═══════════════════════════════════════\n    -- OPT 5 - 6\n    -- ═══════════════════════════════════════\n\n    'BOGOTA' AS Ubicacion_Contacto__c,\n\n    'BOGOTA D.C.' AS UbicacionName__c,\n\n\n    -- ═══════════════════════════════════════\n    -- OPT 7 - 10\n    -- ═══════════════════════════════════════\n\n    'PRUEBA' AS Canal__c,\n\n    CURRENT_DATETIME() AS Fecha_Gestion__c,\n\n    'PRODUCTO PRUEBA' AS OportunityProducts,\n\n\n    -- ═══════════════════════════════════════\n    -- SKILL TELEAMIGO\n    -- ═══════════════════════════════════════\n\n    '168408' AS Skill_TELEAMIGO,\n\n\n    -- ═══════════════════════════════════════\n    -- SALDO CAPITAL\n    -- ═══════════════════════════════════════\n\n    '1500000' AS Saldo_Capital_cliente;", 'wolkvox_campaign_id': '7761', 'server_name': 'qnt_digital', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-21T11:24', 'hora_fin': '11:26'}
+2026-09-21 11:22:15 - INFO - 🟢 [SIMPLE-2] Campos leídos:
+     nombre               = 'prueba'
+     wolkvox_campaign_id  = '7761'
+     server_name          = 'qnt_digital'
+     fecha_programada     = '2026-09-21T11:24'
+     hora_fin             = '11:26'
+     query (primeros 80)  = 'SELECT
+
+    -- ═══════════════════════════════════════
+    -- DATOS PRINCIPALES
+...'
+2026-09-21 11:22:15 - INFO - 🟢 [SIMPLE-3] Validaciones OK
+2026-09-21 11:22:15 - INFO - 🟢 [SIMPLE-4] Parseando fecha: '2026-09-21T11:24'
+2026-09-21 11:22:15 - INFO - 🟢 [SIMPLE-4] Fecha parseada: 2026-09-21 11:24:00 | tzinfo=None
+2026-09-21 11:22:15 - INFO - 🟢 [SIMPLE-4] Sin tzinfo → asignado COLOMBIA_TZ: 2026-09-21 11:24:00-04:56
+2026-09-21 11:22:15 - INFO - 🟢 [SIMPLE-5] Parseando hora_fin: '11:26'
+2026-09-21 11:22:15 - INFO - 🟢 [SIMPLE-5] hora_fin normalizada: '11:26'
+2026-09-21 11:22:15 - INFO - 🟢 [SIMPLE-6] Datos listos para guardar:
+     ahora             = 2026-09-21T11:22:15.346577-05:00
+     run_date (Colombia) = 2026-09-21T11:24:00-04:56
+     hora_inicio       = 11:24
+     hora_fin          = 11:26
+     fecha_programada ISO = 2026-09-21T11:24:00-04:56
+2026-09-21 11:22:15 - INFO - 🟢 [SIMPLE-7] Creando ProgramacionCampana...
+2026-09-21 11:22:15 - INFO - 🟢 [SIMPLE-7] ✅ Registro guardado en DB:
+     ID             = 13
+     estado         = pendiente
+     hora_inicio    = 11:24
+     hora_fin       = 11:26
+     fecha_programada = 2026-09-21 11:24:00
+2026-09-21 11:22:15 - INFO - 🟢 [SIMPLE-8] Registrando job 'wolkvox_simple_13' con run_date=2026-09-21T11:24:00-04:56
+2026-09-21 11:22:15 - INFO - 🟢 [SIMPLE-8] ✅ Job registrado:
+     job.id        = wolkvox_simple_13
+     next_run_time = 2026-09-21 11:24:00-04:56
+     trigger       = date[2026-09-21 11:24:00 LMT]
+2026-09-21 11:22:15 - INFO - 🟢 [SIMPLE-9] Jobs activos en el scheduler (7):
+2026-09-21 11:22:15 - INFO -      - wolkvox_simple_13 | next_run=2026-09-21 11:24:00-04:56 | trigger=date[2026-09-21 11:24:00 LMT]
+2026-09-21 11:22:15 - INFO -      - console_message_heartbeat | next_run=2026-09-21 11:22:43.895217-05:00 | trigger=interval[0:01:00]
+2026-09-21 11:22:15 - INFO -      - execute_pending_tasks | next_run=2026-09-21 11:22:43.895289-05:00 | trigger=interval[0:01:00]
+2026-09-21 11:22:15 - INFO -      - wolkvox_schedule_scanner | next_run=2026-09-21 11:22:43.979411-05:00 | trigger=interval[0:00:30]
+2026-09-21 11:22:15 - INFO -      - bigquery_processor_18:00 | next_run=2026-09-21 18:05:00-05:00 | trigger=cron[hour='18', minute='5']
+2026-09-21 11:22:15 - INFO -      - limpiar_campanas_wolkvox_diario | next_run=2026-09-21 20:00:00-05:00 | trigger=cron[hour='20', minute='0']
+2026-09-21 11:22:15 - INFO -      - bigquery_processor_10:41 | next_run=2026-09-22 10:46:00-05:00 | trigger=cron[hour='10', minute='46']
+2026-09-21 11:22:15 - INFO - ✅ [SIMPLE-END] Campaña 13 creada y programada para 2026-09-21T11:24:00-04:56
+2026-09-21 11:28:27 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:28:27 - INFO - Campaña simple 1: hora_inicio=16:24, hora_fin=16:34, hora_actual=11:28, fecha_ejecucion=None
+2026-09-21 11:28:27 - INFO - Procesando campaña simple 2: prueba
+2026-09-21 11:28:27 - INFO - Campaña simple 2 ya ejecutada a las 2026-09-18 07:33:00.010031
+2026-09-21 11:28:27 - INFO - Procesando campaña simple 3: prueba
+2026-09-21 11:28:27 - INFO - Campaña simple 3: hora_inicio=16:29, hora_fin=16:33, hora_actual=11:28, fecha_ejecucion=None
+2026-09-21 11:28:27 - INFO - Procesando campaña simple 4: prueba
+2026-09-21 11:28:27 - INFO - Campaña simple 4: hora_inicio=16:32, hora_fin=16:35, hora_actual=11:28, fecha_ejecucion=None
+2026-09-21 11:28:27 - INFO - Procesando campaña simple 7: Digital licuadora
+2026-09-21 11:28:27 - INFO - Campaña simple 7 ya ejecutada a las 2026-09-21 08:02:26.681463
+2026-09-21 11:28:27 - INFO - Procesando campaña simple 8: Mantenimiento
+2026-09-21 11:28:27 - INFO - Campaña simple 8 ya ejecutada a las 2026-09-21 08:02:26.681463
+2026-09-21 11:28:27 - INFO - Procesando programación 10: Digital (tipo: recurrente)
+2026-09-21 11:28:27 - INFO - Ejecutando campaña simple 10: Digital (tipo: recurrente)
+2026-09-21 11:28:27 - INFO - 📤 Ejecutando campaña simple 10: Digital
+2026-09-21 11:28:31 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:28:31 - INFO - Campaña simple 1: hora_inicio=16:24, hora_fin=16:34, hora_actual=11:28, fecha_ejecucion=None
+2026-09-21 11:28:31 - INFO - Procesando campaña simple 2: prueba
+2026-09-21 11:28:31 - INFO - Campaña simple 2 ya ejecutada a las 2026-09-18 07:33:00.010031
+2026-09-21 11:28:31 - INFO - Procesando campaña simple 3: prueba
+2026-09-21 11:28:31 - INFO - Campaña simple 3: hora_inicio=16:29, hora_fin=16:33, hora_actual=11:28, fecha_ejecucion=None
+2026-09-21 11:28:31 - INFO - Procesando campaña simple 4: prueba
+2026-09-21 11:28:31 - INFO - Campaña simple 4: hora_inicio=16:32, hora_fin=16:35, hora_actual=11:28, fecha_ejecucion=None
+2026-09-21 11:28:31 - INFO - Procesando campaña simple 7: Digital licuadora
+2026-09-21 11:28:31 - INFO - Campaña simple 7 ya ejecutada a las 2026-09-21 08:02:26.681463
+2026-09-21 11:28:31 - INFO - Procesando campaña simple 8: Mantenimiento
+2026-09-21 11:28:31 - INFO - Campaña simple 8 ya ejecutada a las 2026-09-21 08:02:26.681463
+2026-09-21 11:28:31 - INFO - Procesando programación 10: Digital (tipo: recurrente)
+2026-09-21 11:28:31 - INFO - Ejecutando campaña simple 10: Digital (tipo: recurrente)
+2026-09-21 11:28:31 - INFO - 📤 Ejecutando campaña simple 10: Digital
+2026-09-21 11:33:54 - INFO - ======================================================================
+2026-09-21 11:33:54 - INFO - 🟢 [SIMPLE-1] Petición recibida en /auto-campaigns/programar
+2026-09-21 11:33:54 - INFO - 🟢 [SIMPLE-1] Payload crudo: {'nombre': 'prueba', 'bigquery_query': "SELECT\n\n    -- ═══════════════════════════════════════\n    -- DATOS PRINCIPALES\n    -- ═══════════════════════════════════════\n\n    'PRUEBA_WOLKVOX_001' AS Contaco__c,\n\n    'PRUEBA WOLKVOX' AS Name,\n\n    '953144051619' AS tel1,\n\n    '953144051619' AS tel2,\n\n    '953144051619' AS tel3,\n\n    '953144051619' AS Telefono_Whatsapp,\n\n    'prueba@qnt.com.co' AS MailPreferente,\n\n\n    -- ═══════════════════════════════════════\n    -- DATOS PARA LOS SLOTS\n    -- ═══════════════════════════════════════\n\n    '30' AS AcuDiaPagoCuotaMensual,\n\n    'M' AS AcuFechaCuota1,\n\n    'COLOMBIA' AS AcuFuenteDeIngresos,\n\n    'CUNDINAMARCA' AS AcuGacsPorcentaje,\n\n    'BOGOTA' AS AcuGacsPorcentajeIva,\n\n    'PRUEBA' AS AcuGacsValorTotal,\n\n    'PRUEBA MORA' AS AcuMotivoMora,\n\n\n    -- ═══════════════════════════════════════\n    -- OPT 1 - 4\n    -- ═══════════════════════════════════════\n\n    '12' AS AcuPlazoAceptado,\n\n    '100000' AS AcuVrCuota1,\n\n    '200000' AS AcuVrCuotaMensual,\n\n    '1200000' AS AcuVrTotalAcuerdo,\n\n\n    -- ═══════════════════════════════════════\n    -- OPT 5 - 6\n    -- ═══════════════════════════════════════\n\n    'BOGOTA' AS Ubicacion_Contacto__c,\n\n    'BOGOTA D.C.' AS UbicacionName__c,\n\n\n    -- ═══════════════════════════════════════\n    -- OPT 7 - 10\n    -- ═══════════════════════════════════════\n\n    'PRUEBA' AS Canal__c,\n\n    CURRENT_DATETIME() AS Fecha_Gestion__c,\n\n    'PRODUCTO PRUEBA' AS OportunityProducts,\n\n\n    -- ═══════════════════════════════════════\n    -- SKILL TELEAMIGO\n    -- ═══════════════════════════════════════\n\n    '168408' AS Skill_TELEAMIGO,\n\n\n    -- ═══════════════════════════════════════\n    -- SALDO CAPITAL\n    -- ═══════════════════════════════════════\n\n    '1500000' AS Saldo_Capital_cliente;", 'wolkvox_campaign_id': '7918', 'server_name': 'qnt_digital', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-21T11:35', 'hora_fin': '12:33'}
+2026-09-21 11:33:54 - INFO - 🟢 [SIMPLE-2] Campos leídos:
+     nombre               = 'prueba'
+     wolkvox_campaign_id  = '7918'
+     server_name          = 'qnt_digital'
+     fecha_programada     = '2026-09-21T11:35'
+     hora_fin             = '12:33'
+     query (primeros 80)  = 'SELECT
+
+    -- ═══════════════════════════════════════
+    -- DATOS PRINCIPALES
+...'
+2026-09-21 11:33:54 - INFO - 🟢 [SIMPLE-3] Validaciones OK
+2026-09-21 11:33:54 - INFO - 🟢 [SIMPLE-4] Parseando fecha: '2026-09-21T11:35'
+2026-09-21 11:33:54 - INFO - 🟢 [SIMPLE-4] Fecha parseada: 2026-09-21 11:35:00 | tzinfo=None
+2026-09-21 11:33:54 - INFO - 🟢 [SIMPLE-4] Sin tzinfo → asignado COLOMBIA_TZ: 2026-09-21 11:35:00-04:56
+2026-09-21 11:33:54 - INFO - 🟢 [SIMPLE-5] Parseando hora_fin: '12:33'
+2026-09-21 11:33:54 - INFO - 🟢 [SIMPLE-5] hora_fin normalizada: '12:33'
+2026-09-21 11:33:54 - INFO - 🟢 [SIMPLE-6] Datos listos para guardar:
+     ahora             = 2026-09-21T11:33:54.853510-05:00
+     run_date (Colombia) = 2026-09-21T11:35:00-04:56
+     hora_inicio       = 11:35
+     hora_fin          = 12:33
+     fecha_programada ISO = 2026-09-21T11:35:00-04:56
+2026-09-21 11:33:54 - INFO - 🟢 [SIMPLE-7] Creando ProgramacionCampana...
+2026-09-21 11:33:54 - INFO - 🟢 [SIMPLE-7] ✅ Registro guardado en DB:
+     ID             = 1
+     estado         = pendiente
+     hora_inicio    = 11:35
+     hora_fin       = 12:33
+     fecha_programada = 2026-09-21 11:35:00
+2026-09-21 11:33:54 - INFO - 🟢 [SIMPLE-8] Registrando job 'wolkvox_simple_1' con run_date=2026-09-21T11:35:00-04:56
+2026-09-21 11:33:54 - INFO - 🟢 [SIMPLE-8] ✅ Job registrado:
+     job.id        = wolkvox_simple_1
+     next_run_time = 2026-09-21 11:35:00-04:56
+     trigger       = date[2026-09-21 11:35:00 LMT]
+2026-09-21 11:33:54 - INFO - 🟢 [SIMPLE-9] Jobs activos en el scheduler (6):
+2026-09-21 11:33:54 - INFO -      - console_message_heartbeat | next_run=2026-09-21 11:34:44.891040-05:00 | trigger=interval[0:01:00]
+2026-09-21 11:33:54 - INFO -      - execute_pending_tasks | next_run=2026-09-21 11:34:44.891096-05:00 | trigger=interval[0:01:00]
+2026-09-21 11:33:54 - INFO -      - wolkvox_schedule_scanner | next_run=2026-09-21 11:34:44.947730-05:00 | trigger=interval[0:01:00]
+2026-09-21 11:33:54 - INFO -      - bigquery_processor_18:00 | next_run=2026-09-21 18:05:00-05:00 | trigger=cron[hour='18', minute='5']
+2026-09-21 11:33:54 - INFO -      - limpiar_campanas_wolkvox_diario | next_run=2026-09-21 20:00:00-05:00 | trigger=cron[hour='20', minute='0']
+2026-09-21 11:33:54 - INFO -      - bigquery_processor_10:41 | next_run=2026-09-22 10:46:00-05:00 | trigger=cron[hour='10', minute='46']
+2026-09-21 11:33:54 - INFO - ✅ [SIMPLE-END] Campaña 1 creada y programada para 2026-09-21T11:35:00-04:56
+2026-09-21 11:34:41 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:34:41 - INFO - Campaña simple 1: hora_inicio=11:35, hora_fin=12:33, hora_actual=11:34, fecha_ejecucion=None
+2026-09-21 11:34:44 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:34:44 - INFO - Campaña simple 1: hora_inicio=11:35, hora_fin=12:33, hora_actual=11:34, fecha_ejecucion=None
+2026-09-21 11:35:41 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:35:41 - INFO - Campaña simple 1: hora_inicio=11:35, hora_fin=12:33, hora_actual=11:35, fecha_ejecucion=None
+2026-09-21 11:35:41 - INFO - Campaña simple 1 lista para ejecutar: hora_inicio=11:35, hora_fin=12:33, hora_actual=11:35
+2026-09-21 11:35:41 - INFO - Ejecutando campaña simple 1: prueba (tipo: simple)
+2026-09-21 11:35:41 - INFO - 📤 Ejecutando campaña simple 1: prueba
+2026-09-21 11:35:44 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:35:44 - INFO - Campaña simple 1: hora_inicio=11:35, hora_fin=12:33, hora_actual=11:35, fecha_ejecucion=None
+2026-09-21 11:35:44 - INFO - Campaña simple 1 lista para ejecutar: hora_inicio=11:35, hora_fin=12:33, hora_actual=11:35
+2026-09-21 11:35:44 - INFO - Ejecutando campaña simple 1: prueba (tipo: simple)
+2026-09-21 11:35:44 - INFO - 📤 Ejecutando campaña simple 1: prueba
+2026-09-21 11:35:56 - INFO - 📊 Campaña simple 1 actualizada: 1 destinatarios
+2026-09-21 11:36:10 - INFO - 📊 Campaña simple 1 actualizada: 1 destinatarios
+2026-09-21 11:36:41 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:36:41 - INFO - Campaña simple 1 ya ejecutada a las 2026-09-21 11:35:44.957870
+2026-09-21 11:36:44 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:36:44 - INFO - Campaña simple 1 ya ejecutada a las 2026-09-21 11:35:44.957870
+2026-09-21 11:37:00 - INFO - ======================================================================
+2026-09-21 11:37:00 - INFO - 🟢 [SIMPLE-1] Petición recibida en /auto-campaigns/programar
+2026-09-21 11:37:00 - INFO - 🟢 [SIMPLE-1] Payload crudo: {'nombre': 'prueba', 'bigquery_query': "SELECT\n\n    -- ═══════════════════════════════════════\n    -- DATOS PRINCIPALES\n    -- ═══════════════════════════════════════\n\n    'PRUEBA_WOLKVOX_001' AS Contaco__c,\n\n    'PRUEBA WOLKVOX' AS Name,\n\n    '953144051619' AS tel1,\n\n    '953144051619' AS tel2,\n\n    '953144051619' AS tel3,\n\n    '953144051619' AS Telefono_Whatsapp,\n\n    'prueba@qnt.com.co' AS MailPreferente,\n\n\n    -- ═══════════════════════════════════════\n    -- DATOS PARA LOS SLOTS\n    -- ═══════════════════════════════════════\n\n    '30' AS AcuDiaPagoCuotaMensual,\n\n    'M' AS AcuFechaCuota1,\n\n    'COLOMBIA' AS AcuFuenteDeIngresos,\n\n    'CUNDINAMARCA' AS AcuGacsPorcentaje,\n\n    'BOGOTA' AS AcuGacsPorcentajeIva,\n\n    'PRUEBA' AS AcuGacsValorTotal,\n\n    'PRUEBA MORA' AS AcuMotivoMora,\n\n\n    -- ═══════════════════════════════════════\n    -- OPT 1 - 4\n    -- ═══════════════════════════════════════\n\n    '12' AS AcuPlazoAceptado,\n\n    '100000' AS AcuVrCuota1,\n\n    '200000' AS AcuVrCuotaMensual,\n\n    '1200000' AS AcuVrTotalAcuerdo,\n\n\n    -- ═══════════════════════════════════════\n    -- OPT 5 - 6\n    -- ═══════════════════════════════════════\n\n    'BOGOTA' AS Ubicacion_Contacto__c,\n\n    'BOGOTA D.C.' AS UbicacionName__c,\n\n\n    -- ═══════════════════════════════════════\n    -- OPT 7 - 10\n    -- ═══════════════════════════════════════\n\n    'PRUEBA' AS Canal__c,\n\n    CURRENT_DATETIME() AS Fecha_Gestion__c,\n\n    'PRODUCTO PRUEBA' AS OportunityProducts,\n\n\n    -- ═══════════════════════════════════════\n    -- SKILL TELEAMIGO\n    -- ═══════════════════════════════════════\n\n    '168408' AS Skill_TELEAMIGO,\n\n\n    -- ═══════════════════════════════════════\n    -- SALDO CAPITAL\n    -- ═══════════════════════════════════════\n\n    '1500000' AS Saldo_Capital_cliente;", 'wolkvox_campaign_id': '20213', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-21T11:37', 'hora_fin': '23:36'}
+2026-09-21 11:37:00 - INFO - 🟢 [SIMPLE-2] Campos leídos:
+     nombre               = 'prueba'
+     wolkvox_campaign_id  = '20213'
+     server_name          = 'operacion-interna'
+     fecha_programada     = '2026-09-21T11:37'
+     hora_fin             = '23:36'
+     query (primeros 80)  = 'SELECT
+
+    -- ═══════════════════════════════════════
+    -- DATOS PRINCIPALES
+...'
+2026-09-21 11:37:00 - INFO - 🟢 [SIMPLE-3] Validaciones OK
+2026-09-21 11:37:00 - INFO - 🟢 [SIMPLE-4] Parseando fecha: '2026-09-21T11:37'
+2026-09-21 11:37:00 - INFO - 🟢 [SIMPLE-4] Fecha parseada: 2026-09-21 11:37:00 | tzinfo=None
+2026-09-21 11:37:00 - INFO - 🟢 [SIMPLE-4] Sin tzinfo → asignado COLOMBIA_TZ: 2026-09-21 11:37:00-04:56
+2026-09-21 11:37:00 - INFO - 🟢 [SIMPLE-5] Parseando hora_fin: '23:36'
+2026-09-21 11:37:00 - INFO - 🟢 [SIMPLE-5] hora_fin normalizada: '23:36'
+2026-09-21 11:37:00 - INFO - 🟢 [SIMPLE-6] Datos listos para guardar:
+     ahora             = 2026-09-21T11:37:00.244099-05:00
+     run_date (Colombia) = 2026-09-21T11:37:00-04:56
+     hora_inicio       = 11:37
+     hora_fin          = 23:36
+     fecha_programada ISO = 2026-09-21T11:37:00-04:56
+2026-09-21 11:37:00 - INFO - 🟢 [SIMPLE-7] Creando ProgramacionCampana...
+2026-09-21 11:37:00 - INFO - 🟢 [SIMPLE-7] ✅ Registro guardado en DB:
+     ID             = 2
+     estado         = pendiente
+     hora_inicio    = 11:37
+     hora_fin       = 23:36
+     fecha_programada = 2026-09-21 11:37:00
+2026-09-21 11:37:00 - INFO - 🟢 [SIMPLE-8] Registrando job 'wolkvox_simple_2' con run_date=2026-09-21T11:37:00-04:56
+2026-09-21 11:37:00 - INFO - 🟢 [SIMPLE-8] ✅ Job registrado:
+     job.id        = wolkvox_simple_2
+     next_run_time = 2026-09-21 11:37:00-04:56
+     trigger       = date[2026-09-21 11:37:00 LMT]
+2026-09-21 11:37:00 - INFO - 🟢 [SIMPLE-9] Jobs activos en el scheduler (6):
+2026-09-21 11:37:00 - INFO -      - console_message_heartbeat | next_run=2026-09-21 11:37:44.891040-05:00 | trigger=interval[0:01:00]
+2026-09-21 11:37:00 - INFO -      - execute_pending_tasks | next_run=2026-09-21 11:37:44.891096-05:00 | trigger=interval[0:01:00]
+2026-09-21 11:37:00 - INFO -      - wolkvox_schedule_scanner | next_run=2026-09-21 11:37:44.947730-05:00 | trigger=interval[0:01:00]
+2026-09-21 11:37:00 - INFO -      - bigquery_processor_18:00 | next_run=2026-09-21 18:05:00-05:00 | trigger=cron[hour='18', minute='5']
+2026-09-21 11:37:00 - INFO -      - limpiar_campanas_wolkvox_diario | next_run=2026-09-21 20:00:00-05:00 | trigger=cron[hour='20', minute='0']
+2026-09-21 11:37:00 - INFO -      - bigquery_processor_10:41 | next_run=2026-09-22 10:46:00-05:00 | trigger=cron[hour='10', minute='46']
+2026-09-21 11:37:00 - INFO - ✅ [SIMPLE-END] Campaña 2 creada y programada para 2026-09-21T11:37:00-04:56
+2026-09-21 11:37:41 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:37:41 - INFO - Campaña simple 1 ya ejecutada a las 2026-09-21 11:35:44.957870
+2026-09-21 11:37:41 - INFO - Procesando campaña simple 2: prueba
+2026-09-21 11:37:41 - INFO - Campaña simple 2: hora_inicio=11:37, hora_fin=23:36, hora_actual=11:37, fecha_ejecucion=None
+2026-09-21 11:37:41 - INFO - Campaña simple 2 lista para ejecutar: hora_inicio=11:37, hora_fin=23:36, hora_actual=11:37
+2026-09-21 11:37:41 - INFO - Ejecutando campaña simple 2: prueba (tipo: simple)
+2026-09-21 11:37:41 - INFO - 📤 Ejecutando campaña simple 2: prueba
+2026-09-21 11:37:44 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:37:44 - INFO - Campaña simple 1 ya ejecutada a las 2026-09-21 11:35:44.957870
+2026-09-21 11:37:44 - INFO - Procesando campaña simple 2: prueba
+2026-09-21 11:37:44 - INFO - Campaña simple 2: hora_inicio=11:37, hora_fin=23:36, hora_actual=11:37, fecha_ejecucion=None
+2026-09-21 11:37:44 - INFO - Campaña simple 2 lista para ejecutar: hora_inicio=11:37, hora_fin=23:36, hora_actual=11:37
+2026-09-21 11:37:44 - INFO - Ejecutando campaña simple 2: prueba (tipo: simple)
+2026-09-21 11:37:44 - INFO - 📤 Ejecutando campaña simple 2: prueba
+2026-09-21 11:37:45 - INFO - ======================================================================
+2026-09-21 11:37:45 - INFO - 🟢 [SIMPLE-1] Petición recibida en /auto-campaigns/programar
+2026-09-21 11:37:45 - INFO - 🟢 [SIMPLE-1] Payload crudo: {'nombre': 'prueba', 'bigquery_query': "SELECT\n\n    -- ═══════════════════════════════════════\n    -- DATOS PRINCIPALES\n    -- ═══════════════════════════════════════\n\n    'PRUEBA_WOLKVOX_001' AS Contaco__c,\n\n    'PRUEBA WOLKVOX' AS Name,\n\n    '953144051619' AS tel1,\n\n    '953144051619' AS tel2,\n\n    '953144051619' AS tel3,\n\n    '953144051619' AS Telefono_Whatsapp,\n\n    'prueba@qnt.com.co' AS MailPreferente,\n\n\n    -- ═══════════════════════════════════════\n    -- DATOS PARA LOS SLOTS\n    -- ═══════════════════════════════════════\n\n    '30' AS AcuDiaPagoCuotaMensual,\n\n    'M' AS AcuFechaCuota1,\n\n    'COLOMBIA' AS AcuFuenteDeIngresos,\n\n    'CUNDINAMARCA' AS AcuGacsPorcentaje,\n\n    'BOGOTA' AS AcuGacsPorcentajeIva,\n\n    'PRUEBA' AS AcuGacsValorTotal,\n\n    'PRUEBA MORA' AS AcuMotivoMora,\n\n\n    -- ═══════════════════════════════════════\n    -- OPT 1 - 4\n    -- ═══════════════════════════════════════\n\n    '12' AS AcuPlazoAceptado,\n\n    '100000' AS AcuVrCuota1,\n\n    '200000' AS AcuVrCuotaMensual,\n\n    '1200000' AS AcuVrTotalAcuerdo,\n\n\n    -- ═══════════════════════════════════════\n    -- OPT 5 - 6\n    -- ═══════════════════════════════════════\n\n    'BOGOTA' AS Ubicacion_Contacto__c,\n\n    'BOGOTA D.C.' AS UbicacionName__c,\n\n\n    -- ═══════════════════════════════════════\n    -- OPT 7 - 10\n    -- ═══════════════════════════════════════\n\n    'PRUEBA' AS Canal__c,\n\n    CURRENT_DATETIME() AS Fecha_Gestion__c,\n\n    'PRODUCTO PRUEBA' AS OportunityProducts,\n\n\n    -- ═══════════════════════════════════════\n    -- SKILL TELEAMIGO\n    -- ═══════════════════════════════════════\n\n    '168408' AS Skill_TELEAMIGO,\n\n\n    -- ═══════════════════════════════════════\n    -- SALDO CAPITAL\n    -- ═══════════════════════════════════════\n\n    '1500000' AS Saldo_Capital_cliente;", 'wolkvox_campaign_id': '20213', 'server_name': 'operacion-interna', 'campaign_type': 'predictive', 'fecha_programada': '2026-09-21T11:39', 'hora_fin': '12:41'}
+2026-09-21 11:37:45 - INFO - 🟢 [SIMPLE-2] Campos leídos:
+     nombre               = 'prueba'
+     wolkvox_campaign_id  = '20213'
+     server_name          = 'operacion-interna'
+     fecha_programada     = '2026-09-21T11:39'
+     hora_fin             = '12:41'
+     query (primeros 80)  = 'SELECT
+
+    -- ═══════════════════════════════════════
+    -- DATOS PRINCIPALES
+...'
+2026-09-21 11:37:45 - INFO - 🟢 [SIMPLE-3] Validaciones OK
+2026-09-21 11:37:45 - INFO - 🟢 [SIMPLE-4] Parseando fecha: '2026-09-21T11:39'
+2026-09-21 11:37:45 - INFO - 🟢 [SIMPLE-4] Fecha parseada: 2026-09-21 11:39:00 | tzinfo=None
+2026-09-21 11:37:45 - INFO - 🟢 [SIMPLE-4] Sin tzinfo → asignado COLOMBIA_TZ: 2026-09-21 11:39:00-04:56
+2026-09-21 11:37:45 - INFO - 🟢 [SIMPLE-5] Parseando hora_fin: '12:41'
+2026-09-21 11:37:45 - INFO - 🟢 [SIMPLE-5] hora_fin normalizada: '12:41'
+2026-09-21 11:37:45 - INFO - 🟢 [SIMPLE-6] Datos listos para guardar:
+     ahora             = 2026-09-21T11:37:45.587634-05:00
+     run_date (Colombia) = 2026-09-21T11:39:00-04:56
+     hora_inicio       = 11:39
+     hora_fin          = 12:41
+     fecha_programada ISO = 2026-09-21T11:39:00-04:56
+2026-09-21 11:37:45 - INFO - 🟢 [SIMPLE-7] Creando ProgramacionCampana...
+2026-09-21 11:37:45 - INFO - 🟢 [SIMPLE-7] ✅ Registro guardado en DB:
+     ID             = 3
+     estado         = pendiente
+     hora_inicio    = 11:39
+     hora_fin       = 12:41
+     fecha_programada = 2026-09-21 11:39:00
+2026-09-21 11:37:45 - INFO - 🟢 [SIMPLE-8] Registrando job 'wolkvox_simple_3' con run_date=2026-09-21T11:39:00-04:56
+2026-09-21 11:37:45 - INFO - 🟢 [SIMPLE-8] ✅ Job registrado:
+     job.id        = wolkvox_simple_3
+     next_run_time = 2026-09-21 11:39:00-04:56
+     trigger       = date[2026-09-21 11:39:00 LMT]
+2026-09-21 11:37:45 - INFO - 🟢 [SIMPLE-9] Jobs activos en el scheduler (6):
+2026-09-21 11:37:45 - INFO -      - console_message_heartbeat | next_run=2026-09-21 11:38:44.891040-05:00 | trigger=interval[0:01:00]
+2026-09-21 11:37:45 - INFO -      - execute_pending_tasks | next_run=2026-09-21 11:38:44.891096-05:00 | trigger=interval[0:01:00]
+2026-09-21 11:37:45 - INFO -      - wolkvox_schedule_scanner | next_run=2026-09-21 11:38:44.947730-05:00 | trigger=interval[0:01:00]
+2026-09-21 11:37:45 - INFO -      - bigquery_processor_18:00 | next_run=2026-09-21 18:05:00-05:00 | trigger=cron[hour='18', minute='5']
+2026-09-21 11:37:45 - INFO -      - limpiar_campanas_wolkvox_diario | next_run=2026-09-21 20:00:00-05:00 | trigger=cron[hour='20', minute='0']
+2026-09-21 11:37:45 - INFO -      - bigquery_processor_10:41 | next_run=2026-09-22 10:46:00-05:00 | trigger=cron[hour='10', minute='46']
+2026-09-21 11:37:45 - INFO - ✅ [SIMPLE-END] Campaña 3 creada y programada para 2026-09-21T11:39:00-04:56
+2026-09-21 11:37:51 - INFO - 📊 Campaña simple 2 actualizada: 1 destinatarios
+2026-09-21 11:37:55 - INFO - 📊 Campaña simple 2 actualizada: 1 destinatarios
+2026-09-21 11:38:41 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:38:41 - INFO - Campaña simple 1 ya ejecutada a las 2026-09-21 11:35:44.957870
+2026-09-21 11:38:41 - INFO - Procesando campaña simple 2: prueba
+2026-09-21 11:38:41 - INFO - Campaña simple 2 ya ejecutada a las 2026-09-21 11:37:44.962056
+2026-09-21 11:38:41 - INFO - Procesando campaña simple 3: prueba
+2026-09-21 11:38:41 - INFO - Campaña simple 3: hora_inicio=11:39, hora_fin=12:41, hora_actual=11:38, fecha_ejecucion=None
+2026-09-21 11:38:44 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:38:44 - INFO - Campaña simple 1 ya ejecutada a las 2026-09-21 11:35:44.957870
+2026-09-21 11:38:44 - INFO - Procesando campaña simple 2: prueba
+2026-09-21 11:38:44 - INFO - Campaña simple 2 ya ejecutada a las 2026-09-21 11:37:44.962056
+2026-09-21 11:38:44 - INFO - Procesando campaña simple 3: prueba
+2026-09-21 11:38:44 - INFO - Campaña simple 3: hora_inicio=11:39, hora_fin=12:41, hora_actual=11:38, fecha_ejecucion=None
+2026-09-21 11:39:41 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:39:41 - INFO - Campaña simple 1 ya ejecutada a las 2026-09-21 11:35:44.957870
+2026-09-21 11:39:41 - INFO - Procesando campaña simple 2: prueba
+2026-09-21 11:39:41 - INFO - Campaña simple 2 ya ejecutada a las 2026-09-21 11:37:44.962056
+2026-09-21 11:39:41 - INFO - Procesando campaña simple 3: prueba
+2026-09-21 11:39:41 - INFO - Campaña simple 3: hora_inicio=11:39, hora_fin=12:41, hora_actual=11:39, fecha_ejecucion=None
+2026-09-21 11:39:41 - INFO - Campaña simple 3 lista para ejecutar: hora_inicio=11:39, hora_fin=12:41, hora_actual=11:39
+2026-09-21 11:39:41 - INFO - Ejecutando campaña simple 3: prueba (tipo: simple)
+2026-09-21 11:39:41 - INFO - 📤 Ejecutando campaña simple 3: prueba
+2026-09-21 11:39:44 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:39:44 - INFO - Campaña simple 1 ya ejecutada a las 2026-09-21 11:35:44.957870
+2026-09-21 11:39:44 - INFO - Procesando campaña simple 2: prueba
+2026-09-21 11:39:44 - INFO - Campaña simple 2 ya ejecutada a las 2026-09-21 11:37:44.962056
+2026-09-21 11:39:44 - INFO - Procesando campaña simple 3: prueba
+2026-09-21 11:39:44 - INFO - Campaña simple 3: hora_inicio=11:39, hora_fin=12:41, hora_actual=11:39, fecha_ejecucion=None
+2026-09-21 11:39:44 - INFO - Campaña simple 3 lista para ejecutar: hora_inicio=11:39, hora_fin=12:41, hora_actual=11:39
+2026-09-21 11:39:44 - INFO - Ejecutando campaña simple 3: prueba (tipo: simple)
+2026-09-21 11:39:44 - INFO - 📤 Ejecutando campaña simple 3: prueba
+2026-09-21 11:39:53 - INFO - 📊 Campaña simple 3 actualizada: 1 destinatarios
+2026-09-21 11:39:58 - INFO - 📊 Campaña simple 3 actualizada: 1 destinatarios
+2026-09-21 11:40:41 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:40:41 - INFO - Campaña simple 1 ya ejecutada a las 2026-09-21 11:35:44.957870
+2026-09-21 11:40:41 - INFO - Procesando campaña simple 2: prueba
+2026-09-21 11:40:41 - INFO - Campaña simple 2 ya ejecutada a las 2026-09-21 11:37:44.962056
+2026-09-21 11:40:41 - INFO - Procesando campaña simple 3: prueba
+2026-09-21 11:40:41 - INFO - Campaña simple 3 ya ejecutada a las 2026-09-21 11:39:44.963386
+2026-09-21 11:40:44 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:40:44 - INFO - Campaña simple 1 ya ejecutada a las 2026-09-21 11:35:44.957870
+2026-09-21 11:40:44 - INFO - Procesando campaña simple 2: prueba
+2026-09-21 11:40:44 - INFO - Campaña simple 2 ya ejecutada a las 2026-09-21 11:37:44.962056
+2026-09-21 11:40:44 - INFO - Procesando campaña simple 3: prueba
+2026-09-21 11:40:44 - INFO - Campaña simple 3 ya ejecutada a las 2026-09-21 11:39:44.963386
+2026-09-21 11:41:41 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:41:41 - INFO - Campaña simple 1 ya ejecutada a las 2026-09-21 11:35:44.957870
+2026-09-21 11:41:41 - INFO - Procesando campaña simple 2: prueba
+2026-09-21 11:41:41 - INFO - Campaña simple 2 ya ejecutada a las 2026-09-21 11:37:44.962056
+2026-09-21 11:41:41 - INFO - Procesando campaña simple 3: prueba
+2026-09-21 11:41:41 - INFO - Campaña simple 3 ya ejecutada a las 2026-09-21 11:39:44.963386
+2026-09-21 11:41:44 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:41:44 - INFO - Campaña simple 1 ya ejecutada a las 2026-09-21 11:35:44.957870
+2026-09-21 11:41:44 - INFO - Procesando campaña simple 2: prueba
+2026-09-21 11:41:44 - INFO - Campaña simple 2 ya ejecutada a las 2026-09-21 11:37:44.962056
+2026-09-21 11:41:44 - INFO - Procesando campaña simple 3: prueba
+2026-09-21 11:41:44 - INFO - Campaña simple 3 ya ejecutada a las 2026-09-21 11:39:44.963386
+2026-09-21 11:42:41 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:42:41 - INFO - Campaña simple 1 ya ejecutada a las 2026-09-21 11:35:44.957870
+2026-09-21 11:42:41 - INFO - Procesando campaña simple 2: prueba
+2026-09-21 11:42:41 - INFO - Campaña simple 2 ya ejecutada a las 2026-09-21 11:37:44.962056
+2026-09-21 11:42:41 - INFO - Procesando campaña simple 3: prueba
+2026-09-21 11:42:41 - INFO - Campaña simple 3 ya ejecutada a las 2026-09-21 11:39:44.963386
+2026-09-21 11:42:44 - INFO - Procesando campaña simple 1: prueba
+2026-09-21 11:42:44 - INFO - Campaña simple 1 ya ejecutada a las 2026-09-21 11:35:44.957870
+2026-09-21 11:42:44 - INFO - Procesando campaña simple 2: prueba
+2026-09-21 11:42:44 - INFO - Campaña simple 2 ya ejecutada a las 2026-09-21 11:37:44.962056
+2026-09-21 11:42:44 - INFO - Procesando campaña simple 3: prueba
+2026-09-21 11:42:44 - INFO - Campaña simple 3 ya ejecutada a las 2026-09-21 11:39:44.963386
