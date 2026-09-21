@@ -17,74 +17,26 @@ logger = logging.getLogger(__name__)
 # Mapeo de aliases variados → campo estándar
 # Cada campo estándar acepta múltiples variaciones (case-insensitive)
 FIELD_ALIASES = {
+    # ═══════════ Identidad del cliente ═══════════
     "customer_name": [
-        "customer_name", "nombre", "customer_nombre",
-        "nombre_cliente", "nombreclient", "first_name",
-        "nombre_clientee", "initcap_nombre"
+        "name",                     # ⚠️ el que lees en el cargue
+        "customer_name", "nombre", "nombre_cliente",
+        "nombreclient", "first_name", "initcap_nombre",
+    ],
+    "customer_id": [
+        "contaco__c",               # ⚠️ el que lees (con una sola "t")
+        "customer_id", "contacto__c", "contacto",
+        "cliente_id", "id_cliente", "customer_code",
     ],
     "customer_last_name": [
         "customer_last_name", "apellido", "last_name",
-        "apellido_cliente", "surname"
+        "apellido_cliente", "surname",
     ],
-    "id_type": [
-        "id_type", "tipoid", "tipo_id", "tipo_documento",
-        "id_documento", "document_type"
-    ],
-    "customer_id": [
-        "customer_id", "contacto__c", "contacto",
-        "cliente_id", "id_cliente", "customer_code"
-    ],
-    "age": [
-        "age", "edad", "años", "age_years"
-    ],
-    "gender": [
-        "gender", "sexo", "genero__c", "genero", "género",
-        "sex", "male_female"
-    ],
-    "country": [
-        "country", "pais", "país", "country_code"
-    ],
-    "state": [
-        "state", "departamento", "depto", "provincia",
-        "state_code"
-    ],
-    "city": [
-        "city", "ciudad", "municipio", "town"
-    ],
-    "zone": [
-        "zone", "zona", "area", "region"
-    ],
-    "address": [
-        "address", "direccion", "dirección", "street",
-        "full_address"
-    ],
-    "opt1": [
-        "opt1", "opcion1", "option1", "operado_por__c",
-        "operado_por", "operador", "campaign_id"
-    ],
-    "opt2": [
-        "opt2", "opcion2", "option2", "row_number",
-        "rownum"
-    ],
-    "opt3": [
-        "opt3", "opcion3", "option3", "saldo_capital_cliente",
-        "saldo", "balance"
-    ],
-    "opt4": ["opt4", "opcion4", "option4"],
-    "opt5": [
-        "opt5", "opcion5", "option5", "barridos_tel",
-        "barridos", "attempts"
-    ],
-    "opt6": ["opt6", "opcion6", "option6"],
-    "opt7": ["opt7", "opcion7", "option7"],
-    "opt8": ["opt8", "opcion8", "option8"],
-    "opt9": ["opt9", "opcion9", "option9"],
-    "opt10": ["opt10", "opcion10", "option10"],
-    "opt11": ["opt11", "opcion11", "option11"],
-    "opt12": ["opt12", "opcion12", "option12"],
+
+    # ═══════════ Contacto ═══════════
     "tel1": [
         "tel1", "telefono_1", "telefono1", "phone1",
-        "telefono", "phone", "telephone1"
+        "telefono", "phone", "telephone1",
     ],
     "tel2": ["tel2", "telefono_2", "telefono2", "phone2", "telephone2"],
     "tel3": ["tel3", "telefono_3", "telefono3", "phone3", "telephone3"],
@@ -94,35 +46,118 @@ FIELD_ALIASES = {
     "tel7": ["tel7", "telefono_7", "telefono7", "phone7", "telephone7"],
     "tel8": ["tel8", "telefono_8", "telefono8", "phone8", "telephone8"],
     "tel9": ["tel9", "telefono_9", "telefono9", "phone9", "telephone9"],
-    "tel10": [
-        "tel10", "telefono_10", "telefono10", "phone10",
-        "telephone10"
-    ],
+    "tel10": ["tel10", "telefono_10", "telefono10", "phone10", "telephone10"],
     "tel_extra": [
-        "tel_extra", "otrostel", "otros_tel", "extra_phone",
-        "phone_extra", "additional_phone"
+        "tel_extra", "otrostel", "otros_tel",
+        "extra_phone", "phone_extra", "additional_phone",
     ],
     "email": [
         "email", "email_1", "email1", "correo",
-        "correo_electronico", "e_mail"
+        "correo_electronico", "e_mail",
     ],
+
+    # ═══════════ Slots propios ═══════════
+    "age": [
+        "age", "edad", "años", "age_years",
+        "acudiapagocuotamensual",   # ⚠️ columna del cargue
+    ],
+    "gender": [
+        "gender", "sexo", "genero", "género", "sex", "male_female",
+        "acufechacuota1",           # ⚠️
+    ],
+    "country": [
+        "country", "pais", "país", "country_code",
+        "acufuentedeingresos",      # ⚠️
+    ],
+    "state": [
+        "state", "departamento", "depto", "provincia", "state_code",
+        "acugacs_porcentaje",       # ⚠️
+        "acugacsporcentaje",        # ⚠️ (sin guion)
+    ],
+    "city": [
+        "city", "ciudad", "municipio", "town",
+        "acugacs_porcentaje_iva",   # ⚠️
+        "acugacsporcentajeiva",     # ⚠️ (sin guion)
+    ],
+    "zone": [
+        "zone", "zona", "area", "region",
+        "acugacs_valortotal",       # ⚠️
+        "acugacsvalortotal",        # ⚠️
+    ],
+    "address": [
+        "address", "direccion", "dirección", "street", "full_address",
+        "acumotivomora",            # ⚠️
+    ],
+
+    # ═══════════ Opts ═══════════
+    "opt1": [
+        "opt1", "opcion1", "option1",
+        "acuplazoaceptado",         # ⚠️
+    ],
+    "opt2": [
+        "opt2", "opcion2", "option2",
+        "acuvrcuota1",              # ⚠️
+    ],
+    "opt3": [
+        "opt3", "opcion3", "option3",
+        "acuvrcuotamensual",        # ⚠️
+    ],
+    "opt4": [
+        "opt4", "opcion4", "option4",
+        "acuvrtotalacuerdo",        # ⚠️
+    ],
+    "opt5": [
+        "opt5", "opcion5", "option5",
+        "ubicacion_contacto__c",    # ⚠️
+    ],
+    "opt6": [
+        "opt6", "opcion6", "option6",
+        "ubicacionname__c",         # ⚠️
+    ],
+    "opt7": [
+        "opt7", "opcion7", "option7",
+        "saldo_capital_cliente",    # ⚠️
+    ],
+    "opt8": [
+        "opt8", "opcion8", "option8",
+        "fecha_gestion__c",         # ⚠️
+    ],
+    "opt9": [
+        "opt9", "opcion9", "option9",
+        "oportunityproducts",       # ⚠️
+    ],
+    "opt10": [
+        "opt10", "opcion10", "option10",
+        "skill_teleamigo",          # ⚠️
+    ],
+    "opt11": [
+        "opt11", "opcion11", "option11",
+        "saldo_capital_cliente",    # ⚠️ (mismo dato que opt7, en letras)
+    ],
+    "opt12": [
+        "opt12", "opcion12", "option12",
+        "valor_oferta_texto",       # ⚠️ el que lees en el cargue
+        "valor_oferta",             # variante por si acaso
+    ],
+
+    # ═══════════ Recall ═══════════
     "recall_date": [
         "recall_date", "date_recall", "fecha_recall",
-        "recall_fecha", "fecha_recordatorio"
+        "recall_fecha", "fecha_recordatorio",
     ],
     "recall_telephone": [
         "recall_telephone", "tel_recall", "telefono_recall",
-        "recall_tel", "telefono_recordatorio"
+        "recall_tel", "telefono_recordatorio",
     ],
 }
 
 # Campos requeridos (si faltan → error)
 REQUIRED_FIELDS = {
-    "customer_name",
-    "customer_id",
-}
+    "customer_name",   # viene de `Name`
+    "customer_id",     # viene de `Contaco__c`
+}# Campos requeridos (si faltan → error)
 
-# Campos opcionales pero útiles
+
 OPTIONAL_FIELDS = set(FIELD_ALIASES.keys()) - REQUIRED_FIELDS
 
 

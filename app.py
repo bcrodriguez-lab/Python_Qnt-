@@ -1010,6 +1010,7 @@ def sms_validar():
     except Exception as exc:
         logger.exception("Error en validación SMS")
         return jsonify({"success": False, "message": str(exc)}), 500
+    
 
 def registrar_resumen_sms(campaign, usuario, query, plantilla, total, enviados, fallidos, estado):
     """Registra un resumen del envío en el log (no interrumpe el flujo)."""
@@ -2448,13 +2449,143 @@ def validar_consulta_wolkvox(query):
         "a_enviar": a_enviar
     }
 
-from backend import limpiar_campana_wolkvox_por_id
+
+
+def numero_a_letras_es(numero):
+    """
+    Convierte un número entero a su representación en letras en español.
+    Soporta hasta 999,999,999,999 (miles de millones).
+
+    Ejemplos:
+        100000     -> "cien mil"
+        407815     -> "cuatrocientos siete mil ochocientos quince"
+        989597     -> "novecientos ochenta y nueve mil quinientos noventa y siete"
+        1500000    -> "un millón quinientos mil"
+    """
+    if numero is None:
+        return ""
+
+    # Convertir a entero si viene como string o float
+    try:
+        numero = int(float(str(numero).replace(',', '').replace('.', '').strip()))
+    except (ValueError, TypeError):
+        return ""
+
+    if numero == 0:
+        return "cero"
+
+    if numero < 0:
+        return "menos " + numero_a_letras_es(abs(numero))
+
+    # ═══ Diccionarios base ═══
+    UNIDADES = [
+        "", "uno", "dos", "tres", "cuatro", "cinco",
+        "seis", "siete", "ocho", "nueve", "diez",
+        "once", "doce", "trece", "catorce", "quince",
+        "dieciséis", "diecisiete", "dieciocho", "diecinueve",
+        "veinte", "veintiuno", "veintidós", "veintitrés",
+        "veinticuatro", "veinticinco", "veintiséis",
+        "veintisiete", "veintiocho", "veintinueve"
+    ]
+    DECENAS = [
+        "", "", "", "treinta", "cuarenta", "cincuenta",
+        "sesenta", "setenta", "ochenta", "noventa"
+    ]
+    CENTENAS = [
+        "", "ciento", "doscientos", "trescientos", "cuatrocientos",
+        "quinientos", "seiscientos", "setecientos", "ochocientos", "novecientos"
+    ]
+
+    def _convertir_centenas(n):
+        """Convierte de 0 a 999."""
+        if n == 0:
+            return ""
+        if n == 100:
+            return "cien"
+        if n < 30:
+            return UNIDADES[n]
+
+        c = n // 100
+        resto = n % 100
+
+        if c == 0:
+            d = n // 10
+            u = n % 10
+            if u == 0:
+                return DECENAS[d]
+            return f"{DECENAS[d]} y {UNIDADES[u]}"
+
+        resultado = CENTENAS[c]
+        if resto > 0:
+            if resto < 30:
+                resultado += f" {UNIDADES[resto]}"
+            else:
+                d = resto // 10
+                u = resto % 10
+                if u == 0:
+                    resultado += f" {DECENAS[d]}"
+                else:
+                    resultado += f" {DECENAS[d]} y {UNIDADES[u]}"
+        return resultado
+
+    def _apocope(texto):
+        """Ajusta 'uno' -> 'un' antes de 'mil' o 'millón'."""
+        if texto.endswith("uno"):
+            return texto[:-3] + "un"
+        if texto == "uno":
+            return "un"
+        return texto
+
+    # ═══ Casos ═══
+    if numero < 1000:
+        return _convertir_centenas(numero)
+
+    if numero < 1_000_000:
+        miles = numero // 1000
+        resto = numero % 1000
+        if miles == 1:
+            texto = "mil"
+        else:
+            texto = _apocope(_convertir_centenas(miles)) + " mil"
+        if resto > 0:
+            texto += " " + _convertir_centenas(resto)
+        return texto
+
+    if numero < 1_000_000_000:
+        millones = numero // 1_000_000
+        resto = numero % 1_000_000
+        if millones == 1:
+            texto = "un millón"
+        else:
+            texto = _apocope(_convertir_centenas(millones)) + " millones"
+        if resto > 0:
+            texto += " " + numero_a_letras_es(resto)
+        return texto
+
+    if numero < 1_000_000_000_000:
+        miles_millones = numero // 1_000_000_000
+        resto = numero % 1_000_000_000
+        if miles_millones == 1:
+            texto = "mil millones"
+        else:
+            texto = _apocope(_convertir_centenas(miles_millones)) + " mil millones"
+        if resto > 0:
+            texto += " " + numero_a_letras_es(resto)
+        return texto
+
+    return str(numero)
+
+
 def Cargue_Wolkvox(campaign, token):
     """
     Formatea registros y envía a Wolkvox en lotes.
     Limpia la campaña antes de cargar para evitar acumulación.
-    Usa validar_consulta_wolkvox para obtener registros válidos.
+    opt11 y opt12 se envían como texto (números en letras).
     """
+    from backend import limpiar_campana_wolkvox_por_id
+    from datetime import datetime
+    import json as _json
+
     # 1. Validar consulta
     validacion = validar_consulta_wolkvox(campaign.bigquery_query)
     registros_validos = validacion["registros_validos"]
@@ -2462,119 +2593,159 @@ def Cargue_Wolkvox(campaign, token):
     if not registros_validos:
         raise ValueError("Todos los registros fueron bloqueados por lista negra.")
 
-    # 🆕 1.1 LIMPIAR la campaña antes de cargar nuevos datos
-    logger.info(
-        f"🧹 Limpiando campaña {campaign.wolkvox_campaign_id} "
-        f"en {campaign.server_name} antes de cargar..."
-    )
+    # 1.1 Limpiar campaña antes de cargar
+    logger.info(f"🧹 Limpiando campaña {campaign.wolkvox_campaign_id} en {campaign.server_name}...")
     limpieza_ok = limpiar_campana_wolkvox_por_id(
         server_name=campaign.server_name,
         campaign_id=campaign.wolkvox_campaign_id,
         token=token,
     )
     if not limpieza_ok:
-        logger.warning(
-            f"⚠️ No se pudo limpiar la campaña {campaign.wolkvox_campaign_id}. "
-            f"Se continuará con el cargue (podrían acumularse registros)."
-        )
+        logger.warning(f"⚠️ No se pudo limpiar campaña {campaign.wolkvox_campaign_id}")
 
-    # 2. Formatear registros
+    # ═══════════ HELPERS ═══════════
+    def formatear_telefono(telefono):
+        """Wolkvox exige teléfonos con prefijo 9157."""
+        telefono = re.sub(r'[^0-9]', '', str(telefono))
+        
+        if telefono.startswith('57'):
+            telefono = telefono[2:]
+        if telefono.startswith('+57'):
+            telefono = telefono[3:]
+     
+        return f"{telefono}"
+
+    def _clean(val, default=''):
+        if val is None:
+            return default
+        s = str(val).strip()
+        return default if s in ('nan', 'None', 'NaT', 'NoneType', '') else s
+
+    def normalizar_gender(val):
+        """Wolkvox espera M / F / O. No fechas."""
+        s = _clean(val).upper()
+        if s.startswith('M') or s in ('MASCULINO', 'HOMBRE', 'MALE'):
+            return "M"
+        if s.startswith('F') or s in ('FEMENINO', 'MUJER', 'FEMALE'):
+            return "F"
+        return "O"
+
+    def formatear_recall_date(val):
+        """Wolkvox espera YYYYmmddHHiiss."""
+        s = _clean(val)
+        if s and s.isdigit() and len(s) == 14:
+            return s
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S",
+                    "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(s[:len(fmt) + 2], fmt).strftime("%Y%m%d%H%M%S")
+            except (ValueError, TypeError):
+                continue
+        return datetime.now().strftime("%Y%m%d%H%M%S")
+
+    # ═══════════ 2. Formatear registros ═══════════
     records = []
     for idx, row in enumerate(registros_validos):
 
-        def formatear_telefono(telefono):
-            telefono = re.sub(r'[^0-9]', '', str(telefono))
-            if not telefono:
-                return "91570000000000"
-            if telefono.startswith('57'):
-                telefono = telefono[2:]
-            if telefono.startswith('+57'):
-                telefono = telefono[3:]
-            return f"{telefono}"
+        Contaco__c = _clean(row.get('Contaco__c', ''))
+        if not Contaco__c:
+            Contaco__c = _clean(row.get('tel1', '')) or f"CLI-{idx}"
 
-        customer_id = str(row.get('customer_id', '')).strip()
-        if not customer_id or customer_id in ('nan', 'None'):
-            customer_id = str(row.get('tel1', f"CLI-{idx}")).strip()
-            if not customer_id or customer_id in ('nan', 'None'):
-                customer_id = f"CLI-{idx}"
+        telefono_formateado = formatear_telefono(row.get('tel1', ''))
+        Name = _clean(row.get('Name', '')) or 'Sin Nombre'
 
-        telefono_formateado = formatear_telefono(str(row.get('tel1', '')).strip())
 
-        nombre = str(row.get('customer_name', '')).strip()
-        if not nombre or nombre in ('nan', 'None'):
-            nombre = 'Sin Nombre'
+        saldo_raw = row.get('Saldo_Capital_cliente', '')
+        opt7_valor  = _clean(saldo_raw)                    # string crudo para opt7
+        opt11_valor = numero_a_letras_es(saldo_raw) 
 
-        apellido = str(row.get('customer_last_name', '')).strip()
-        if apellido in ('nan', 'None'):
-            apellido = ''
+        valor_oferta = row.get('AcuVrTotalAcuerdo', '')
+        opt4_valor = _clean(valor_oferta)
+        opt12_valor = numero_a_letras_es(valor_oferta)
 
-        email = str(row.get('email', '')).strip()
-        if email in ('nan', 'None'):
-            email = ''
+        apellido = _clean(row.get('customer_last_name', ''))
+        MailPreferente = _clean(row.get('MailPreferente', ''))
 
         record = {
-            "customer_name": nombre,
+            # ═══ Base ═══
+            "customer_name": Name,
             "customer_last_name": apellido,
             "id_type": "CC",
-            "customer_id": customer_id,
+            "customer_id": Contaco__c,
             "tel1": telefono_formateado,
-            "tel2": "", "tel3": "", "tel4": "", "tel5": "",
+            "tel2": _clean(row.get('Telefono_2', '')),
+            "tel3": _clean(row.get('Telefono_3', '')),
+            "tel4": _clean(row.get('Telefono_Whatsapp', '')),
+            "tel5": "",
             "tel6": "", "tel7": "", "tel8": "", "tel9": "", "tel10": "",
             "tel_extra": "",
-            "email": email,
-            "age": "", "gender": "", "country": "", "state": "",
-            "city": "", "zone": "", "address": "",
-            "opt1": str(row.get('fecha_pago', '')),
-            "opt2": str(row.get('valor_pagar', '')),
-            "opt3": str(row.get('segmento', '')),
-            "opt4": str(row.get('empresa', '')),
-            "opt5": str(row.get('fecha_pago_2', '')),
-            "opt6": str(row.get('valor_pagar_2', '')),
-            "opt7": str(row.get('valor_oferta_esp', '')),
-            "opt8": str(row.get('valor_oferta_esp_2', '')),
-            "opt9": str(row.get('cuotas', '')),
-            "opt10": str(row.get('porcentaje', '')),
-            "opt11": str(row.get('porcentaje_2', '')),
-            "opt12": str(row.get('link_pago', '')),
-            "recall_date": "",
-            "recall_telephone": ""
+            "email": MailPreferente,
+
+            # ═══ Slots propios (reutilizados para PaymentAgreement) ═══
+            "age":     _clean(row.get('AcuDiaPagoCuotaMensual', '')),  
+            "gender":  normalizar_gender(row.get('AcuFechaCuota1', '')), 
+            "country": _clean(row.get('AcuFuenteDeIngresos', '')) or "COL",  
+            "state":   _clean(row.get('AcuGacsPorcentaje', '')),        
+            "city":    _clean(row.get('AcuGacsPorcentajeIva', '')),     
+            "zone":    _clean(row.get('AcuGacsValorTotal', '')),        
+            "address": _clean(row.get('AcuMotivoMora', '')),            
+
+            # ═══ Opts 1-10 ═══
+            "opt1":  _clean(row.get('AcuPlazoAceptado', '')),
+            "opt2":  _clean(row.get('AcuVrCuota1', '')),
+            "opt3":  _clean(row.get('AcuVrCuotaMensual', '')),
+            "opt4":  opt4_valor,
+            "opt5":  _clean(row.get('Ubicacion_Contacto__c', '')),
+            "opt6":  _clean(row.get('UbicacionName__c', '')),
+
+
+            "opt7":  opt7_valor,
+            "opt8":  _clean(row.get('Fecha_Gestion__c', '')),
+            "opt9":  _clean(row.get('OportunityProducts', '')),
+            "opt10": _clean(row.get('Skill_TELEAMIGO', '')),   
+
+            # ═══ opt11 y opt12: números en LETRAS ═══
+            "opt11": opt11_valor,
+            "opt12": opt12_valor,
+
+            # ═══ Recall (formato YYYYmmddHHiiss) ═══
+            "recall_date":      formatear_recall_date(row.get('recall_date', '')),
+            "recall_telephone": formatear_telefono(
+                                    _clean(row.get('recall_telephone', ''))
+                                    or row.get('tel1', '')
+                                ),
         }
         records.append(record)
 
-    # 2.1 CONSTRUIR SEÑUELOS
+    # ═══════════ 3. Señuelos ═══════════
     senuelos_data_ = [
-        #("Camilo", "3015007868","10000000000"),
+        # ("Camilo", "3015007868", "10000000000"),
     ]
     logger.info(f"Agregando {len(senuelos_data_)} señuelos a la campaña {campaign.name} (ID: {campaign.id})")
-    start_id = len(records) + 1
 
-    # 🆕 Fix: variables apellido/email usadas en señuelos podían no existir
-    apellido = ''
-    email = ''
-    for i, (nombre, telefono, customer_id) in enumerate(senuelos_data_, start=start_id):
-        telefono_formateado = formatear_telefono(telefono)
-        Señuelos = {
-            "customer_name": nombre,
-            "customer_last_name": apellido,
+    start_id = len(records) + 1
+    for i, (nombre_s, telefono_s, customer_id_s) in enumerate(senuelos_data_, start=start_id):
+        senuelo = {
+            "customer_name": nombre_s,
+            "customer_last_name": "",
             "id_type": "CC",
-            "customer_id": customer_id,
-            "tel1": telefono_formateado,
+            "customer_id": customer_id_s,
+            "tel1": formatear_telefono(telefono_s),
             "tel2": "", "tel3": "", "tel4": "", "tel5": "",
             "tel6": "", "tel7": "", "tel8": "", "tel9": "", "tel10": "",
-            "tel_extra": "",
-            "email": email,
-            "age": "", "gender": "", "country": "", "state": "",
-            "city": "", "zone": "", "address": "",
+            "tel_extra": "", "email": "",
+            "age": "30", "gender": "O", "country": "COL",
+            "state": "", "city": "", "zone": "", "address": "",
             "opt1": "", "opt2": "", "opt3": "", "opt4": "",
-            "opt5": "", "opt6": "", "opt7": "", "opt8": "",
-            "opt9": "", "opt10": "", "opt11": "", "opt12": "",
-            "recall_date": "",
-            "recall_telephone": ""
+            "opt5": "", "opt6": "", "opt7": "", "opt8": "", "opt9": "",
+            "opt10": "", "opt11": "", "opt12": "",
+            "recall_date": datetime.now().strftime("%Y%m%d%H%M%S"),
+            "recall_telephone": formatear_telefono(telefono_s),
         }
-        records.append(Señuelos)
-        logger.info(f"Señuelo agregado: {nombre}, {telefono_formateado}, {customer_id}")
+        records.append(senuelo)
+        logger.info(f"Señuelo agregado: {nombre_s}, {telefono_s}, {customer_id_s}")
 
-    # 3. Construir URL de Wolkvox
+    # ═══════════ 4. URL Wolkvox ═══════════
     server_mapping = {
         "operacion-interna": "https://wv0016.wolkvox.com",
         "qnt_digital": "https://wv0010.wolkvox.com/",
@@ -2584,7 +2755,6 @@ def Cargue_Wolkvox(campaign, token):
         "Qnt_recaudo_blaster": "https://wv0016.wolkvox.com",
     }
     server_url = server_mapping.get(campaign.server_name, "https://wv0016.wolkvox.com")
-
     url = f"{server_url}/api/v2/campaign.php"
     params = {
         "api": "add_record",
@@ -2593,7 +2763,11 @@ def Cargue_Wolkvox(campaign, token):
         "campaign_status": "1"
     }
 
-    # 4. Enviar en lotes
+    # ═══════════ 5. Debug del primer registro ═══════════
+    if records:
+        logger.info(f"📤 PAYLOAD PRIMER REGISTRO:\n{_json.dumps(records[0], indent=2, ensure_ascii=False, default=str)}")
+
+    # ═══════════ 6. Enviar en lotes ═══════════
     headers = {"wolkvox-token": token, "Content-Type": "application/json"}
     batch_size = 100
     total_enviados = 0
@@ -2603,24 +2777,26 @@ def Cargue_Wolkvox(campaign, token):
         batch = records[i:i+batch_size]
         try:
             response = requests.post(url, params=params, headers=headers, json=batch, timeout=60)
+            logger.info(f"📥 Wolkvox HTTP {response.status_code}: {response.text[:1500]}")
+
             if response.status_code in [200, 201]:
                 total_enviados += len(batch)
+                logger.info(f"✅ Lote {i//batch_size + 1}: {len(batch)} registros enviados")
             else:
-                errores.append({
-                    "status": response.status_code,
-                    "response": response.text[:500]
-                })
+                errores.append({"status": response.status_code, "response": response.text[:500]})
+                logger.warning(f"❌ Lote {i//batch_size + 1}: HTTP {response.status_code}")
         except Exception as e:
             errores.append({"error": str(e)})
+            logger.warning(f"❌ Lote {i//batch_size + 1}: Error {str(e)}")
 
-    # 5. Guardar en WolkvoxLog
+    # ═══════════ 7. Guardar WolkvoxLog ═══════════
     if records:
         try:
             guardar_wolkvox_log(bq_client, records, campaign, usuario='sistema')
         except Exception as e:
             logger.warning(f"Error guardando WolkvoxLog: {e}")
 
-    # 6. Devolver resultado
+    # ═══════════ 8. Devolver resultado ═══════════
     return {
         "success": len(errores) == 0,
         "records_sent": total_enviados,
@@ -2630,9 +2806,10 @@ def Cargue_Wolkvox(campaign, token):
         "duplicados": validacion["duplicados"],
         "invalidos": validacion["invalidos"],
         "errors": errores,
-        "limpieza_previa": limpieza_ok,   # 🆕 informativo
+        "limpieza_previa": limpieza_ok,
         "message": f"{total_enviados} registros cargados. {validacion['lista_negra']} bloqueados."
     }
+
 
 
 @app.route("/api/wolkvox/validar", methods=["POST"])
@@ -2744,8 +2921,7 @@ def campaigns_schedule_simple():
         run_date = datetime.fromisoformat(fecha_programada)
         if run_date.tzinfo is None:
             run_date = run_date.replace(tzinfo=COLOMBIA_TZ)
-        if run_date <= datetime.now(COLOMBIA_TZ):
-            return jsonify({"success": False, "message": "La fecha debe ser futura."}), 400
+  
 
         try:
             hora_fin = datetime.strptime(hora_terminar, "%H:%M").strftime("%H:%M")
@@ -2848,7 +3024,7 @@ def campaigns_schedule_recurrent():
         scheduler.add_job(
             execute_wolkvox_schedule,
             trigger="interval",
-            hours=10,
+            minutes=10,
             id=f"wolkvox_recurrente_{nueva.id}",
             replace_existing=True
         )

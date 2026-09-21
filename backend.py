@@ -254,9 +254,15 @@ app.config["DOWNLOAD_FOLDER"] = str(DOWNLOAD_FOLDER)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{BASE_DIR / 'app.db'}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+import pytz
 
 init_db(app)
 scheduler = BackgroundScheduler()
+COLOMBIA_TZ = pytz.timezone("America/Bogota")
+
+scheduler = BackgroundScheduler(
+    timezone=COLOMBIA_TZ
+)
 scheduler.start()
 for job in scheduler.get_jobs():
     if job.id.startswith('wolkvox_'):
