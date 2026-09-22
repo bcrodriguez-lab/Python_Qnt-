@@ -2346,17 +2346,13 @@ def auto_campaigns_validate_query_fields():
         return jsonify({"success": False, "message": str(exc)}), 500
 
 
+def validar_consulta_wolkvox(query, excluir_duplicados=True):
 
-def validar_consulta_wolkvox(query):
-    """
-    Ejecuta BigQuery, filtra lista negra, valida teléfonos.
-    Devuelve registros válidos + estadísticas.
-    """
     # 1. Ejecutar BigQuery
     rows = fetch_data_from_bigquery(query)
     if not rows:
         raise ValueError("La consulta no retornó registros.")
-    
+
     # 2. Detectar columna de teléfono
     columnas = list(rows[0].keys())
     telefono_col = None
@@ -2364,92 +2360,112 @@ def validar_consulta_wolkvox(query):
         if candidata in columnas:
             telefono_col = candidata
             break
-    
+
     if not telefono_col:
         raise ValueError(f"No se encontró columna de teléfono. Columnas: {columnas}")
-    
+
     # 3. Filtrar lista negra y validar
     blacklist = get_blacklist_phones()
     registros_validos = []
     registros_bloqueados = []
     registros_invalidos = 0
-    
+
     for row in rows:
         telefono_raw = str(row.get(telefono_col, '')).strip()
         telefono_limpio = re.sub(r'[^0-9]', '', telefono_raw)
-        
-        # Validar longitud mínima
+
         if len(telefono_limpio) < 10:
             registros_invalidos += 1
             continue
-        
-        # Limpiar prefijo 57
+
         if telefono_limpio.startswith('57') and len(telefono_limpio) == 12:
             telefono_limpio = telefono_limpio[2:]
-        
-        # Lista negra
+
         if telefono_limpio in blacklist:
             registros_bloqueados.append({
                 'telefono': telefono_limpio,
                 'motivo': 'Lista negra'
             })
             continue
-        
+
         registros_validos.append(row)
-    
-    # 4. Duplicados del día (compara con WolkvoxLog)
-    duplicados = 0
+
+    # 4. Duplicados del día (WolkvoxLog)
+    telefonos_duplicados = set()
+    registros_duplicados = []
+
     if registros_validos:
-        telefonos_validos = [
-            str(row.get(telefono_col, '')).strip() 
-            for row in registros_validos
-        ]
         telefonos_limpios = []
-        for t in telefonos_validos:
-            t_limpio = re.sub(r'[^0-9]', '', t)
+        for row in registros_validos:
+            t_limpio = re.sub(r'[^0-9]', '', str(row.get(telefono_col, '')).strip())
             if t_limpio.startswith('57') and len(t_limpio) == 12:
                 t_limpio = t_limpio[2:]
-            telefonos_limpios.append(t_limpio)
-        
-        hoy = datetime.now(COLOMBIA_TZ).strftime("%Y-%m-%d")
-        telefonos_str = "', '".join(telefonos_limpios)
-        
-        query_dup = f"""
-            SELECT DISTINCT telefono
-            FROM `capable-arbor-209819.Temporal.WolkvoxLog`
-            WHERE DATE(fecha_carga) = '{hoy}'
-            AND telefono IN ('{telefonos_str}')
-        """
-        
-        try:
-            df_dup = bq_client.query(query_dup).to_dataframe()
-            duplicados = len(df_dup) if not df_dup.empty else 0
-        except:
-            duplicados = 0
-    
+            if len(t_limpio) >= 10:
+                telefonos_limpios.append(t_limpio)
+
+        if telefonos_limpios:
+            telefonos_str = "', '".join(telefonos_limpios)
+
+            # fecha_carga está en UTC → convertir a fecha Colombia
+            query_dup = f"""
+                SELECT DISTINCT
+                  REGEXP_REPLACE(telefono, r'^57', '') AS telefono_limpio
+                FROM `capable-arbor-209819.Temporal.WolkvoxLog`
+                WHERE DATE(fecha_carga, 'America/Bogota') = CURRENT_DATE('America/Bogota')
+                  AND REGEXP_REPLACE(telefono, r'^57', '') IN ('{telefonos_str}')
+            """
+
+            try:
+                df_dup = bq_client.query(query_dup).to_dataframe()
+                if not df_dup.empty:
+                    telefonos_duplicados = set(df_dup['telefono_limpio'].astype(str).tolist())
+
+                    for row in registros_validos:
+                        t_limpio = re.sub(r'[^0-9]', '', str(row.get(telefono_col, '')).strip())
+                        if t_limpio.startswith('57') and len(t_limpio) == 12:
+                            t_limpio = t_limpio[2:]
+                        if t_limpio in telefonos_duplicados:
+                            registros_duplicados.append({
+                                'telefono': t_limpio,
+                                'customer_id': str(row.get('customer_id', '')),
+                                'customer_name': str(row.get('customer_name', '')),
+                            })
+            except Exception as e:
+                logger.warning(f"⚠️ Error consultando duplicados: {e}")
+                telefonos_duplicados = set()
+
     total_consulta = len(rows)
     validos = len(registros_validos)
     invalidos = registros_invalidos
     lista_negra = len(registros_bloqueados)
-    
-    # 🆕 CORRECCIÓN: a_enviar = validos - duplicados (lista negra ya se excluyó de validos)
-    a_enviar = validos - duplicados
-    
+    duplicados = len(telefonos_duplicados)
+
+    if excluir_duplicados:
+        a_enviar = validos - duplicados
+    else:
+        a_enviar = validos
+
+    logger.info(
+        f"📊 Validación: total={total_consulta} | válidos={validos} | "
+        f"inválidos={invalidos} | lista_negra={lista_negra} | "
+        f"duplicados={duplicados} | a_enviar={a_enviar} (excluir_dup={excluir_duplicados})"
+    )
+
     return {
         "success": True,
         "rows": rows,
         "telefono_col": telefono_col,
         "registros_validos": registros_validos,
         "registros_bloqueados": registros_bloqueados,
+        "registros_duplicados": registros_duplicados,
+        "telefonos_duplicados": telefonos_duplicados,
         "total_consulta": total_consulta,
         "validos": validos,
         "invalidos": invalidos,
         "duplicados": duplicados,
         "lista_negra": lista_negra,
-        "a_enviar": a_enviar
+        "a_enviar": a_enviar,
     }
-
-
 
 def numero_a_letras_es(numero):
     """
@@ -2575,25 +2591,52 @@ def numero_a_letras_es(numero):
 
     return str(numero)
 
-
-def Cargue_Wolkvox(campaign, token):
+def Cargue_Wolkvox(campaign, token, excluir_duplicados=True):
     """
     Formatea registros y envía a Wolkvox en lotes.
     Limpia la campaña antes de cargar para evitar acumulación.
-    opt11 y opt12 se envían como texto (números en letras).
+
+    Args:
+        campaign: objeto de campaña
+        token: token de Wolkvox
+        excluir_duplicados: si True, filtra teléfonos ya enviados hoy
     """
     from backend import limpiar_campana_wolkvox_por_id
     from datetime import datetime
     import json as _json
 
     # 1. Validar consulta
-    validacion = validar_consulta_wolkvox(campaign.bigquery_query)
+    validacion = validar_consulta_wolkvox(
+        campaign.bigquery_query,
+        excluir_duplicados=excluir_duplicados
+    )
     registros_validos = validacion["registros_validos"]
+    telefono_col = validacion["telefono_col"]
 
     if not registros_validos:
         raise ValueError("Todos los registros fueron bloqueados por lista negra.")
 
-    # 1.1 Limpiar campaña antes de cargar
+    # 1.2 Filtrar duplicados si aplica
+    if excluir_duplicados:
+        telefonos_dup = validacion.get("telefonos_duplicados", set())
+        if telefonos_dup:
+            antes = len(registros_validos)
+            registros_filtrados = []
+            for r in registros_validos:
+                t = re.sub(r'[^0-9]', '', str(r.get(telefono_col, '')).strip())
+                if t.startswith('57') and len(t) == 12:
+                    t = t[2:]
+                if t not in telefonos_dup:
+                    registros_filtrados.append(r)
+            registros_validos = registros_filtrados
+            logger.info(
+                f"🚫 Filtrados {antes - len(registros_validos)} duplicados. "
+                f"Quedan {len(registros_validos)} registros."
+            )
+            if not registros_validos:
+                raise ValueError("Todos los registros fueron excluidos por duplicados.")
+
+    # 1.3 Limpiar campaña antes de cargar
     logger.info(f"🧹 Limpiando campaña {campaign.wolkvox_campaign_id} en {campaign.server_name}...")
     limpieza_ok = limpiar_campana_wolkvox_por_id(
         server_name=campaign.server_name,
@@ -2605,14 +2648,7 @@ def Cargue_Wolkvox(campaign, token):
 
     # ═══════════ HELPERS ═══════════
     def formatear_telefono(telefono):
-        """Wolkvox exige teléfonos con prefijo 9157."""
         telefono = re.sub(r'[^0-9]', '', str(telefono))
-        
-        if telefono.startswith('57'):
-            telefono = telefono[2:]
-        if telefono.startswith('+57'):
-            telefono = telefono[3:]
-     
         return f"{telefono}"
 
     def _clean(val, default=''):
@@ -2622,7 +2658,6 @@ def Cargue_Wolkvox(campaign, token):
         return default if s in ('nan', 'None', 'NaT', 'NoneType', '') else s
 
     def normalizar_gender(val):
-        """Wolkvox espera M / F / O. No fechas."""
         s = _clean(val).upper()
         if s.startswith('M') or s in ('MASCULINO', 'HOMBRE', 'MALE'):
             return "M"
@@ -2631,7 +2666,6 @@ def Cargue_Wolkvox(campaign, token):
         return "O"
 
     def formatear_recall_date(val):
-        """Wolkvox espera YYYYmmddHHiiss."""
         s = _clean(val)
         if s and s.isdigit() and len(s) == 14:
             return s
@@ -2643,10 +2677,9 @@ def Cargue_Wolkvox(campaign, token):
                 continue
         return datetime.now().strftime("%Y%m%d%H%M%S")
 
-    # ═══════════ 2. Formatear registros ═══════════
+    # 2. Formatear registros
     records = []
     for idx, row in enumerate(registros_validos):
-
         Contaco__c = _clean(row.get('Contaco__c', ''))
         if not Contaco__c:
             Contaco__c = _clean(row.get('tel1', '')) or f"CLI-{idx}"
@@ -2654,10 +2687,9 @@ def Cargue_Wolkvox(campaign, token):
         telefono_formateado = formatear_telefono(row.get('tel1', ''))
         Name = _clean(row.get('Name', '')) or 'Sin Nombre'
 
-
         saldo_raw = row.get('Saldo_Capital_cliente', '')
-        opt7_valor  = _clean(saldo_raw)                    # string crudo para opt7
-        opt11_valor = numero_a_letras_es(saldo_raw) 
+        opt7_valor = _clean(saldo_raw)
+        opt11_valor = numero_a_letras_es(saldo_raw)
 
         valor_oferta = row.get('AcuVrTotalAcuerdo', '')
         opt4_valor = _clean(valor_oferta)
@@ -2667,7 +2699,6 @@ def Cargue_Wolkvox(campaign, token):
         MailPreferente = _clean(row.get('MailPreferente', ''))
 
         record = {
-            # ═══ Base ═══
             "customer_name": Name,
             "customer_last_name": apellido,
             "id_type": "CC",
@@ -2681,48 +2712,36 @@ def Cargue_Wolkvox(campaign, token):
             "tel_extra": "",
             "email": MailPreferente,
 
-            # ═══ Slots propios (reutilizados para PaymentAgreement) ═══
-            "age":     _clean(row.get('AcuDiaPagoCuotaMensual', '')),  
-            "gender":  normalizar_gender(row.get('AcuFechaCuota1', '')), 
-            "country": _clean(row.get('AcuFuenteDeIngresos', '')) or "COL",  
-            "state":   _clean(row.get('AcuGacsPorcentaje', '')),        
-            "city":    _clean(row.get('AcuGacsPorcentajeIva', '')),     
-            "zone":    _clean(row.get('AcuGacsValorTotal', '')),        
-            "address": _clean(row.get('AcuMotivoMora', '')),            
+            "age":     _clean(row.get('AcuDiaPagoCuotaMensual', '')),
+            "gender":  normalizar_gender(row.get('AcuFechaCuota1', '')),
+            "country": _clean(row.get('AcuFuenteDeIngresos', '')) or "COL",
+            "state":   _clean(row.get('AcuGacsPorcentaje', '')),
+            "city":    _clean(row.get('AcuGacsPorcentajeIva', '')),
+            "zone":    _clean(row.get('AcuGacsValorTotal', '')),
+            "address": _clean(row.get('AcuMotivoMora', '')),
 
-            # ═══ Opts 1-10 ═══
             "opt1":  _clean(row.get('AcuPlazoAceptado', '')),
             "opt2":  _clean(row.get('AcuVrCuota1', '')),
             "opt3":  _clean(row.get('AcuVrCuotaMensual', '')),
             "opt4":  opt4_valor,
             "opt5":  _clean(row.get('Ubicacion_Contacto__c', '')),
             "opt6":  _clean(row.get('UbicacionName__c', '')),
-
-
             "opt7":  opt7_valor,
             "opt8":  _clean(row.get('Fecha_Gestion__c', '')),
             "opt9":  _clean(row.get('OportunityProducts', '')),
-            "opt10": _clean(row.get('Skill_TELEAMIGO', '')),   
-
-            # ═══ opt11 y opt12: números en LETRAS ═══
+            "opt10": _clean(row.get('Skill_TELEAMIGO', '')),
             "opt11": opt11_valor,
             "opt12": opt12_valor,
 
-            # ═══ Recall (formato YYYYmmddHHiiss) ═══
             "recall_date":      formatear_recall_date(row.get('recall_date', '')),
             "recall_telephone": formatear_telefono(
                                     _clean(row.get('recall_telephone', ''))
-                                    or row.get('tel1', '')
                                 ),
         }
         records.append(record)
 
-    # ═══════════ 3. Señuelos ═══════════
-    senuelos_data_ = [
-        # ("Camilo", "3015007868", "10000000000"),
-    ]
-    logger.info(f"Agregando {len(senuelos_data_)} señuelos a la campaña {campaign.name} (ID: {campaign.id})")
-
+    # 3. Señuelos
+    senuelos_data_ = []
     start_id = len(records) + 1
     for i, (nombre_s, telefono_s, customer_id_s) in enumerate(senuelos_data_, start=start_id):
         senuelo = {
@@ -2743,9 +2762,8 @@ def Cargue_Wolkvox(campaign, token):
             "recall_telephone": formatear_telefono(telefono_s),
         }
         records.append(senuelo)
-        logger.info(f"Señuelo agregado: {nombre_s}, {telefono_s}, {customer_id_s}")
 
-    # ═══════════ 4. URL Wolkvox ═══════════
+    # 4. URL Wolkvox
     server_mapping = {
         "operacion-interna": "https://wv0016.wolkvox.com",
         "qnt_digital": "https://wv0010.wolkvox.com/",
@@ -2763,11 +2781,10 @@ def Cargue_Wolkvox(campaign, token):
         "campaign_status": "1"
     }
 
-    # ═══════════ 5. Debug del primer registro ═══════════
     if records:
         logger.info(f"📤 PAYLOAD PRIMER REGISTRO:\n{_json.dumps(records[0], indent=2, ensure_ascii=False, default=str)}")
 
-    # ═══════════ 6. Enviar en lotes ═══════════
+    # 5. Enviar en lotes
     headers = {"wolkvox-token": token, "Content-Type": "application/json"}
     batch_size = 100
     total_enviados = 0
@@ -2789,14 +2806,13 @@ def Cargue_Wolkvox(campaign, token):
             errores.append({"error": str(e)})
             logger.warning(f"❌ Lote {i//batch_size + 1}: Error {str(e)}")
 
-    # ═══════════ 7. Guardar WolkvoxLog ═══════════
+    # 6. Guardar WolkvoxLog
     if records:
         try:
             guardar_wolkvox_log(bq_client, records, campaign, usuario='sistema')
         except Exception as e:
             logger.warning(f"Error guardando WolkvoxLog: {e}")
 
-    # ═══════════ 8. Devolver resultado ═══════════
     return {
         "success": len(errores) == 0,
         "records_sent": total_enviados,
@@ -2810,11 +2826,9 @@ def Cargue_Wolkvox(campaign, token):
         "message": f"{total_enviados} registros cargados. {validacion['lista_negra']} bloqueados."
     }
 
-
-
 @app.route("/api/wolkvox/validar", methods=["POST"])
 def wolkvox_validar():
-    """Valida consulta y devuelve estadísticas."""
+    """Valida consulta y devuelve estadísticas (con soporte de exclusión de duplicados)."""
     global bq_client
     if bq_client is None:
         init_bigquery()
@@ -2823,12 +2837,13 @@ def wolkvox_validar():
     
     data = request.get_json(silent=True) or {}
     query = (data.get("query") or "").strip()
+    excluir_duplicados = bool(data.get("excluir_duplicados", True))  
     
     if not query:
         return jsonify({"success": False, "message": "Consulta SQL requerida"}), 400
     
     try:
-        resultado = validar_consulta_wolkvox(query)
+        resultado = validar_consulta_wolkvox(query, excluir_duplicados=excluir_duplicados)
         return jsonify({
             "success": True,
             "total_consulta": resultado["total_consulta"],
@@ -2836,11 +2851,13 @@ def wolkvox_validar():
             "invalidos": resultado["invalidos"],
             "duplicados": resultado["duplicados"],
             "lista_negra": resultado["lista_negra"],
-            "a_enviar": resultado["a_enviar"]
+            "a_enviar": resultado["a_enviar"],
+            "excluir_duplicados": excluir_duplicados,  
         })
     except Exception as exc:
         logger.exception("Error validando consulta Wolkvox")
         return jsonify({"success": False, "message": str(exc)}), 500
+
 
 @app.route("/auto-campaigns/<int:campaign_id>/load-wkv", methods=["POST"])
 def auto_campaigns_load_wkv(campaign_id):
@@ -2856,6 +2873,10 @@ def auto_campaigns_load_wkv(campaign_id):
     if not token:
         return jsonify({"success": False, "message": "No se encontró token Wolkvox."}), 400
 
+    # 🆕 Leer el flag del body
+    data = request.get_json(silent=True) or {}
+    excluir_duplicados = bool(data.get("excluir_duplicados", True))
+
     log = AutoCampaignExecutionLog(
         auto_campaign_id=campaign.id,
         start_time=datetime.now(timezone.utc)
@@ -2864,10 +2885,11 @@ def auto_campaigns_load_wkv(campaign_id):
     db.session.commit()
 
     try:
-        #  Llamar a la función para cargar los datos a wolkbox
-        resultado = Cargue_Wolkvox(campaign, token)
+        resultado = Cargue_Wolkvox(
+            campaign, token,
+            excluir_duplicados=excluir_duplicados   # 🆕
+        )
 
-        # Actualizar log
         log.records_fetched = resultado.get("records_fetched", 0)
         log.records_sent = resultado.get("records_sent", 0)
         log.records_failed = resultado.get("records_failed", 0)
@@ -2884,6 +2906,8 @@ def auto_campaigns_load_wkv(campaign_id):
         return jsonify({"success": False, "message": str(e)}), 500
 
 
+
+    
 #============= Programcion Simple ==================#
 @app.route("/auto-campaigns/programar", methods=["POST"])
 def campaigns_schedule_simple():
