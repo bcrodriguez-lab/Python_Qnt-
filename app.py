@@ -2348,109 +2348,340 @@ def auto_campaigns_validate_query_fields():
 
 def validar_consulta_wolkvox(query, excluir_duplicados=True):
 
-    # 1. Ejecutar BigQuery
+    # ============================================================
+    # 1. EJECUTAR CONSULTA PRINCIPAL
+    # ============================================================
     rows = fetch_data_from_bigquery(query)
+
     if not rows:
         raise ValueError("La consulta no retornó registros.")
 
-    # 2. Detectar columna de teléfono
+    # ============================================================
+    # 2. DETECTAR COLUMNA DE TELÉFONO
+    # ============================================================
     columnas = list(rows[0].keys())
+
     telefono_col = None
-    for candidata in ['tel1', 'telefono', 'celular', 'Celular', 'movil', 'phone']:
+
+    for candidata in [
+        'tel1',
+        'telefono',
+        'celular',
+        'Celular',
+        'movil',
+        'phone'
+    ]:
         if candidata in columnas:
             telefono_col = candidata
             break
 
     if not telefono_col:
-        raise ValueError(f"No se encontró columna de teléfono. Columnas: {columnas}")
+        raise ValueError(
+            f"No se encontró columna de teléfono. "
+            f"Columnas disponibles: {columnas}"
+        )
 
-    # 3. Filtrar lista negra y validar
+    logger.info(
+        f"📞 Columna de teléfono detectada: {telefono_col}"
+    )
+
+    # ============================================================
+    # 3. LISTA NEGRA + VALIDACIÓN
+    # ============================================================
     blacklist = get_blacklist_phones()
+
     registros_validos = []
     registros_bloqueados = []
     registros_invalidos = 0
 
     for row in rows:
-        telefono_raw = str(row.get(telefono_col, '')).strip()
-        telefono_limpio = re.sub(r'[^0-9]', '', telefono_raw)
 
+        telefono_raw = str(
+            row.get(telefono_col, '')
+        ).strip()
+
+        telefono_limpio = re.sub(
+            r'[^0-9]',
+            '',
+            telefono_raw
+        )
+
+        # --------------------------------------------------------
+        # Teléfono inválido
+        # --------------------------------------------------------
         if len(telefono_limpio) < 10:
+
             registros_invalidos += 1
+
             continue
 
-        if telefono_limpio.startswith('57') and len(telefono_limpio) == 12:
+        # --------------------------------------------------------
+        # Quitar prefijo 57 para comparar
+        # --------------------------------------------------------
+        if (
+            telefono_limpio.startswith('57')
+            and len(telefono_limpio) == 12
+        ):
             telefono_limpio = telefono_limpio[2:]
 
+        # --------------------------------------------------------
+        # Lista negra
+        # --------------------------------------------------------
         if telefono_limpio in blacklist:
+
             registros_bloqueados.append({
                 'telefono': telefono_limpio,
                 'motivo': 'Lista negra'
             })
+
             continue
 
         registros_validos.append(row)
 
-    # 4. Duplicados del día (WolkvoxLog)
+    # ============================================================
+    # 4. DUPLICADOS DEL DÍA
+    #
+    # Tabla:
+    # Operacion_Analitica.Embudos_Robot_Advanced
+    #
+    # IMPORTANTE:
+    # Fecha_dia es STRING con formato YYYY-MM-DD
+    # ============================================================
     telefonos_duplicados = set()
     registros_duplicados = []
 
     if registros_validos:
+
+        # --------------------------------------------------------
+        # Normalizar teléfonos de la consulta
+        # --------------------------------------------------------
         telefonos_limpios = []
+
         for row in registros_validos:
-            t_limpio = re.sub(r'[^0-9]', '', str(row.get(telefono_col, '')).strip())
-            if t_limpio.startswith('57') and len(t_limpio) == 12:
+
+            telefono_raw = str(
+                row.get(telefono_col, '')
+            ).strip()
+
+            t_limpio = re.sub(
+                r'[^0-9]',
+                '',
+                telefono_raw
+            )
+
+            # Quitar 57
+            if (
+                t_limpio.startswith('57')
+                and len(t_limpio) == 12
+            ):
                 t_limpio = t_limpio[2:]
+
             if len(t_limpio) >= 10:
-                telefonos_limpios.append(t_limpio)
+
+                telefonos_limpios.append(
+                    t_limpio
+                )
+
+        # --------------------------------------------------------
+        # Eliminar repetidos antes del IN
+        # --------------------------------------------------------
+        telefonos_limpios = list(
+            set(telefonos_limpios)
+        )
 
         if telefonos_limpios:
-            telefonos_str = "', '".join(telefonos_limpios)
 
-            # fecha_carga está en UTC → convertir a fecha Colombia
+            logger.info(
+                f"🔎 Buscando "
+                f"{len(telefonos_limpios)} teléfonos "
+                f"en Embudos_Robot_Advanced..."
+            )
+
+            # ----------------------------------------------------
+            # Construir IN
+            # ----------------------------------------------------
+            telefonos_str = ", ".join(
+                f"'{telefono}'"
+                for telefono in telefonos_limpios
+            )
+
+            # ----------------------------------------------------
+            # CONSULTA CORREGIDA
+            #
+            # Fecha_dia es STRING
+            # ----------------------------------------------------
             query_dup = f"""
                 SELECT DISTINCT
-                  REGEXP_REPLACE(telefono, r'^57', '') AS telefono_limpio
-                FROM `capable-arbor-209819.Temporal.WolkvoxLog`
-                WHERE DATE(fecha_carga, 'America/Bogota') = CURRENT_DATE('America/Bogota')
-                  AND REGEXP_REPLACE(telefono, r'^57', '') IN ('{telefonos_str}')
+
+                    REGEXP_REPLACE(
+                        CAST(TELEPHONE AS STRING),
+                        r'^57',
+                        ''
+                    ) AS telefono_limpio
+
+                FROM `capable-arbor-209819.Operacion_Analitica.Embudos_Robot_Advanced`
+
+                WHERE SAFE_CAST(
+                    Fecha_dia AS DATE
+                ) = CURRENT_DATE('America/Bogota')
+
+                AND REGEXP_REPLACE(
+                    CAST(TELEPHONE AS STRING),
+                    r'^57',
+                    ''
+                ) IN ({telefonos_str})
             """
 
             try:
-                df_dup = bq_client.query(query_dup).to_dataframe()
-                if not df_dup.empty:
-                    telefonos_duplicados = set(df_dup['telefono_limpio'].astype(str).tolist())
 
+                df_dup = (
+                    bq_client
+                    .query(query_dup)
+                    .to_dataframe()
+                )
+
+                # ------------------------------------------------
+                # RESULTADOS ENCONTRADOS
+                # ------------------------------------------------
+                if not df_dup.empty:
+
+                    telefonos_duplicados = set(
+                        df_dup[
+                            'telefono_limpio'
+                        ]
+                        .astype(str)
+                        .str.strip()
+                        .tolist()
+                    )
+
+                    logger.info(
+                        f"🔁 Teléfonos únicos encontrados "
+                        f"en Advanced: "
+                        f"{len(telefonos_duplicados)}"
+                    )
+
+                    # ------------------------------------------------
+                    # AHORA CONTAMOS LOS REGISTROS DE LA BASE
+                    # QUE REALMENTE DEBEN SER EXCLUIDOS
+                    # ------------------------------------------------
                     for row in registros_validos:
-                        t_limpio = re.sub(r'[^0-9]', '', str(row.get(telefono_col, '')).strip())
-                        if t_limpio.startswith('57') and len(t_limpio) == 12:
+
+                        telefono_raw = str(
+                            row.get(
+                                telefono_col,
+                                ''
+                            )
+                        ).strip()
+
+                        t_limpio = re.sub(
+                            r'[^0-9]',
+                            '',
+                            telefono_raw
+                        )
+
+                        # Quitar 57
+                        if (
+                            t_limpio.startswith('57')
+                            and len(t_limpio) == 12
+                        ):
                             t_limpio = t_limpio[2:]
-                        if t_limpio in telefonos_duplicados:
+
+                        if (
+                            t_limpio
+                            in telefonos_duplicados
+                        ):
+
                             registros_duplicados.append({
                                 'telefono': t_limpio,
-                                'customer_id': str(row.get('customer_id', '')),
-                                'customer_name': str(row.get('customer_name', '')),
+
+                                'customer_id': str(
+                                    row.get(
+                                        'customer_id',
+                                        ''
+                                    )
+                                ),
+
+                                'customer_name': str(
+                                    row.get(
+                                        'customer_name',
+                                        ''
+                                    )
+                                ),
                             })
+
+                    logger.info(
+                        f"🚫 Registros que serán excluidos "
+                        f"por duplicados: "
+                        f"{len(registros_duplicados)}"
+                    )
+
+                else:
+
+                    logger.info(
+                        "✅ No se encontraron "
+                        "duplicados para hoy."
+                    )
+
             except Exception as e:
-                logger.warning(f"⚠️ Error consultando duplicados: {e}")
-                telefonos_duplicados = set()
 
+                logger.error(
+                    f"❌ Error consultando duplicados: {e}"
+                )
+
+                # IMPORTANTE:
+                # Si la consulta falla, NO debemos fingir
+                # que hay 0 duplicados.
+                #
+                # Dejamos la validación en estado de error.
+                raise RuntimeError(
+                    f"No fue posible validar duplicados "
+                    f"contra Embudos_Robot_Advanced: {e}"
+                )
+
+    # ============================================================
+    # 5. ESTADÍSTICAS
+    # ============================================================
     total_consulta = len(rows)
-    validos = len(registros_validos)
-    invalidos = registros_invalidos
-    lista_negra = len(registros_bloqueados)
-    duplicados = len(telefonos_duplicados)
 
+    validos = len(registros_validos)
+
+    invalidos = registros_invalidos
+
+    lista_negra = len(registros_bloqueados)
+
+    # Cantidad REAL de registros que se eliminarán
+    duplicados = len(registros_duplicados)
+
+    # ============================================================
+    # 6. TOTAL A ENVIAR
+    # ============================================================
     if excluir_duplicados:
+
         a_enviar = validos - duplicados
+
     else:
+
         a_enviar = validos
 
+    a_enviar = max(0, a_enviar)
+
+    # ============================================================
+    # 7. LOG FINAL
+    # ============================================================
     logger.info(
-        f"📊 Validación: total={total_consulta} | válidos={validos} | "
-        f"inválidos={invalidos} | lista_negra={lista_negra} | "
-        f"duplicados={duplicados} | a_enviar={a_enviar} (excluir_dup={excluir_duplicados})"
+        f"📊 Validación Wolkvox: "
+        f"total={total_consulta} | "
+        f"válidos={validos} | "
+        f"inválidos={invalidos} | "
+        f"lista_negra={lista_negra} | "
+        f"duplicados={duplicados} | "
+        f"a_enviar={a_enviar} | "
+        f"excluir_dup={excluir_duplicados}"
     )
 
+    # ============================================================
+    # 8. RETORNAR RESULTADO
+    # ============================================================
     return {
         "success": True,
         "rows": rows,
@@ -2466,6 +2697,9 @@ def validar_consulta_wolkvox(query, excluir_duplicados=True):
         "lista_negra": lista_negra,
         "a_enviar": a_enviar,
     }
+
+
+
 
 def numero_a_letras_es(numero):
     """
