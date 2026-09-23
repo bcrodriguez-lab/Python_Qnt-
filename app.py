@@ -8,7 +8,6 @@ import json
 import requests
 import re
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.cron import CronTrigger
 import pandas as pd
 
@@ -24,6 +23,7 @@ from backend import (
     log_task, log_gui_action, read_recent_log_lines,
     cleanup_old_log_files, reschedule_campaign_check_job,
     reschedule_console_message_job, DOWNLOAD_FOLDER,
+    log_activity,
 )
 from general_params import load_general_parameters, save_general_parameters
 from conexion_bigquery import get_bigquery_client
@@ -1183,7 +1183,7 @@ def agendar_programacion_sms(prog):
         
         scheduler.add_job(
             execute_sms_schedule,
-            trigger=IntervalTrigger(minutes=1),
+            trigger=IntervalTrigger(minutes=10),
             args=[str(prog.id)],
             id=job_id,
             replace_existing=True,
@@ -2699,8 +2699,6 @@ def validar_consulta_wolkvox(query, excluir_duplicados=True):
     }
 
 
-
-
 def numero_a_letras_es(numero):
     """
     Convierte un número entero a su representación en letras en español.
@@ -2862,11 +2860,7 @@ def Cargue_Wolkvox(campaign, token, excluir_duplicados=True):
                     t = t[2:]
                 if t not in telefonos_dup:
                     registros_filtrados.append(r)
-            registros_validos = registros_filtrados
-            logger.info(
-                f"🚫 Filtrados {antes - len(registros_validos)} duplicados. "
-                f"Quedan {len(registros_validos)} registros."
-            )
+    
             if not registros_validos:
                 raise ValueError("Todos los registros fueron excluidos por duplicados.")
 
@@ -2877,6 +2871,7 @@ def Cargue_Wolkvox(campaign, token, excluir_duplicados=True):
         campaign_id=campaign.wolkvox_campaign_id,
         token=token,
     )
+
     if not limpieza_ok:
         logger.warning(f"⚠️ No se pudo limpiar campaña {campaign.wolkvox_campaign_id}")
 
@@ -2919,6 +2914,7 @@ def Cargue_Wolkvox(campaign, token, excluir_duplicados=True):
             Contaco__c = _clean(row.get('tel1', '')) or f"CLI-{idx}"
 
         telefono_formateado = formatear_telefono(row.get('tel1', ''))
+        
         Name = _clean(row.get('Name', '')) or 'Sin Nombre'
 
         saldo_raw = row.get('Saldo_Capital_cliente', '')
@@ -2975,7 +2971,9 @@ def Cargue_Wolkvox(campaign, token, excluir_duplicados=True):
         records.append(record)
 
     # 3. Señuelos
-    senuelos_data_ = []
+    senuelos_data_ = [
+        "brayan", "91573144051619","3213213"
+    ]
     start_id = len(records) + 1
     for i, (nombre_s, telefono_s, customer_id_s) in enumerate(senuelos_data_, start=start_id):
         senuelo = {
@@ -3180,56 +3178,45 @@ def campaigns_schedule_simple():
 
     # 2. Validar campos obligatorios
     if not nombre:
-        logger_programacion.warning("🔴 [SIMPLE-3] Validación: nombre vacío")
+
         return jsonify({"success": False, "message": "El nombre es obligatorio."}), 400
     if not bigquery_query:
         logger_programacion.warning("🔴 [SIMPLE-3] Validación: query vacía")
         return jsonify({"success": False, "message": "La consulta SQL es obligatoria."}), 400
-    if not wolkvox_campaign_id:
-        logger_programacion.warning("🔴 [SIMPLE-3] Validación: campaign_id vacío")
+    if not wolkvox_campaign_id: 
         return jsonify({"success": False, "message": "El Campaign ID es obligatorio."}), 400
     if not server_name:
-        logger_programacion.warning("🔴 [SIMPLE-3] Validación: server_name vacío")
+        
         return jsonify({"success": False, "message": "El servidor es obligatorio."}), 400
     if not fecha_programada:
-        logger_programacion.warning("🔴 [SIMPLE-3] Validación: fecha_programada vacía")
         return jsonify({"success": False, "message": "La fecha programada es obligatoria."}), 400
     if not hora_terminar:
-        logger_programacion.warning("🔴 [SIMPLE-3] Validación: hora_fin vacía")
         return jsonify({"success": False, "message": "No hay una fecha para terminar la programación"}), 400
 
-    logger_programacion.info("🟢 [SIMPLE-3] Validaciones OK")
+    logger_programacion.info(" Programcion simple Validaciones OK")
 
     try:
         # ═══════════════════════════════════════════════════════════
         # LOG 4: Parseo de fecha
         # ═══════════════════════════════════════════════════════════
-        logger_programacion.info(f"🟢 [SIMPLE-4] Parseando fecha: '{fecha_programada}'")
         try:
             run_date = datetime.fromisoformat(fecha_programada)
-            logger_programacion.info(f"🟢 [SIMPLE-4] Fecha parseada: {run_date} | tzinfo={run_date.tzinfo}")
         except ValueError as e:
-            logger_programacion.error(f"🔴 [SIMPLE-4] Error parseando fecha: {e}")
             return jsonify({"success": False, "message": f"Formato de fecha inválido: {e}"}), 400
 
         # Normalizar SIEMPRE a Colombia
         if run_date.tzinfo is None:
-            run_date = run_date.replace(tzinfo=COLOMBIA_TZ)
-            logger_programacion.info(f"🟢 [SIMPLE-4] Sin tzinfo → asignado COLOMBIA_TZ: {run_date}")
+        # Asignar zona Colombia correctamente
+            run_date = COLOMBIA_TZ.localize(run_date)
         else:
-            run_date_original = run_date
+            # Convertir a zona Colombia si ya tiene zona
             run_date = run_date.astimezone(COLOMBIA_TZ)
-            logger_programacion.info(f"🟢 [SIMPLE-4] Con tzinfo → normalizado a Colombia: {run_date_original} → {run_date}")
-
         # ═══════════════════════════════════════════════════════════
         # LOG 5: Parseo de hora_fin
         # ═══════════════════════════════════════════════════════════
-        logger_programacion.info(f"🟢 [SIMPLE-5] Parseando hora_fin: '{hora_terminar}'")
         try:
             hora_fin = datetime.strptime(hora_terminar, "%H:%M").strftime("%H:%M")
-            logger_programacion.info(f"🟢 [SIMPLE-5] hora_fin normalizada: '{hora_fin}'")
         except ValueError as e:
-            logger_programacion.error(f"🔴 [SIMPLE-5] Error parseando hora_fin: {e}")
             return jsonify({
                 "success": False,
                 "message": "Formato de hora de finalización inválido. Use HH:MM."
@@ -3238,21 +3225,9 @@ def campaigns_schedule_simple():
         ahora = datetime.now(COLOMBIA_TZ)
 
         # ═══════════════════════════════════════════════════════════
-        # LOG 6: Datos listos para guardar
-        # ═══════════════════════════════════════════════════════════
-        logger_programacion.info(
-            f"🟢 [SIMPLE-6] Datos listos para guardar:\n"
-            f"     ahora             = {ahora.isoformat()}\n"
-            f"     run_date (Colombia) = {run_date.isoformat()}\n"
-            f"     hora_inicio       = {run_date.strftime('%H:%M')}\n"
-            f"     hora_fin          = {hora_fin}\n"
-            f"     fecha_programada ISO = {run_date.isoformat()}"
-        )
-
-        # ═══════════════════════════════════════════════════════════
         # LOG 7: Crear registro en DB
         # ═══════════════════════════════════════════════════════════
-        logger_programacion.info("🟢 [SIMPLE-7] Creando ProgramacionCampana...")
+        logger_programacion.info("Programcion simple Creando ")
         nueva = ProgramacionCampana(
             nombre=nombre,
             bigquery_query=bigquery_query,
@@ -3267,57 +3242,6 @@ def campaigns_schedule_simple():
         )
         db.session.add(nueva)
         db.session.commit()
-
-        logger_programacion.info(
-            f"🟢 [SIMPLE-7] ✅ Registro guardado en DB:\n"
-            f"     ID             = {nueva.id}\n"
-            f"     estado         = {nueva.estado}\n"
-            f"     hora_inicio    = {nueva.hora_inicio}\n"
-            f"     hora_fin       = {nueva.hora_fin}\n"
-            f"     fecha_programada = {nueva.fecha_programada}"
-        )
-
-        # ═══════════════════════════════════════════════════════════
-        # LOG 8: Registrar job en APScheduler
-        # ═══════════════════════════════════════════════════════════
-        job_id = f"wolkvox_simple_{nueva.id}"
-        logger_programacion.info(f"🟢 [SIMPLE-8] Registrando job '{job_id}' con run_date={run_date.isoformat()}")
-
-        try:
-            job = scheduler.add_job(
-                execute_wolkvox_schedule,
-                trigger="date",
-                run_date=run_date,
-                id=job_id,
-                replace_existing=True,
-            )
-            logger_programacion.info(
-                f"🟢 [SIMPLE-8] ✅ Job registrado:\n"
-                f"     job.id        = {job.id}\n"
-                f"     next_run_time = {job.next_run_time if hasattr(job, 'next_run_time') else 'N/A'}\n"
-                f"     trigger       = {job.trigger}"
-            )
-        except Exception as e:
-            logger_programacion.exception(f"🔴 [SIMPLE-8] Error registrando job: {e}")
-            # No hacemos rollback porque el registro en DB ya quedó
-
-        # ═══════════════════════════════════════════════════════════
-        # LOG 9: Jobs actualmente activos en el scheduler
-        # ═══════════════════════════════════════════════════════════
-        try:
-            jobs_actuales = scheduler.get_jobs()
-            logger_programacion.info(
-                f"🟢 [SIMPLE-9] Jobs activos en el scheduler ({len(jobs_actuales)}):"
-            )
-            for j in jobs_actuales:
-                next_run = getattr(j, 'next_run_time', 'N/A')
-                logger_programacion.info(f"     - {j.id} | next_run={next_run} | trigger={j.trigger}")
-        except Exception as e:
-            logger_programacion.warning(f"🟡 [SIMPLE-9] No se pudo listar jobs: {e}")
-
-        logger_programacion.info(
-            f"✅ [SIMPLE-END] Campaña {nueva.id} creada y programada para {run_date.isoformat()}"
-        )
 
         return jsonify({
             "success": True,
@@ -3351,22 +3275,24 @@ def campaigns_schedule_recurrent():
     campaign_type = (data.get("campaign_type") or "predictive").strip()
     hora_inicio = (data.get("hora_inicio") or "").strip()
     fecha_fin = (data.get("fecha_fin") or "").strip() or None
+    fecha_inicio = (data.get("fecha_inicio") or "").strip() or None  # 🆕
 
     # 2. Validar campos obligatorios
     if not nombre:
         return jsonify({"success": False, "message": "El nombre es obligatorio."}), 400
     if not bigquery_query:
         return jsonify({"success": False, "message": "La consulta SQL es obligatoria."}), 400
-   
     if not server_name:
         return jsonify({"success": False, "message": "El servidor es obligatorio."}), 400
     if not hora_inicio:
         return jsonify({"success": False, "message": "La hora de envío es obligatoria."}), 400
     if not re.match(r'^\d{2}:\d{2}$', hora_inicio):
         return jsonify({"success": False, "message": "Formato de hora inválido. Use HH:MM."}), 400
-
     if not wolkvox_campaign_id:
         return jsonify({"success": False, "message": "El Campaign ID es obligatorio."}), 400
+
+    if fecha_inicio and not re.match(r'^\d{4}-\d{2}-\d{2}$', fecha_inicio):
+        return jsonify({"success": False, "message": "Formato de fecha de inicio inválido. Use YYYY-MM-DD."}), 400
 
     try:
         nueva = ProgramacionCampana(
@@ -3376,48 +3302,179 @@ def campaigns_schedule_recurrent():
             server_name=server_name,
             tipo_programacion='recurrente',
             hora_inicio=hora_inicio,
+            fecha_inicio=fecha_inicio,  #
             fecha_fin=fecha_fin,
             estado='pendiente'
         )
         db.session.add(nueva)
         db.session.commit()
 
-        scheduler.add_job(
-            execute_wolkvox_schedule,
-            trigger="interval",
-            minutes=10,
-            id=f"wolkvox_recurrente_{nueva.id}",
-            replace_existing=True
-        )
 
-        logger_programacion.info(f"Programación recurrente creada para ID: {nueva.id}")
         return jsonify({"success": True, "id": nueva.id, "message": "Programación recurrente creada."})
     except Exception as exc:
         db.session.rollback()
         logger_programacion.exception("Error programando Wolkvox recurrente")
         return jsonify({"success": False, "message": str(exc)}), 500
 
-
+    
 # ==================== SCHEDULER ====================
 def execute_wolkvox_schedule():
-    """Busca y ejecuta todas las programaciones pendientes de Wolkvox."""
+ 
     from database import ProgramacionCampana, db
 
     with app.app_context():
         try:
-            pendientes = ProgramacionCampana.query.filter_by(estado='pendiente').all()
-
-            if not pendientes:
-                return
-
             ahora = datetime.now(COLOMBIA_TZ)
             hoy_str = ahora.strftime("%Y-%m-%d")
             hora_actual = ahora.strftime("%H:%M")
+
+            # ═══════════════════════════════════════════════════════════
+            # Traer TODAS las programaciones no completadas
+            # ═══════════════════════════════════════════════════════════
+            pendientes = ProgramacionCampana.query.filter(
+                ProgramacionCampana.estado.in_(['pendiente', 'enviado'])
+            ).all()
+
+            simples = [p for p in pendientes if p.tipo_programacion == 'simple']
+            recurrentes = [p for p in pendientes if p.tipo_programacion == 'recurrente']
+
+            # ═══════════════════════════════════════════════════════════
+            # LOG DE RESUMEN (siempre, incluso si no hay nada)
+            # ═══════════════════════════════════════════════════════════
+            logger.info(
+                f"[SCANNER] {hora_actual} | "
+                f"Simples: {len(simples)} | Recurrentes: {len(recurrentes)}"
+            )
+
+            # ═══════════════════════════════════════════════════════════
+            # Detalle de SIMPLES
+            # ═══════════════════════════════════════════════════════════
+            for prog in simples:
+                try:
+                    fecha_prog_str = (
+                        prog.fecha_programada.strftime("%Y-%m-%d")
+                        if prog.fecha_programada else hoy_str
+                    )
+
+                    # Estado: en espera por fecha futura
+                    if fecha_prog_str > hoy_str:
+                        logger.info(
+                            f"   ⏳ Simple #{prog.id} '{prog.nombre}': "
+                            f"programada para {fecha_prog_str} (faltan días)"
+                        )
+                        continue
+
+                    # Estado: fuera de ventana (ya pasó hora_fin)
+                    if prog.hora_fin and hora_actual >= prog.hora_fin:
+                        logger.info(
+                            f"   🧹 Simple #{prog.id} '{prog.nombre}': "
+                            f"fuera de ventana ({hora_actual} >= {prog.hora_fin}), "
+                            f"se limpiará"
+                        )
+                        continue
+
+                    # Estado: ya se ejecutó hoy y está en ventana
+                    if prog.fecha_ejecucion:
+                        fe_ejec = prog.fecha_ejecucion.strftime("%Y-%m-%d")
+                        if fe_ejec == hoy_str:
+                            logger.info(
+                                f"   ✔️ Simple #{prog.id} '{prog.nombre}': "
+                                f"ya ejecutada hoy a las "
+                                f"{prog.fecha_ejecucion.strftime('%H:%M')}"
+                            )
+                            continue
+
+                    # Estado: aún no es la hora
+                    if prog.hora_inicio and hora_actual < prog.hora_inicio:
+                        h_ini, m_ini = map(int, prog.hora_inicio.split(":"))
+                        h_act, m_act = map(int, hora_actual.split(":"))
+                        delta_min = (h_ini * 60 + m_ini) - (h_act * 60 + m_act)
+                        logger.info(
+                            f"   ⏰ Simple #{prog.id} '{prog.nombre}': "
+                            f"hora_inicio={prog.hora_inicio} "
+                            f"(en {delta_min} min)"
+                        )
+                        continue
+
+                    # Estado: LISTA para ejecutar
+                    logger.info(
+                        f"   ✅ Simple #{prog.id} '{prog.nombre}': "
+                        f"LISTA para ejecutar (hora_inicio={prog.hora_inicio}, "
+                        f"hora_fin={prog.hora_fin or '—'})"
+                    )
+
+                except Exception as e:
+                    logger.warning(
+                        f"   ⚠️ Error calculando estado de Simple #{prog.id}: {e}"
+                    )
+
+            # ═══════════════════════════════════════════════════════════
+            # Detalle de RECURRENTES
+            # ═══════════════════════════════════════════════════════════
+            for prog in recurrentes:
+                try:
+                    # Estado: fecha de inicio futura
+                    if prog.fecha_inicio and hoy_str < prog.fecha_inicio:
+                        logger.info(
+                            f"   ⏳ Recurrente #{prog.id} '{prog.nombre}': "
+                            f"inicia el {prog.fecha_inicio} (faltan días)"
+                        )
+                        continue
+
+                    # Estado: fuera de rango por fecha_fin
+                    if prog.fecha_fin and hoy_str > prog.fecha_fin:
+                        logger.info(
+                            f"   ⏹️ Recurrente #{prog.id} '{prog.nombre}': "
+                            f"venció el {prog.fecha_fin}, se completará"
+                        )
+                        continue
+
+                    # Estado: ya se ejecutó hoy
+                    if prog.fecha_ejecucion:
+                        fe_ejec = prog.fecha_ejecucion.strftime("%Y-%m-%d")
+                        if fe_ejec == hoy_str:
+                            logger.info(
+                                f"   ✔️ Recurrente #{prog.id} '{prog.nombre}': "
+                                f"ya ejecutada hoy a las "
+                                f"{prog.fecha_ejecucion.strftime('%H:%M')}"
+                            )
+                            continue
+
+                    # Estado: aún no es la hora
+                    if prog.hora_inicio and hora_actual < prog.hora_inicio:
+                        h_ini, m_ini = map(int, prog.hora_inicio.split(":"))
+                        h_act, m_act = map(int, hora_actual.split(":"))
+                        delta_min = (h_ini * 60 + m_ini) - (h_act * 60 + m_act)
+                        logger.info(
+                            f"   ⏰ Recurrente #{prog.id} '{prog.nombre}': "
+                            f"hora={prog.hora_inicio} (en {delta_min} min)"
+                        )
+                        continue
+
+                    # Estado: LISTA para ejecutar
+                    logger.info(
+                        f"   ✅ Recurrente #{prog.id} '{prog.nombre}': "
+                        f"LISTA para ejecutar (hora={prog.hora_inicio})"
+                    )
+
+                except Exception as e:
+                    logger.warning(
+                        f"   ⚠️ Error calculando estado de Recurrente #{prog.id}: {e}"
+                    )
+
+            # ═══════════════════════════════════════════════════════════
+            # EJECUCIÓN
+            # ═══════════════════════════════════════════════════════════
+            if not pendientes:
+                return
 
             for prog in pendientes:
                 try:
                     # ================== RECURRENTE ==================
                     if prog.tipo_programacion == 'recurrente':
+                        if prog.fecha_inicio and hoy_str < prog.fecha_inicio:
+                            continue
+
                         if hora_actual < prog.hora_inicio:
                             continue
 
@@ -3429,16 +3486,26 @@ def execute_wolkvox_schedule():
                         if prog.fecha_fin and hoy_str > prog.fecha_fin:
                             prog.estado = 'completado'
                             db.session.commit()
-    
                             continue
 
-                        logger_programacion.info(f"Procesando programación {prog.id}: {prog.nombre} (tipo: {prog.tipo_programacion})")
+                        logger.info(
+                            f"Procesando programación {prog.id}: {prog.nombre} "
+                            f"(tipo: {prog.tipo_programacion})"
+                        )
 
                     # ==================== SIMPLE ====================
                     elif prog.tipo_programacion == 'simple':
-                        logger_programacion.info(f"Procesando campaña simple {prog.id}: {prog.nombre}")
-                        # COND 1: ¿Ya pasó la hora fin? -> limpiar SIEMPRE,
-                        # se haya ejecutado o no.
+                        logger.info(f"Procesando campaña simple {prog.id}: {prog.nombre}")
+
+                        fecha_prog_str = (
+                            prog.fecha_programada.strftime("%Y-%m-%d")
+                            if prog.fecha_programada else hoy_str
+                        )
+
+                        if fecha_prog_str > hoy_str:
+                            continue
+
+                        # COND 1: hora_fin alcanzada -> limpiar
                         if prog.hora_fin and hora_actual >= prog.hora_fin:
                             token_clear = _get_token_desde_server(prog.server_name)
                             if token_clear:
@@ -3455,7 +3522,10 @@ def execute_wolkvox_schedule():
                                         headers={"wolkvox-token": token_clear},
                                         timeout=60,
                                     )
-                                    logger_programacion.info(f"Campaña {prog.wolkvox_campaign_id} limpiada: HTTP {clear_resp.status_code}")
+                                    logger.info(
+                                        f"Campaña {prog.wolkvox_campaign_id} limpiada: "
+                                        f"HTTP {clear_resp.status_code}"
+                                    )
                                     if not clear_resp.ok:
                                         logger.warning(
                                             f"No se pudo limpiar campaña {prog.wolkvox_campaign_id} "
@@ -3477,28 +3547,27 @@ def execute_wolkvox_schedule():
                                 pass
                             continue
 
-                        # COND 2: ¿Ya se ejecutó? -> no volver a ejecutar,
-                        # solo esperar a que llegue hora_fin para limpiar.
                         if prog.fecha_ejecucion:
-                            logger_programacion.info(f"Campaña simple {prog.id} ya ejecutada a las {prog.fecha_ejecucion}")
-
+                            logger.info(
+                                f"Campaña simple {prog.id} ya ejecutada a las "
+                                f"{prog.fecha_ejecucion}"
+                            )
                             continue
-                        logger_programacion.info(f"Campaña simple {prog.id}: hora_inicio={prog.hora_inicio}, hora_fin={prog.hora_fin}, hora_actual={hora_actual}, fecha_ejecucion={prog.fecha_ejecucion}")
-                        # COND 3: ¿Ya llegó la hora de inicio?
+
                         if hora_actual < prog.hora_inicio:
                             continue
-                        logger_programacion.info(f"Campaña simple {prog.id} lista para ejecutar: hora_inicio={prog.hora_inicio}, hora_fin={prog.hora_fin}, hora_actual={hora_actual}")
-                    else:
-                        logger_programacion.info(f"Procesando campaña simple  {prog.id}: {prog.nombre} (tipo: {prog.tipo_programacion})")
 
-                    logger_programacion.info(f"Ejecutando campaña simple {prog.id}: {prog.nombre} (tipo: {prog.tipo_programacion})")
+                        logger.info(
+                            f"Campaña simple {prog.id} lista para ejecutar: "
+                            f"hora_inicio={prog.hora_inicio}, "
+                            f"hora_fin={prog.hora_fin}, hora_actual={hora_actual}"
+                        )
 
-                     
                     # 3. Obtener token
                     token = _get_token_desde_server(prog.server_name)
                     if not token:
-                        logger_programacion.warning(f"Sin token para ejecutar campaña simple {prog.id}")
-                        continue  # reintenta en el próximo barrido
+                        logger.warning(f"Sin token para ejecutar campaña simple {prog.id}")
+                        continue
 
                     # 4. Crear objeto temporal
                     class CampaignWrapper:
@@ -3512,20 +3581,22 @@ def execute_wolkvox_schedule():
                     campaign.server_name = prog.server_name
                     campaign.campaign_type = 'predictive'
 
-                    # 5. Ejecutar carga (UNA sola vez, para ambos tipos)
-                    logger_programacion.info(f"📤 Ejecutando campaña simple {prog.id}: {prog.nombre}")
+                    # 5. Ejecutar carga
+                    logger.info(f"📤 Ejecutando campaña simple {prog.id}: {prog.nombre}")
                     resultado = Cargue_Wolkvox(campaign, token)
 
                     # 6. Actualizar registro
                     prog.fecha_ejecucion = ahora
                     prog.total_destinatarios = resultado.get("records_sent", 0)
                     prog.fecha_actualizacion = datetime.now(COLOMBIA_TZ)
-                    logger_programacion.info(f"📊 Campaña simple {prog.id} actualizada: {prog.total_destinatarios} destinatarios")
+                    logger.info(
+                        f"📊 Campaña simple {prog.id} actualizada: "
+                        f"{prog.total_destinatarios} destinatarios"
+                    )
 
                     if prog.tipo_programacion == 'recurrente':
-                        
                         prog.estado = 'enviado' if resultado.get("success") else 'fallido'
-                  
+
                     db.session.commit()
 
                 except Exception as e:
@@ -3533,9 +3604,10 @@ def execute_wolkvox_schedule():
                     if prog.tipo_programacion == 'recurrente':
                         prog.estado = 'fallido'
                         db.session.commit()
-                    
+
         except Exception as exc:
             logger.exception("Error en scheduler Wolkvox")
+
 
 scheduler.add_job(
     execute_wolkvox_schedule,
@@ -3546,6 +3618,11 @@ scheduler.add_job(
     coalesce=True,
     misfire_grace_time=120,
 )
+
+import re
+
+
+
 
 import requests
 from flask import request, jsonify
@@ -4392,4 +4469,4 @@ if __name__ == "__main__":
     with app.app_context():
         db.create_all()
     init_bigquery()
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=False, host="0.0.0.0", port=5000)

@@ -67,11 +67,8 @@ except ImportError as e:
 # Mapeo de servidores
 CORTE_A_SERVIDOR = {
     1: "operacion-interna",
-    2: "qnt_juridico_blaster",
-    3: "qnt_cobro_blaster",
-    4: "Qnt_RBK_blaster",
-    5: "Qnt_recaudo_blaster",
-    6: "qnt_digital"
+    
+    2: "qnt_digital"
 }
 
 _scheduler_running = False

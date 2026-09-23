@@ -209,7 +209,8 @@ class ProgramacionCampana(db.Model):
     wolkvox_campaign_id = db.Column(db.String(100), nullable=False)
     server_name = db.Column(db.String(255), nullable=False)
     tipo_programacion = db.Column(db.String(20), default='simple')  
-    fecha_programada = db.Column(db.DateTime)  # 🆕 Para simple
+    fecha_programada = db.Column(db.DateTime)  
+    fecha_inicio = db.Column(db.String(10))    
     hora_inicio = db.Column(db.String(5), default='08:00')
     hora_fin = db.Column(db.String(5), nullable=True)
     fecha_fin = db.Column(db.String(10))
@@ -218,7 +219,6 @@ class ProgramacionCampana(db.Model):
     total_destinatarios = db.Column(db.Integer, default=0)
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
     fecha_actualizacion = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
 class ProgramacionSms(db.Model):
     __tablename__ = 'programaciones_sms'
 
