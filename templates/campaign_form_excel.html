@@ -1,0 +1,870 @@
+{% extends "layouts/adminlte.html" %}
+{% set is_edit = campaign is not none %}
+
+{% block title %}Enviar Excel - Campaña Wolkvox{% endblock %}
+
+{% block page_title %}
+  <div class="d-flex align-items-center gap-3">
+    <div style="font-size:2rem; color:var(--primary);">
+      <i class="fas fa-file-excel"></i>
+    </div>
+    <div>
+      <h1 class="m-0" style="font-weight:700;">Enviar Excel a Wolkvox</h1>
+      <small class="text-muted">Subir Excel · Enriquecer con BigQuery · Enviar</small>
+    </div>
+  </div>
+{% endblock %}
+
+{% block breadcrumb %}
+<li><a href="/auto-campaigns">Campañas</a></li>
+<li class="active">Enviar Excel</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ══════════════════════════════════════════════════════
+     LAYOUT GENERAL (idéntico a campaign_form.html)
+     ══════════════════════════════════════════════════════ */
+  .sms-container {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 1199px) { .sms-container { grid-template-columns: 1fr; } }
+
+  .sms-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: var(--transition);
+  }
+  .sms-card:hover { box-shadow: var(--shadow-lg); }
+  .sms-card-body { padding: 24px 26px 26px; }
+
+  /* TABS */
+  .sms-tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--border-light);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 22px;
+  }
+  .sms-tabs .tab {
+    flex: 1;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+    text-decoration: none;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .sms-tabs .tab:hover {
+    color: var(--text-primary);
+    background: rgba(255,255,255,0.6);
+    text-decoration: none;
+  }
+  .sms-tabs .tab.active {
+    background: #fff;
+    color: var(--primary);
+    box-shadow: 0 2px 8px rgba(31, 41, 102, 0.06);
+  }
+
+  /* FIELDS */
+  .sms-field { margin-bottom: 18px; }
+  .sms-field label {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sms-field label .badge-required {
+    background: var(--danger);
+    color: #fff;
+    font-size: 0.6rem;
+    padding: 1px 8px;
+    border-radius: 20px;
+  }
+  .sms-help {
+    font-size: 0.76rem;
+    color: var(--text-secondary);
+    margin-top: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .form-control {
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    transition: var(--transition);
+    background: var(--bg-input);
+  }
+  .form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(11, 80, 218, 0.12);
+    outline: none;
+  }
+
+  /* SECCIÓN DATOS */
+  .sms-auto-section {
+    background: #FAFAFD;
+    border: 1.5px dashed var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+  .sms-auto-section .section-title {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--primary);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* BOTONES */
+  .sms-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  .btn {
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.86rem;
+    padding: 0.55rem 1.2rem;
+    transition: var(--transition);
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+  .btn:active { transform: translateY(0); }
+  .btn-outline-primary {
+    background: #fff;
+    color: var(--primary);
+    border: 1.5px solid var(--primary);
+  }
+  .btn-outline-primary:hover { background: var(--primary-light); color: var(--primary-hover); }
+  .btn-success {
+    background: var(--success);
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.28);
+  }
+  .btn-success:hover { background: #0D9668; }
+  .btn-success:disabled { background: #B9C0CC; box-shadow: none; cursor: not-allowed; transform: none; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-hover); }
+  .btn-outline-secondary {
+    background: #fff;
+    color: var(--text-secondary);
+    border: 1.5px solid var(--border);
+  }
+  .btn-outline-secondary:hover { background: var(--border-light); color: var(--text-primary); }
+  .btn-danger { background: var(--danger); color: #fff; box-shadow: 0 6px 16px rgba(225, 53, 43, 0.25); }
+  .btn-danger:hover { background: #C0392B; }
+  .btn-warning { background: var(--warning); color: #fff; }
+  .btn-warning:hover { background: #D97706; }
+  .btn-sm { padding: 0.35rem 0.8rem; font-size: 0.78rem; }
+
+  /* SIDEBAR */
+  .sms-side {
+    position: sticky;
+    top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .sms-stats {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+  }
+  .sms-stats .row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    padding: 5px 0;
+  }
+  .sms-stats .row + .row { border-top: 1px dashed var(--border); }
+  .sms-stats .label { color: var(--text-secondary); }
+  .sms-stats .value { font-weight: 700; color: var(--text-primary); }
+  .sms-stats .value.success { color: var(--success); }
+  .sms-stats .value.danger { color: var(--danger); }
+  .sms-stats .value.warning { color: var(--warning); }
+  .sms-stats .value.primary { color: var(--primary); }
+
+  /* STATUS PILL */
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 999px;
+  }
+  .status-pill.idle { color: var(--text-secondary); background: var(--border-light); }
+  .status-pill.loading { color: var(--primary); background: var(--primary-light); }
+  .status-pill.ok { color: var(--success); background: var(--success-bg); }
+  .status-pill.err { color: var(--danger); background: var(--danger-bg); }
+
+  /* RESULT BOX */
+  .result-box {
+    margin-top: 16px;
+    padding: 16px 20px;
+    border-radius: 10px;
+    display: none;
+    border: 1px solid var(--border);
+  }
+  .result-box.visible { display: block; animation: fadeIn 0.3s ease; }
+  .result-box.success { background: var(--success-bg); border-color: #BEEBDA; }
+  .result-box.error { background: var(--danger-bg); border-color: #FBD6D7; }
+  .result-box .result-content { font-size: 0.9rem; }
+
+  /* TOAST */
+  #smsToastArea {
+    position: fixed;
+    top: 0.6rem;
+    right: 0.6rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 350px;
+    width: 100%;
+  }
+  .sms-toast {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+    padding: 12px 16px;
+    border-left: 5px solid var(--primary);
+    animation: slideIn 0.3s ease;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .sms-toast.success { border-left-color: var(--success); }
+  .sms-toast.danger { border-left-color: var(--danger); }
+  .sms-toast.warning { border-left-color: var(--warning); }
+  .sms-toast.info { border-left-color: var(--info); }
+  .sms-toast .icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 2px; }
+  .sms-toast .content { flex: 1; font-size: 0.88rem; color: var(--text-primary); }
+  .sms-toast .close-btn {
+    background: none; border: none; font-size: 1.2rem;
+    color: var(--text-secondary); cursor: pointer; padding: 0 4px;
+  }
+  .sms-toast .close-btn:hover { color: var(--text-primary); }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(30px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .spinner-sm {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ZONA UPLOAD EXCEL */
+  .excel-upload-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .excel-upload-row .file-input-wrapper {
+    flex: 1;
+    min-width: 220px;
+  }
+  .excel-upload-row .prefix-input-wrapper {
+    width: 130px;
+  }
+  .excel-upload-row .prefix-input-wrapper input {
+    text-align: center;
+    font-family: monospace;
+    font-weight: 700;
+    letter-spacing: 2px;
+    font-size: 1rem;
+    color: var(--primary);
+  }
+  .excel-status {
+    margin-top: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    display: none;
+    align-items: center;
+    gap: 10px;
+  }
+  .excel-status.visible { display: flex; }
+  .excel-status.info { background: var(--info-bg); color: #0C5460; }
+  .excel-status.success { background: var(--success-bg); color: #065F46; }
+  .excel-status.error { background: var(--danger-bg); color: #991B1B; }
+
+  /* TABLA RESUMEN (reutilizada del form de Enviar) */
+  .vk-summary {
+    margin-top: 16px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    display: none;
+  }
+  .vk-summary.visible { display: block; animation: fadeIn 0.3s ease; }
+  .vk-summary-header {
+    padding: 12px 18px;
+    background: linear-gradient(135deg, var(--primary) 0%, #1E40AF 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .vk-summary-header h4 {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .vk-summary-header .vk-summary-badge {
+    background: rgba(255,255,255,0.2);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .vk-summary-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+  .vk-summary-item {
+    padding: 14px 16px;
+    border-right: 1px solid var(--border-light);
+    border-bottom: 1px solid var(--border-light);
+    text-align: center;
+    transition: var(--transition);
+  }
+  .vk-summary-item:hover { background: #FAFAFD; }
+  .vk-summary-item:last-child { border-right: none; }
+  .vk-summary-item .vk-stat {
+    font-size: 1.35rem;
+    font-weight: 800;
+    display: block;
+    margin-bottom: 4px;
+    line-height: 1;
+  }
+  .vk-summary-item .vk-stat-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+  .vk-stat.value-primary { color: var(--primary); }
+  .vk-stat.value-success { color: var(--success); }
+  .vk-stat.value-danger { color: var(--danger); }
+  .vk-stat.value-warning { color: var(--warning); }
+  .vk-stat.value-info { color: var(--info); }
+  .vk-stat.value-muted { color: var(--text-secondary); }
+  .vk-summary-item.vk-highlight {
+    background: linear-gradient(135deg, #EEF1FD 0%, #E0E7FF 100%);
+    border: none;
+    position: relative;
+  }
+  .vk-summary-item.vk-highlight::before {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+  }
+  .vk-summary-item.vk-highlight .vk-stat {
+    font-size: 1.8rem;
+    color: var(--primary);
+  }
+  .vk-summary-item.vk-highlight .vk-stat-label {
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  @media (max-width: 768px) {
+    .sms-card-body { padding: 16px; }
+    .sms-side { position: relative; }
+    .vk-summary-body { grid-template-columns: repeat(2, 1fr); }
+    .excel-upload-row { flex-direction: column; }
+    .excel-upload-row .prefix-input-wrapper { width: 100%; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div id="smsToastArea"></div>
+
+<div class="sms-container">
+  <div class="sms-card">
+    <div class="sms-card-body">
+
+      <!-- TABS -->
+      <div class="sms-tabs" id="smsTabs">
+        <a href="/auto-campaigns/{{ campaign.id }}" class="tab">
+          <i class="fas fa-paper-plane"></i> Enviar
+        </a>
+        <a href="/auto-campaigns/programar" class="tab">
+          <i class="fas fa-clock"></i> Programar
+        </a>
+        <a href="/auto-campaigns/{{ campaign.id }}/excel" class="tab">
+            <i class="fas fa-file-excel"></i> Enviar Excel
+        </a>
+      </div>
+
+      <!-- DATOS DE LA CAMPAÑA -->
+      <div class="sms-auto-section">
+        <div class="section-title">
+          <i class="fas fa-info-circle"></i> Datos de la campaña
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+          <div class="sms-field" style="margin-bottom:0;">
+            <label>Nombre</label>
+            <input class="form-control form-control-sm" id="excelNombre"
+                   value="{{ campaign.name }}" readonly>
+          </div>
+          <div class="sms-field" style="margin-bottom:0;">
+            <label>Campaign ID</label>
+            <input class="form-control form-control-sm" id="excelCampaignId"
+                   value="{{ campaign.wolkvox_campaign_id }}" readonly>
+          </div>
+          <div class="sms-field" style="margin-bottom:0;">
+            <label>Servidor</label>
+            <input class="form-control form-control-sm" id="excelServerName"
+                   value="{{ campaign.server_name }}" readonly>
+          </div>
+          <div class="sms-field" style="margin-bottom:0;">
+            <label>Tipo</label>
+            <input class="form-control form-control-sm" id="excelCampaignType"
+                   value="{{ campaign.campaign_type or 'predictive' }}" readonly>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBIR EXCEL -->
+      <div class="sms-auto-section">
+        <div class="section-title">
+          <i class="fas fa-file-excel"></i> Subir Excel de contactos
+        </div>
+
+        <div class="excel-upload-row">
+          <div class="file-input-wrapper">
+            <label for="excelFile" style="font-size:0.8rem; font-weight:600; margin-bottom:4px; display:block;">
+              Archivo Excel <span class="text-danger">*</span>
+            </label>
+            <input type="file" id="excelFile" class="form-control form-control-sm" accept=".xlsx,.xls">
+            <div class="sms-help" style="margin-top:4px;">
+              <span>Debe tener columna <code>Contacto__c</code></span>
+            </div>
+          </div>
+
+          <div class="prefix-input-wrapper">
+            <label for="excelPrefijo" style="font-size:0.8rem; font-weight:600; margin-bottom:4px; display:block;">
+              Prefijo tel1
+            </label>
+            <input type="text" id="excelPrefijo" class="form-control form-control-sm"
+                   value="9157" maxlength="6" inputmode="numeric">
+          </div>
+
+          <button type="button" class="btn btn-outline-primary btn-sm" id="btnEnriquecer">
+            <i class="fas fa-magic"></i> Enriquecer
+          </button>
+        </div>
+
+        <div class="excel-status" id="excelStatus"></div>
+      </div>
+
+      <!-- RESUMEN -->
+      <div class="vk-summary" id="vkSummary">
+        <div class="vk-summary-header">
+          <h4><i class="fas fa-clipboard-check"></i> Resumen de validación</h4>
+          <span class="vk-summary-badge" id="vkSummaryTime">—</span>
+        </div>
+        <div class="vk-summary-body">
+          <div class="vk-summary-item">
+            <span class="vk-stat value-muted" id="vkTotal">—</span>
+            <span class="vk-stat-label">Total</span>
+          </div>
+          <div class="vk-summary-item">
+            <span class="vk-stat value-success" id="vkValidos">—</span>
+            <span class="vk-stat-label">Válidos</span>
+          </div>
+          <div class="vk-summary-item">
+            <span class="vk-stat value-danger" id="vkInvalidos">—</span>
+            <span class="vk-stat-label">Inválidos</span>
+          </div>
+          <div class="vk-summary-item">
+            <span class="vk-stat value-warning" id="vkDuplicados">—</span>
+            <span class="vk-stat-label">Duplicados hoy</span>
+          </div>
+          <div class="vk-summary-item">
+            <span class="vk-stat value-danger" id="vkListaNegra">—</span>
+            <span class="vk-stat-label">Lista negra</span>
+          </div>
+          <div class="vk-summary-item vk-highlight">
+            <span class="vk-stat" id="vkAEnviar">—</span>
+            <span class="vk-stat-label">A enviar</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACCIONES -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 0;">
+        <button type="button" class="btn btn-warning btn-sm" id="btnClear">
+          <i class="fas fa-broom"></i> Limpiar campaña
+        </button>
+        <button type="button" class="btn btn-success btn-sm" id="btnEnviarExcel" disabled>
+          <i class="fas fa-paper-plane"></i> Enviar Excel a Wolkvox
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnStart">
+          <i class="fas fa-play"></i> Iniciar
+        </button>
+        <button type="button" class="btn btn-danger btn-sm" id="btnStop">
+          <i class="fas fa-stop"></i> Detener
+        </button>
+      </div>
+
+      <div id="resultBox" class="result-box">
+        <div id="resultContent" class="result-content"></div>
+      </div>
+
+      <!-- BOTÓN VOLVER -->
+      <div class="sms-actions" style="margin-top:20px;">
+        <a class="btn btn-outline-secondary" href="/auto-campaigns">
+          <i class="fas fa-arrow-left"></i> Volver
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sms-side">
+    <div class="sms-stats">
+      <div class="row">
+        <span class="label"><i class="fas fa-users"></i> Total</span>
+        <span class="value" id="statTotal">—</span>
+      </div>
+      <div class="row">
+        <span class="label"><i class="fas fa-check-circle" style="color:var(--success);"></i> Válidos</span>
+        <span class="value success" id="statValidos">—</span>
+      </div>
+      <div class="row">
+        <span class="label"><i class="fas fa-exclamation-circle" style="color:var(--danger);"></i> Inválidos</span>
+        <span class="value danger" id="statInvalidos">—</span>
+      </div>
+      <div class="row">
+        <span class="label"><i class="fas fa-copy" style="color:var(--warning);"></i> Duplicados hoy</span>
+        <span class="value warning" id="statDuplicados">—</span>
+      </div>
+      <div class="row">
+        <span class="label"><i class="fas fa-ban" style="color:var(--danger);"></i> Lista negra</span>
+        <span class="value danger" id="statBlacklist">—</span>
+      </div>
+      <div class="row" style="border-top:2px solid var(--border);padding-top:8px;margin-top:4px;">
+        <span class="label" style="font-weight:700;">📤 A enviar</span>
+        <span class="value primary" id="statAEnviar" style="font-size:1.1rem;color:var(--primary);">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  'use strict';
+
+  const campaignId = "{{ campaign.id }}";
+  let uploadId = null;
+
+  // ══════════════════════════════════════════════════════
+  // TOAST
+  // ══════════════════════════════════════════════════════
+  function showToast(message, type) {
+    const area = document.getElementById('smsToastArea');
+    const toast = document.createElement('div');
+    toast.className = 'sms-toast ' + (type || 'info');
+    const iconMap = {
+      success: 'fa-check-circle',
+      danger: 'fa-exclamation-circle',
+      warning: 'fa-exclamation-triangle',
+      info: 'fa-info-circle'
+    };
+    const icon = iconMap[type] || iconMap.info;
+    toast.innerHTML = `
+      <span class="icon"><i class="fas ${icon}"></i></span>
+      <div class="content">${message}</div>
+      <button class="close-btn">&times;</button>
+    `;
+    toast.querySelector('.close-btn').onclick = () => toast.remove();
+    area.appendChild(toast);
+    setTimeout(() => { if (toast.parentElement) toast.remove(); }, 5000);
+  }
+
+  // ══════════════════════════════════════════════════════
+  // RESULT BOX
+  // ══════════════════════════════════════════════════════
+  function showResult(success, message, extraData) {
+    const box = document.getElementById('resultBox');
+    const content = document.getElementById('resultContent');
+    box.className = 'result-box visible ' + (success ? 'success' : 'error');
+
+    let html = message;
+    if (extraData) {
+      html += `
+        <div style="margin-top:12px;padding:12px;background:#FFF3CD;border-radius:8px;border:1px solid #FFC107;">
+          <strong>📊 Estadísticas:</strong><br>
+          <span style="color:#28a745;">✅ Enviados: ${extraData.records_sent || 0}</span><br>
+          <span style="color:#dc3545;">🚫 Bloqueados: ${extraData.records_blocked || 0}</span><br>
+          <span style="color:#f59e0b;">📋 Duplicados: ${extraData.duplicados || 0}</span><br>
+          <span style="color:#6c757d;">📋 Total: ${extraData.records_fetched || 0}</span>
+        </div>
+      `;
+    }
+    content.innerHTML = html;
+
+    if (success) setTimeout(() => { box.className = 'result-box'; }, 10000);
+  }
+
+  // ══════════════════════════════════════════════════════
+  // SET LOADING
+  // ══════════════════════════════════════════════════════
+  function setLoading(btn, loading, text) {
+    if (!btn) return;
+    if (loading) {
+      btn._orig = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-sm"></span> ' + (text || 'Procesando...');
+    } else {
+      btn.disabled = false;
+      if (btn._orig) btn.innerHTML = btn._orig;
+    }
+  }
+
+  // ══════════════════════════════════════════════════════
+  // ENRIQUECER (subir Excel)
+  // ══════════════════════════════════════════════════════
+  document.getElementById('btnEnriquecer').addEventListener('click', async () => {
+    const fileInput = document.getElementById('excelFile');
+    const prefijoInput = document.getElementById('excelPrefijo');
+    const statusBox = document.getElementById('excelStatus');
+
+    const file = fileInput.files[0];
+    const prefijo = prefijoInput.value.trim();
+
+    if (!file) {
+      showToast('⚠️ Seleccioná un archivo Excel primero.', 'warning');
+      return;
+    }
+    if (!prefijo || !/^\d+$/.test(prefijo)) {
+      showToast('⚠️ El prefijo debe ser numérico.', 'warning');
+      return;
+    }
+
+    const btn = document.getElementById('btnEnriquecer');
+    setLoading(btn, true, 'Enriqueciendo...');
+
+    statusBox.className = 'excel-status visible info';
+    statusBox.innerHTML = '⏳ Procesando Excel...';
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('prefijo', prefijo);
+
+      const resp = await fetch(`/auto-campaigns/${campaignId}/upload-excel`, {
+        method: 'POST',
+        body: formData
+      });
+      const data = await resp.json();
+
+      if (data.success) {
+        uploadId = data.upload_id;
+
+        // Actualizar tabla resumen
+        document.getElementById('vkTotal').textContent = (data.total_consulta || 0).toLocaleString();
+        document.getElementById('vkValidos').textContent = (data.validos || 0).toLocaleString();
+        document.getElementById('vkInvalidos').textContent = (data.invalidos || 0).toLocaleString();
+        document.getElementById('vkDuplicados').textContent = (data.duplicados || 0).toLocaleString();
+        document.getElementById('vkListaNegra').textContent = (data.lista_negra || 0).toLocaleString();
+        document.getElementById('vkAEnviar').textContent = (data.a_enviar || 0).toLocaleString();
+        document.getElementById('vkSummaryTime').textContent =
+          new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+
+        // Actualizar sidebar
+        document.getElementById('statTotal').textContent = (data.total_consulta || 0).toLocaleString();
+        document.getElementById('statValidos').textContent = (data.validos || 0).toLocaleString();
+        document.getElementById('statInvalidos').textContent = (data.invalidos || 0).toLocaleString();
+        document.getElementById('statDuplicados').textContent = (data.duplicados || 0).toLocaleString();
+        document.getElementById('statBlacklist').textContent = (data.lista_negra || 0).toLocaleString();
+        document.getElementById('statAEnviar').textContent = (data.a_enviar || 0).toLocaleString();
+
+        document.getElementById('vkSummary').classList.add('visible');
+
+        statusBox.className = 'excel-status visible success';
+        statusBox.innerHTML = `✅ Enriquecido: ${data.a_enviar} contactos listos para enviar`;
+
+        document.getElementById('btnEnviarExcel').disabled = false;
+        showToast(`✅ ${data.a_enviar} contactos listos`, 'success');
+      } else {
+        statusBox.className = 'excel-status visible error';
+        statusBox.innerHTML = '❌ ' + (data.message || 'Error');
+        document.getElementById('btnEnviarExcel').disabled = true;
+        showToast('❌ ' + data.message, 'danger');
+      }
+    } catch (e) {
+      statusBox.className = 'excel-status visible error';
+      statusBox.innerHTML = '❌ Error: ' + e.message;
+      document.getElementById('btnEnviarExcel').disabled = true;
+      showToast('❌ Error: ' + e.message, 'danger');
+    } finally {
+      setLoading(btn, false);
+    }
+  });
+
+  // ══════════════════════════════════════════════════════
+  // ENVIAR A WOLKVOX
+  // ══════════════════════════════════════════════════════
+  document.getElementById('btnEnviarExcel').addEventListener('click', async () => {
+    if (!uploadId) {
+      showToast('⚠️ Primero enriquecé el Excel.', 'warning');
+      return;
+    }
+    if (!confirm('¿Enviar los contactos del Excel a Wolkvox?')) return;
+
+    const btn = document.getElementById('btnEnviarExcel');
+    setLoading(btn, true, 'Enviando...');
+
+    try {
+      const resp = await fetch(`/auto-campaigns/${campaignId}/load-excel-wkv`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          upload_id: uploadId,
+          excluir_duplicados: true
+        })
+      });
+      const data = await resp.json();
+
+      if (data.success) {
+        let message = `✅ ${data.records_sent || 0} contactos enviados a Wolkvox.`;
+        if (data.records_blocked > 0) message += ` 🚫 ${data.records_blocked} bloqueados.`;
+        if (data.duplicados > 0) message += ` 📋 ${data.duplicados} duplicados excluidos.`;
+        showResult(true, message, data);
+        showToast('✅ Envío completado', 'success');
+
+        // Reset
+        uploadId = null;
+        document.getElementById('excelFile').value = '';
+        document.getElementById('excelStatus').className = 'excel-status';
+        document.getElementById('vkSummary').classList.remove('visible');
+        document.getElementById('btnEnviarExcel').disabled = true;
+      } else {
+        showResult(false, '❌ ' + (data.message || 'Error en el envío'), data);
+        showToast('⚠️ Carga parcial', 'warning');
+      }
+    } catch (e) {
+      showResult(false, '❌ Error: ' + e.message);
+      showToast('❌ Error: ' + e.message, 'danger');
+    } finally {
+      setLoading(btn, false);
+    }
+  });
+
+  // ══════════════════════════════════════════════════════
+  // ACCIONES SECUNDARIAS
+  // ══════════════════════════════════════════════════════
+  document.getElementById('btnClear')?.addEventListener('click', async () => {
+    if (!confirm('¿Limpiar todos los registros de la campaña en Wolkvox?')) return;
+    const btn = document.getElementById('btnClear');
+    setLoading(btn, true);
+    try {
+      const resp = await fetch(`/auto-campaigns/${campaignId}/clear-wkv`, { method: 'DELETE' });
+      const data = await resp.json();
+      showResult(data.success, data.message || '✅ Campaña limpiada');
+      if (data.success) showToast('✅ Campaña limpiada', 'success');
+    } catch (e) {
+      showResult(false, '❌ Error: ' + e.message);
+    } finally {
+      setLoading(btn, false);
+    }
+  });
+
+  document.getElementById('btnStart')?.addEventListener('click', async () => {
+    if (!confirm('¿Iniciar la campaña en Wolkvox?')) return;
+    const btn = document.getElementById('btnStart');
+    setLoading(btn, true);
+    try {
+      const resp = await fetch(`/auto-campaigns/${campaignId}/start-wkv`, { method: 'POST' });
+      const data = await resp.json();
+      showResult(data.success, data.message || '✅ Campaña iniciada');
+      if (data.success) showToast('✅ Campaña iniciada', 'success');
+    } catch (e) {
+      showResult(false, '❌ Error: ' + e.message);
+    } finally {
+      setLoading(btn, false);
+    }
+  });
+
+  document.getElementById('btnStop')?.addEventListener('click', async () => {
+    if (!confirm('¿Detener la campaña en Wolkvox?')) return;
+    const btn = document.getElementById('btnStop');
+    setLoading(btn, true);
+    try {
+      const resp = await fetch(`/auto-campaigns/${campaignId}/stop-wkv`, { method: 'POST' });
+      const data = await resp.json();
+      showResult(data.success, data.message || '✅ Campaña detenida');
+      if (data.success) showToast('✅ Campaña detenida', 'success');
+    } catch (e) {
+      showResult(false, '❌ Error: ' + e.message);
+    } finally {
+      setLoading(btn, false);
+    }
+  });
+
+})();
+</script>
+{% endblock %}

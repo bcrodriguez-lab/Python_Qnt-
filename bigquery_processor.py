@@ -907,7 +907,7 @@ def subir_a_embudos_robot(df_procesado: pd.DataFrame, fecha: str, client) -> boo
     # 🔥 4. AGREGAR COLUMNAS FALTANTES CON NULL
     columnas_faltantes = [col for col in columnas_destino if col not in df_subir.columns]
     if columnas_faltantes:
-        logger.info(f"   ➕ Agregando {len(columnas_faltantes)} columnas faltantes")
+        logger.info(f"   Agregando {len(columnas_faltantes)} columnas faltantes")
         for col in columnas_faltantes:
             df_subir[col] = None
 

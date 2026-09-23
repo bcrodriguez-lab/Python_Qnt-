@@ -90,6 +90,13 @@ PROJECT_ID = "capable-arbor-209819"
 bq_client = None
 import os
 
+
+
+
+_EXCEL_CACHE = {} 
+
+
+
 OPERADORES_SMS = [
     "HELLO_BPO",
     "QNT_RBK_2",
@@ -2346,12 +2353,16 @@ def auto_campaigns_validate_query_fields():
         return jsonify({"success": False, "message": str(exc)}), 500
 
 
-def validar_consulta_wolkvox(query, excluir_duplicados=True):
+def validar_consulta_wolkvox(query= None, excluir_duplicados=True, rows_override=None):
 
     # ============================================================
     # 1. EJECUTAR CONSULTA PRINCIPAL
     # ============================================================
-    rows = fetch_data_from_bigquery(query)
+    if rows_override is not None:
+        rows = rows_override
+        logger.info(f"📥 Usando {len(rows)} registros provistos (override)")
+    else:
+        rows = fetch_data_from_bigquery(query)
 
     if not rows:
         raise ValueError("La consulta no retornó registros.")
@@ -2823,7 +2834,27 @@ def numero_a_letras_es(numero):
 
     return str(numero)
 
-def Cargue_Wolkvox(campaign, token, excluir_duplicados=True):
+
+
+@app.route("/auto-campaigns/<int:campaign_id>/excel", methods=["GET"])
+def campaign_form_excel(campaign_id):
+    """Vista para subir Excel y enriquecer contactos."""
+    from database import AutoCampaign
+    from servers import load_servers
+
+    campaign = AutoCampaign.query.get(campaign_id)
+    if not campaign:
+        return "Campaña no encontrada", 404
+
+    servers = load_servers()
+
+    return render_template(
+        "campaign_form_excel.html",
+        campaign=campaign,
+        servers=servers,
+    )
+
+def Cargue_Wolkvox(campaign, token, excluir_duplicados=True, rows_override=None ):
     """
     Formatea registros y envía a Wolkvox en lotes.
     Limpia la campaña antes de cargar para evitar acumulación.
@@ -2840,7 +2871,8 @@ def Cargue_Wolkvox(campaign, token, excluir_duplicados=True):
     # 1. Validar consulta
     validacion = validar_consulta_wolkvox(
         campaign.bigquery_query,
-        excluir_duplicados=excluir_duplicados
+        excluir_duplicados=excluir_duplicados,
+        rows_override=rows_override,
     )
     registros_validos = validacion["registros_validos"]
     telefono_col = validacion["telefono_col"]
@@ -2972,10 +3004,16 @@ def Cargue_Wolkvox(campaign, token, excluir_duplicados=True):
 
     # 3. Señuelos
     senuelos_data_ = [
-        "brayan", "91573144051619","3213213"
     ]
     start_id = len(records) + 1
-    for i, (nombre_s, telefono_s, customer_id_s) in enumerate(senuelos_data_, start=start_id):
+    for i, senuelo_data in enumerate(senuelos_data_, start=start_id):
+        # Verificar que tenga 3 elementos
+        if len(senuelo_data) != 3:
+            logger.warning(f"⚠️ Señuelo mal formado (se esperan 3 valores): {senuelo_data}")
+            continue
+        
+        nombre_s, telefono_s, customer_id_s = senuelo_data
+        
         senuelo = {
             "customer_name": nombre_s,
             "customer_last_name": "",
@@ -2994,6 +3032,7 @@ def Cargue_Wolkvox(campaign, token, excluir_duplicados=True):
             "recall_telephone": formatear_telefono(telefono_s),
         }
         records.append(senuelo)
+        logger_programacion.info(f"Señuelo agregado: {nombre_s}, {telefono_s}, {customer_id_s}")
 
     # 4. URL Wolkvox
     server_mapping = {
@@ -3057,6 +3096,15 @@ def Cargue_Wolkvox(campaign, token, excluir_duplicados=True):
         "limpieza_previa": limpieza_ok,
         "message": f"{total_enviados} registros cargados. {validacion['lista_negra']} bloqueados."
     }
+
+
+
+
+
+
+
+
+
 
 @app.route("/api/wolkvox/validar", methods=["POST"])
 def wolkvox_validar():
@@ -4461,7 +4509,172 @@ def api_reejecutar_programacion(prog_id):
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route("/auto-campaigns/<int:campaign_id>/upload-excel", methods=["POST"])
+def auto_campaigns_upload_excel(campaign_id):
+    """
+    Sube el Excel, enriquece con BQ, y aplica las MISMAS validaciones
+    que el flujo SQL (lista negra + duplicados + inválidos).
+    """
+    from database import AutoCampaign
+    from services.excel_campaigns import excel_a_registros
+    import uuid
 
+    logger.info(f"[UPLOAD-1] Petición para campaña #{campaign_id}")
+
+    if bq_client is None:
+        init_bigquery()
+
+    campaign = AutoCampaign.query.get(campaign_id)
+    if not campaign:
+        logger.warning(f"[UPLOAD-1] Campaña #{campaign_id} no encontrada")
+        return jsonify({"success": False, "message": "Campaña no encontrada."}), 404
+
+    if "file" not in request.files:
+        logger.warning("[UPLOAD-2] Sin archivo")
+        return jsonify({"success": False, "message": "No se envió archivo."}), 400
+
+    file = request.files["file"]
+    prefijo = (request.form.get("prefijo") or "9157").strip()
+
+    logger.info(f"[UPLOAD-2] Archivo: {file.filename} | Prefijo: {prefijo}")
+
+    if not file or not file.filename:
+        return jsonify({"success": False, "message": "Archivo vacío."}), 400
+
+    if not file.filename.lower().endswith((".xlsx", ".xls")):
+        return jsonify({"success": False, "message": "Debe ser .xlsx o .xls"}), 400
+
+    if not prefijo.isdigit():
+        return jsonify({"success": False, "message": "El prefijo debe ser numérico."}), 400
+
+    try:
+        # 1. Excel → registros (enriquecidos + prefijo)
+        logger.info("[UPLOAD-3] Procesando Excel...")
+        registros = excel_a_registros(file, prefijo, bq_client)
+
+        # 2. 🆕 REUTILIZAMOS validar_consulta_wolkvox con rows_override
+        logger.info(f"[UPLOAD-4] Aplicando validaciones a {len(registros)} registros...")
+        validacion = validar_consulta_wolkvox(
+            excluir_duplicados=True,
+            rows_override=registros,
+        )
+
+        # 3. Guardar en cache
+        upload_id = str(uuid.uuid4())
+        _EXCEL_CACHE[upload_id] = {
+            "registros": validacion["registros_validos"],
+            "expires": datetime.now(COLOMBIA_TZ) + timedelta(hours=1),
+        }
+
+        logger.info(
+            f"[UPLOAD-5] Validación OK: "
+            f"total={validacion['total_consulta']} | "
+            f"válidos={validacion['validos']} | "
+            f"inválidos={validacion['invalidos']} | "
+            f"lista_negra={validacion['lista_negra']} | "
+            f"duplicados={validacion['duplicados']} | "
+            f"a_enviar={validacion['a_enviar']}"
+        )
+
+        # 4. Devolver MISMA estructura que el flujo SQL
+        return jsonify({
+            "success": True,
+            "upload_id": upload_id,
+            "total_consulta": validacion["total_consulta"],
+            "validos": validacion["validos"],
+            "invalidos": validacion["invalidos"],
+            "duplicados": validacion["duplicados"],
+            "lista_negra": validacion["lista_negra"],
+            "a_enviar": validacion["a_enviar"],
+        })
+
+    except ValueError as ve:
+        logger.warning(f"[UPLOAD-ERROR] {ve}")
+        return jsonify({"success": False, "message": str(ve)}), 400
+    except Exception as exc:
+        logger.exception("[UPLOAD-ERROR] Error procesando Excel")
+        return jsonify({"success": False, "message": f"Error: {exc}"}), 500
+
+
+# ══════════════════════════════════════════════════════════════════════
+# ENVIAR EXCEL VALIDADO A WOLKVOX
+# ══════════════════════════════════════════════════════════════════════
+
+@app.route("/auto-campaigns/<int:campaign_id>/load-excel-wkv", methods=["POST"])
+def auto_campaigns_load_excel_wkv(campaign_id):
+    """
+    Toma los registros validados del cache y los envía a Wolkvox.
+    Reutiliza  con rows_override.
+    """
+    from database import AutoCampaign, AutoCampaignExecutionLog, db
+    from auto_campaign_executor import _get_token
+
+    logger.info(f"[SEND-1] Petición de envío para campaña #{campaign_id}")
+
+    campaign = AutoCampaign.query.get(campaign_id)
+    if not campaign:
+        return jsonify({"success": False, "message": "Campaña no encontrada."}), 404
+
+    data = request.get_json(silent=True) or {}
+    upload_id = data.get("upload_id")
+    excluir_duplicados = bool(data.get("excluir_duplicados", True))
+
+    cache = _EXCEL_CACHE.get(upload_id)
+    if not cache:
+        logger.warning(f"[SEND-2] upload_id={upload_id} no encontrado")
+        return jsonify({"success": False, "message": "Excel no cargado o expiró."}), 400
+
+    if cache["expires"] < datetime.now(COLOMBIA_TZ):
+        logger.warning(f"[SEND-2] upload_id={upload_id} expiró")
+        _EXCEL_CACHE.pop(upload_id, None)
+        return jsonify({"success": False, "message": "Excel expiró. Volvé a subirlo."}), 400
+
+    registros = cache["registros"]
+    logger.info(f"[SEND-3] {len(registros)} registros del cache")
+
+    if not registros:
+        return jsonify({"success": False, "message": "Sin registros para enviar."}), 400
+
+    token = _get_token(campaign)
+    if not token:
+        return jsonify({"success": False, "message": "Sin token Wolkvox."}), 400
+
+    log = AutoCampaignExecutionLog(
+        auto_campaign_id=campaign.id,
+        start_time=datetime.now(timezone.utc)
+    )
+    db.session.add(log)
+    db.session.commit()
+
+    try:
+        logger.info(f"[SEND-4] Enviando {len(registros)} registros a Wolkvox...")
+
+        # 🆕 REUTILIZAMOS Cargue_Wolkvox con rows_override
+        resultado = Cargue_Wolkvox(
+            campaign,
+            token,
+            excluir_duplicados=excluir_duplicados,
+            rows_override=registros,
+        )
+
+        log.records_fetched = resultado.get("records_fetched", 0)
+        log.records_sent = resultado.get("records_sent", 0)
+        log.records_failed = resultado.get("records_failed", 0)
+        log.end_time = datetime.now(timezone.utc)
+        db.session.commit()
+
+        logger.info(f"[SEND-5] Envío OK: {resultado.get('records_sent')} enviados")
+
+        _EXCEL_CACHE.pop(upload_id, None)
+        return jsonify(resultado)
+
+    except Exception as e:
+        db.session.rollback()
+        log.end_time = datetime.now(timezone.utc)
+        log.error_message = str(e)
+        db.session.commit()
+        logger.exception("[SEND-ERROR] Error en el envío")
+        return jsonify({"success": False, "message": str(e)}), 500
 
 # ==================== MAIN ====================
 
@@ -4469,4 +4682,4 @@ if __name__ == "__main__":
     with app.app_context():
         db.create_all()
     init_bigquery()
-    app.run(debug=False, host="0.0.0.0", port=5000)
+    app.run(debug=True, host="0.0.0.0", port=5000)
