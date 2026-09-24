@@ -1,3 +1,10 @@
+# ============================================================
+# reporte_qnt_48h.py — Reporte SMS QNT (últimas 48 horas)
+# ------------------------------------------------------------
+# Descarga paralela por ventanas de 30 min (sin cambios).
+# Dashboard HTML filtrable por bulkId, estado, operador, error,
+# hora y búsqueda libre. Exporta la vista filtrada a CSV.
+# ============================================================
 
 import asyncio
 import aiohttp
@@ -9,12 +16,15 @@ from collections import Counter, defaultdict
 
 # ============ CONFIGURACIÓN ============
 BASE_URL = "2knxjz.api.infobip.com"
-API_KEY  = "04ca14df6c5a47e6713cdb13e8272ab3-aa42acbb-c69f-4a29-a3f5-3ec8b2fae16d"   # ← 替换为真实 API Key
+API_KEY  = "b93dfcb782954ad40f2449df9f9e2c20-26aa4d12-fae3-4b1c-ba10-ff7ec1d6472a"
 
-SALIDA_LOGS_JSON = "logs_hoy.json"
-SALIDA_CSV       = "logs_hoy.csv"
-SALIDA_HTML      = "reporte_hoy.html"
+SALIDA_LOGS_JSON = "logs_48h.json"
+SALIDA_CSV       = "logs_48h.csv"
+SALIDA_HTML      = "reporte_48h.html"
 HISTORICO_CSV    = "historico.csv"
+
+# Rango de descarga: últimas 48 horas desde "ahora" en hora Colombia
+HORAS_ATRAS = 48
 
 CONCURRENCIA       = 20
 TAMANO_VENTANA_MIN = 30
@@ -46,7 +56,7 @@ ERROR_ACTIONS = {
 
 
 # ============================================================
-# 1. DESCARGA DE LOGS (SIN CAMBIOS — ventanas paralelas)
+# 1. DESCARGA DE LOGS — VENTANAS PARALELAS (últimas 48h)
 # ============================================================
 async def _traer_ventana(session, sem, idx, desde_utc, hasta_utc, total):
     async with sem:
@@ -81,15 +91,24 @@ async def _traer_ventana(session, sem, idx, desde_utc, hasta_utc, total):
         return out
 
 
-async def descargar_logs_hoy():
+async def descargar_logs_48h():
+    """
+    Descarga los logs de las últimas 48 horas.
+    - 'Ahora' se toma en hora Colombia.
+    - El rango en UTC se calcula restando 48h a 'ahora'.
+    - Se divide en ventanas de 30 min lanzadas en paralelo.
+    """
     ahora_col  = datetime.now(TZ_COL)
-    inicio_col = ahora_col.replace(hour=0, minute=0, second=0, microsecond=0)
+    inicio_col = ahora_col - timedelta(hours=HORAS_ATRAS)
+
+    # Convertir a UTC para la API de Infobip
     ahora_utc  = ahora_col.astimezone(timezone.utc)
     inicio_utc = inicio_col.astimezone(timezone.utc)
 
-    print(f"📅 Día Colombia: {inicio_col.strftime('%Y-%m-%d %H:%M')} → {ahora_col.strftime('%H:%M')}")
-    print(f"📅 En UTC API  : {inicio_utc.strftime(FMT)} → {ahora_utc.strftime(FMT)}\n")
+    print(f"📅 Rango Colombia: {inicio_col.strftime('%Y-%m-%d %H:%M')} → {ahora_col.strftime('%Y-%m-%d %H:%M')}")
+    print(f"📅 Rango UTC API : {inicio_utc.strftime(FMT)} → {ahora_utc.strftime(FMT)}\n")
 
+    # Construir ventanas de 30 min entre inicio_utc y ahora_utc
     ventanas, t = [], inicio_utc
     while t < ahora_utc:
         fin = min(t + timedelta(minutes=TAMANO_VENTANA_MIN), ahora_utc)
@@ -97,6 +116,7 @@ async def descargar_logs_hoy():
         t = fin
 
     print(f"🚀 {len(ventanas)} ventanas paralelas (conc={CONCURRENCIA})\n")
+
     sem       = asyncio.Semaphore(CONCURRENCIA)
     connector = aiohttp.TCPConnector(limit=CONCURRENCIA * 2, ttl_dns_cache=300)
     timeout   = aiohttp.ClientTimeout(total=180)
@@ -106,6 +126,7 @@ async def descargar_logs_hoy():
                   for i, (d, h) in enumerate(ventanas)]
         lotes = await asyncio.gather(*tareas)
 
+    # Deduplicar por messageId
     vistos, todos = set(), []
     for lote in lotes:
         for log in lote:
@@ -115,6 +136,8 @@ async def descargar_logs_hoy():
             if mid:
                 vistos.add(mid)
             todos.append(log)
+
+    # Ordenar cronológicamente
     todos.sort(key=lambda x: x.get("sentAt", ""))
 
     with open(SALIDA_LOGS_JSON, "w", encoding="utf-8") as f:
@@ -158,6 +181,7 @@ def extraer_filas(logs):
             "destination":   log.get("destination", ""),
             "sentAt_utc":    log.get("sentAt", ""),
             "sentAt_col":    sent_col.strftime("%Y-%m-%d %H:%M:%S") if sent_col else "",
+            "fecha_col":     sent_col.strftime("%Y-%m-%d") if sent_col else "",
             "doneAt_col":    done_col.strftime("%Y-%m-%d %H:%M:%S") if done_col else "",
             "delay_sec":     round(delay, 2) if delay is not None else None,
             "mccMnc":        mcc,
@@ -185,7 +209,7 @@ def exportar_csv(filas, path=SALIDA_CSV):
 
 
 # ============================================================
-# 3. REPORTE EN CONSOLA (igual que antes)
+# 3. REPORTE EN CONSOLA (con desglose por día)
 # ============================================================
 def reporte(filas):
     total = len(filas)
@@ -195,22 +219,36 @@ def reporte(filas):
 
     costo_total = sum(float(f["precio"] or 0) for f in filas)
     delivered   = sum(1 for f in filas if f["estado"] == "DELIVERED")
-    fallidos    = total - delivered
 
     print(f"\n{'='*72}")
-    print(f"REPORTE DEL DÍA (HORA COLOMBIA) — {datetime.now(TZ_COL).strftime('%Y-%m-%d')}")
+    print(f"REPORTE ÚLTIMAS {HORAS_ATRAS}H (HORA COLOMBIA) — {datetime.now(TZ_COL).strftime('%Y-%m-%d %H:%M')}")
     print(f"{'='*72}")
     print(f"Total mensajes      : {total:,}")
     print(f"Destinos únicos     : {len(set(f['destination'] for f in filas)):,}")
     print(f"Costo total         : {costo_total:,.0f} COP")
     print(f"Tasa de entrega     : {delivered/total*100:.2f}%")
 
+    # --- Desglose por fecha (útil al mirar 48h) ---
+    print(f"\n── 📅 DESGLOSE POR FECHA ──")
+    por_fecha = defaultdict(lambda: {"total": 0, "delivered": 0, "costo": 0.0})
+    for f in filas:
+        d = por_fecha[f["fecha_col"]]
+        d["total"] += 1
+        if f["estado"] == "DELIVERED":
+            d["delivered"] += 1
+        d["costo"] += float(f["precio"] or 0)
+    print(f"  {'Fecha':<12} {'Total':>10} {'Entregados':>12} {'Tasa':>9} {'Costo':>14}")
+    print(f"  {'-'*12} {'-'*10} {'-'*12} {'-'*9} {'-'*14}")
+    for fecha, d in sorted(por_fecha.items()):
+        te = d["delivered"]/d["total"]*100 if d["total"] else 0
+        print(f"  {fecha:<12} {d['total']:>10,} {d['delivered']:>12,} {te:>8.2f}% {d['costo']:>13,.0f}")
+
+    # --- Tiempos por operador ---
     print(f"\n── ⏱ TIEMPO DE ENTREGA POR OPERADOR ──")
     por_op = defaultdict(list)
     for f in filas:
         if f["delay_sec"] is not None and f["estado"] == "DELIVERED":
             por_op[f["operador"]].append(f["delay_sec"])
-
     print(f"  {'Operador':<15} {'Muestras':>10} {'P50 (s)':>10} {'P95 (s)':>10} {'>5min':>8}")
     print(f"  {'-'*15} {'-'*10} {'-'*10} {'-'*10} {'-'*8}")
     for op, ds in sorted(por_op.items(), key=lambda x: -len(x[1])):
@@ -222,17 +260,17 @@ def reporte(filas):
         anomalies = sum(1 for d in ds if d > 300)
         print(f"  {op:<15} {len(ds):>10,} {p50:>10.2f} {p95:>10.2f} {anomalies:>8,}")
 
-    # Tasa <5s
-    entregados_rapidos = sum(1 for f in filas
-                             if f["delay_sec"] is not None
-                             and f["estado"] == "DELIVERED"
-                             and f["delay_sec"] < 5)
-    tasa_5s = (entregados_rapidos / delivered * 100) if delivered else 0
+    # --- Tasa <5s ---
+    rapidos = sum(1 for f in filas
+                  if f["delay_sec"] is not None
+                  and f["estado"] == "DELIVERED"
+                  and f["delay_sec"] < 5)
+    tasa_5s = (rapidos / delivered * 100) if delivered else 0
     print(f"\n── ⚡ TASA DE ENTREGA <5 SEGUNDOS ──")
-    print(f"  Entregados <5s      : {entregados_rapidos:,}")
+    print(f"  Entregados <5s      : {rapidos:,}")
     print(f"  Tasa entrega <5s    : {tasa_5s:.2f}%")
 
-    # Costo-eficiencia por operador
+    # --- Costo-eficiencia ---
     print(f"\n── 💰 COSTO-EFICIENCIA POR OPERADOR ──")
     op_stats = defaultdict(lambda: {"total": 0, "delivered": 0, "costo": 0.0})
     for f in filas:
@@ -241,7 +279,6 @@ def reporte(filas):
         if f["estado"] == "DELIVERED":
             s["delivered"] += 1
         s["costo"] += float(f["precio"] or 0)
-
     print(f"  {'Operador':<12} {'Enviados':>10} {'Entrega':>9} {'Fallo':>9} {'Costo':>14} {'$/Entrega':>12}")
     print(f"  {'-'*12} {'-'*10} {'-'*9} {'-'*9} {'-'*14} {'-'*12}")
     for op, s in sorted(op_stats.items(), key=lambda x: -x[1]["total"]):
@@ -250,7 +287,7 @@ def reporte(filas):
         ce = s["costo"] / s["delivered"] if s["delivered"] else 0
         print(f"  {op:<12} {s['total']:>10,} {te:>8.2f}% {tf:>8.2f}% {s['costo']:>13,.0f} {ce:>12.2f}")
 
-    # Errores con acción
+    # --- Errores ---
     print(f"\n── ❌ ERRORES Y ACCIONES SUGERIDAS ──")
     errores = Counter(f["error"] for f in filas if f["error"] != "NO_ERROR")
     if not errores:
@@ -259,127 +296,70 @@ def reporte(filas):
         for err, cnt in errores.most_common(15):
             print(f"  {err:<40} {cnt:>6,}  →  {ERROR_ACTIONS.get(err, '—')}")
 
-    # Distribución por hora
-    print(f"\n── 🕐 DISTRIBUCIÓN POR HORA (COLOMBIA) ──")
-    horas = Counter(f["hora_col"] for f in filas if f["hora_col"] is not None)
-    for h in sorted(horas.keys()):
-        v = horas[h]
-        barra = "█" * int(v / total * 50)
-        print(f"  {h:02d}:00  {v:>7,}  {barra}")
-
-    # Comparación histórica
-    hoy = datetime.now(TZ_COL).strftime("%Y-%m-%d")
-    fila_actual = {
-        "fecha": hoy, "total": total, "delivered": delivered,
-        "tasa_entrega": round(delivered/total*100, 2),
-        "tasa_fallo":   round(fallidos/total*100, 2),
-        "costo":        round(costo_total, 0),
-        "costo_unitario": round(costo_total/delivered, 2) if delivered else 0,
-    }
-
-    historico = []
-    if os.path.exists(HISTORICO_CSV):
-        with open(HISTORICO_CSV, "r", encoding="utf-8-sig") as f:
-            historico = list(csv.DictReader(f, delimiter=";"))
-    if not any(h["fecha"] == hoy for h in historico):
-        historico.append(fila_actual)
-    with open(HISTORICO_CSV, "w", newline="", encoding="utf-8-sig") as f:
-        w = csv.DictWriter(f, fieldnames=list(fila_actual.keys()), delimiter=";")
-        w.writeheader()
-        w.writerows(historico)
-
-    if len(historico) >= 2:
-        print(f"\n── 📊 COMPARACIÓN CON DÍA ANTERIOR ──")
-        ayer = historico[-2]
-        print(f"  {'Indicador':<20} {ayer['fecha']:>12} {hoy:>12} {'Cambio':>12}")
-        print(f"  {'-'*20} {'-'*12} {'-'*12} {'-'*12}")
-        for key, label in [("total", "Enviados"), ("tasa_entrega", "Tasa entrega"),
-                           ("tasa_fallo", "Tasa fallo"), ("costo", "Costo total"),
-                           ("costo_unitario", "Costo unitario")]:
-            va = float(ayer[key]); vh = float(fila_actual[key])
-            diff = vh - va
-            signo = "+" if diff > 0 else ""
-            print(f"  {label:<20} {va:>12,.2f} {vh:>12,.2f} {signo}{diff:>11,.2f}")
-
     print(f"\n{'='*72}\n")
 
 
 # ============================================================
-# 4. GENERAR HTML CON DASHBOARD FILTRABLE
+# 4. HTML CON DASHBOARD FILTRABLE
 # ============================================================
 def generar_html(filas, path=SALIDA_HTML):
-    """
-    HTML con:
-    - Tarjetas de totales
-    - Gráficas SVG de resumen
-    - Tabla de bulkIds (clickeable para filtrar)
-    - Tabla detallada con filtros interactivos
-    - Exportación de la vista filtrada a CSV
-    """
     total = len(filas)
     if total == 0:
         return
 
-    # --- Preparar datos para el dashboard ---
-    # Convertimos filas a JSON compacto para embeber en la página.
-    # Acortamos el texto para que no explote el tamaño del HTML.
+    # Embeber datos (recortamos texto para reducir tamaño)
     datos_json = []
     for f in filas:
         datos_json.append({
-            "messageId": f["messageId"],
-            "bulkId":    f["bulkId"],
-            "sender":    f["sender"],
-            "destination": f["destination"],
-            "sentAt_col":  f["sentAt_col"],
-            "doneAt_col":  f["doneAt_col"],
-            "delay_sec":   f["delay_sec"],
-            "mccMnc":      f["mccMnc"],
-            "operador":    f["operador"],
-            "estado":      f["estado"],
+            "messageId":     f["messageId"],
+            "bulkId":        f["bulkId"],
+            "sender":        f["sender"],
+            "destination":   f["destination"],
+            "sentAt_col":    f["sentAt_col"],
+            "fecha_col":     f["fecha_col"],
+            "doneAt_col":    f["doneAt_col"],
+            "delay_sec":     f["delay_sec"],
+            "mccMnc":        f["mccMnc"],
+            "operador":      f["operador"],
+            "estado":        f["estado"],
             "nombre_estado": f["nombre_estado"],
-            "error":       f["error"],
-            "desc_error":  f["desc_error"],
-            "accion":      f["accion"],
-            "precio":      f["precio"],
-            "texto":       f["texto"][:200],   # recorte para reducir tamaño
-            "hora_col":    f["hora_col"],
+            "error":         f["error"],
+            "desc_error":    f["desc_error"],
+            "accion":        f["accion"],
+            "precio":        f["precio"],
+            "texto":         f["texto"][:200],
+            "hora_col":      f["hora_col"],
         })
     datos_json_str = json.dumps(datos_json, ensure_ascii=False, separators=(",", ":"))
 
-    # Resumen por bulkId para la tabla superior
+    # Resumen por bulkId
     por_bulk = defaultdict(lambda: {
         "total": 0, "delivered": 0, "rejected": 0, "undeliverable": 0,
-        "expired": 0, "costo": 0.0, "primera_hora": "", "operadores": Counter()
+        "expired": 0, "costo": 0.0, "operadores": Counter()
     })
     for f in filas:
         b = por_bulk[f["bulkId"]]
         b["total"] += 1
         est = f["estado"]
-        if est == "DELIVERED":
-            b["delivered"] += 1
-        elif est == "REJECTED":
-            b["rejected"] += 1
-        elif est == "UNDELIVERABLE":
-            b["undeliverable"] += 1
-        elif est == "EXPIRED":
-            b["expired"] += 1
+        if est == "DELIVERED":       b["delivered"] += 1
+        elif est == "REJECTED":      b["rejected"] += 1
+        elif est == "UNDELIVERABLE": b["undeliverable"] += 1
+        elif est == "EXPIRED":       b["expired"] += 1
         b["costo"] += float(f["precio"] or 0)
-        if not b["primera_hora"] and f["sentAt_col"]:
-            b["primera_hora"] = f["sentAt_col"]
         b["operadores"][f["operador"]] += 1
 
     bulk_rows = []
     for bid, s in sorted(por_bulk.items(), key=lambda x: -x[1]["total"]):
-        tasa_ent = s["delivered"] / s["total"] * 100 if s["total"] else 0
+        te = s["delivered"]/s["total"]*100 if s["total"] else 0
         op_principal = s["operadores"].most_common(1)[0][0] if s["operadores"] else "—"
         bulk_rows.append(
-            f'<tr data-bulkid="{bid}">'
+            f'<tr>'
             f'<td class="mono">{bid}</td>'
             f'<td class="num">{s["total"]:,}</td>'
             f'<td class="num ok">{s["delivered"]:,}</td>'
             f'<td class="num bad">{s["rejected"]:,}</td>'
             f'<td class="num warn">{s["undeliverable"] + s["expired"]:,}</td>'
-            f'<td class="num">{tasa_ent:.2f}%</td>'
+            f'<td class="num">{te:.2f}%</td>'
             f'<td class="num">${s["costo"]:,.0f}</td>'
             f'<td>{op_principal}</td>'
             f'<td><button class="btn-filtrar" data-bulkid="{bid}">Filtrar</button></td>'
@@ -387,34 +367,36 @@ def generar_html(filas, path=SALIDA_HTML):
         )
     bulk_rows_str = "\n".join(bulk_rows)
 
-    # Resumen operadores
-    ops = Counter(f["operador"] for f in filas)
-    errores = Counter(f["error"] for f in filas if f["error"] != "NO_ERROR")
-    estados = Counter(f["estado"] for f in filas)
+    ops      = Counter(f["operador"] for f in filas)
+    errores  = Counter(f["error"] for f in filas if f["error"] != "NO_ERROR")
+    estados  = Counter(f["estado"] for f in filas)
     delivered = estados.get("DELIVERED", 0)
-    tasa_ent = delivered / total * 100 if total else 0
+    tasa_ent  = delivered / total * 100 if total else 0
     costo_total = sum(float(f["precio"] or 0) for f in filas)
 
-    # Listas para los <select> de filtros
     bulk_options = "".join(f'<option value="{b}">{b}</option>'
                            for b in sorted(por_bulk.keys()))
-    ops_options   = "".join(f'<option value="{o}">{o} ({c:,})</option>'
-                            for o, c in ops.most_common())
-    err_options   = "".join(f'<option value="{e}">{e} ({c:,})</option>'
-                            for e, c in errores.most_common())
+    ops_options  = "".join(f'<option value="{o}">{o} ({c:,})</option>'
+                           for o, c in ops.most_common())
+    err_options  = "".join(f'<option value="{e}">{e} ({c:,})</option>'
+                           for e, c in errores.most_common())
+
+    # Fechas presentes (para filtro de fecha)
+    fechas_presentes = sorted({f["fecha_col"] for f in filas if f["fecha_col"]})
+    fechas_options = "".join(f'<option value="{d}">{d}</option>'
+                             for d in fechas_presentes)
 
     html = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Dashboard SMS QNT — {datetime.now(TZ_COL).strftime('%Y-%m-%d')}</title>
+<title>Dashboard SMS QNT — Últimas 48h</title>
 <style>
   * {{ box-sizing: border-box; }}
   body {{ font-family: -apple-system,'Segoe UI',sans-serif; margin:0; padding:20px;
           background:#f5f6fa; color:#2c3e50; font-size:14px; }}
   h1 {{ margin-top:0; font-size:22px; }}
-  h2 {{ font-size:16px; border-bottom:2px solid #3498db; padding-bottom:6px;
-        margin-top:30px; }}
+  h2 {{ font-size:16px; border-bottom:2px solid #3498db; padding-bottom:6px; margin-top:30px; }}
   .cards {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
             gap:12px; margin:16px 0; }}
   .card {{ background:white; padding:14px; border-radius:8px;
@@ -424,14 +406,12 @@ def generar_html(filas, path=SALIDA_HTML):
   .ok {{ color:#27ae60; }} .bad {{ color:#e74c3c; }} .warn {{ color:#f39c12; }}
   .section {{ background:white; padding:18px; border-radius:8px;
               box-shadow:0 2px 6px rgba(0,0,0,0.06); margin-bottom:18px; }}
-  /* Filtros */
   .filtros {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
               gap:10px; margin:14px 0; }}
   .filtros label {{ display:block; font-size:11px; color:#7f8c8d;
                     text-transform:uppercase; margin-bottom:3px; }}
   .filtros select, .filtros input {{ width:100%; padding:6px 8px; border:1px solid #ddd;
                                      border-radius:5px; font-size:13px; }}
-  .filtros input[type=text] {{ width:100%; }}
   .acciones {{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }}
   button {{ padding:8px 14px; border:none; border-radius:5px; cursor:pointer;
             font-size:13px; font-weight:500; }}
@@ -441,9 +421,7 @@ def generar_html(filas, path=SALIDA_HTML):
   .btn-secondary:hover {{ background:#d5dbdb; }}
   .btn-exportar {{ background:#27ae60; color:white; }}
   .btn-exportar:hover {{ background:#1e8449; }}
-  .btn-filtrar {{ background:#3498db; color:white; padding:4px 10px;
-                  font-size:11px; }}
-  /* Tablas */
+  .btn-filtrar {{ background:#3498db; color:white; padding:4px 10px; font-size:11px; }}
   table {{ width:100%; border-collapse:collapse; font-size:12px; }}
   th {{ background:#34495e; color:white; padding:8px 6px; text-align:left;
         font-size:11px; text-transform:uppercase; position:sticky; top:0; }}
@@ -451,8 +429,7 @@ def generar_html(filas, path=SALIDA_HTML):
   tbody tr:hover {{ background:#f8f9fa; }}
   .num {{ text-align:right; font-variant-numeric:tabular-nums; }}
   .mono {{ font-family: 'Consolas', monospace; font-size:11px; }}
-  .tabla-scroll {{ max-height:600px; overflow-y:auto; border:1px solid #ecf0f1;
-                   border-radius:6px; }}
+  .tabla-scroll {{ max-height:600px; overflow-y:auto; border:1px solid #ecf0f1; border-radius:6px; }}
   .contador {{ font-size:12px; color:#7f8c8d; margin:8px 0; }}
   .badge {{ display:inline-block; padding:2px 8px; border-radius:10px;
             font-size:10px; font-weight:600; text-transform:uppercase; }}
@@ -464,10 +441,12 @@ def generar_html(filas, path=SALIDA_HTML):
 </head>
 <body>
 
-<h1>📊 Dashboard SMS QNT — {datetime.now(TZ_COL).strftime('%Y-%m-%d')}</h1>
-<p style="color:#7f8c8d; font-size:12px;">Generado: {datetime.now(TZ_COL).strftime('%H:%M:%S')} (Colombia UTC-5) — {total:,} mensajes</p>
+<h1>📊 Dashboard SMS QNT — Últimas {HORAS_ATRAS} horas</h1>
+<p style="color:#7f8c8d; font-size:12px;">
+  Generado: {datetime.now(TZ_COL).strftime('%Y-%m-%d %H:%M:%S')} (Colombia UTC-5) —
+  {total:,} mensajes — Rango: {filas[0]['sentAt_col'][:16] if filas else '—'} → {filas[-1]['sentAt_col'][:16] if filas else '—'}
+</p>
 
-<!-- Tarjetas de resumen -->
 <div class="cards">
   <div class="card"><div class="num">{total:,}</div><div class="lbl">Total mensajes</div></div>
   <div class="card"><div class="num ok">{delivered:,}</div><div class="lbl">Entregados ({tasa_ent:.2f}%)</div></div>
@@ -477,9 +456,8 @@ def generar_html(filas, path=SALIDA_HTML):
   <div class="card"><div class="num">{len(por_bulk)}</div><div class="lbl">BulkIds únicos</div></div>
 </div>
 
-<!-- Tabla de bulkIds -->
 <div class="section">
-  <h2>📦 BulkIds del día</h2>
+  <h2>📦 BulkIds en el rango</h2>
   <p style="color:#7f8c8d; font-size:12px;">
     Haz clic en "Filtrar" para ver solo los mensajes de ese bulkId en la tabla de abajo.
   </p>
@@ -493,24 +471,27 @@ def generar_html(filas, path=SALIDA_HTML):
           <th>Operador princ.</th><th></th>
         </tr>
       </thead>
-      <tbody>
-        {bulk_rows_str}
-      </tbody>
+      <tbody>{bulk_rows_str}</tbody>
     </table>
   </div>
 </div>
 
-<!-- Tabla detallada con filtros -->
 <div class="section">
   <h2>🔍 Detalle de mensajes</h2>
 
-  <!-- Filtros interactivos -->
   <div class="filtros">
     <div>
       <label>BulkId</label>
       <select id="f-bulkid">
         <option value="">Todos</option>
         {bulk_options}
+      </select>
+    </div>
+    <div>
+      <label>Fecha</label>
+      <select id="f-fecha">
+        <option value="">Todas</option>
+        {fechas_options}
       </select>
     </div>
     <div>
@@ -538,15 +519,15 @@ def generar_html(filas, path=SALIDA_HTML):
       </select>
     </div>
     <div>
-      <label>Desde (hora)</label>
+      <label>Hora desde</label>
       <input type="text" id="f-desde" placeholder="ej: 08:00">
     </div>
     <div>
-      <label>Hasta (hora)</label>
+      <label>Hora hasta</label>
       <input type="text" id="f-hasta" placeholder="ej: 14:30">
     </div>
     <div>
-      <label>Búsqueda en destino / texto</label>
+      <label>Búsqueda (destino / texto / bulkId)</label>
       <input type="text" id="f-buscar" placeholder="573001234 o QNT">
     </div>
   </div>
@@ -563,6 +544,7 @@ def generar_html(filas, path=SALIDA_HTML):
     <table id="tabla-detalle">
       <thead>
         <tr>
+          <th>Fecha</th>
           <th>Hora COL</th>
           <th>BulkId</th>
           <th>Destino</th>
@@ -580,14 +562,7 @@ def generar_html(filas, path=SALIDA_HTML):
 </div>
 
 <script>
-// ============================================================
-// DATOS EMBEBIDOS (todas las filas del día)
-// ============================================================
 const DATOS = {datos_json_str};
-
-// ============================================================
-// RENDERIZADO + FILTROS
-// ============================================================
 let datosFiltrados = DATOS.slice();
 
 function escapeHtml(s) {{
@@ -612,14 +587,14 @@ function renderTabla() {{
 
   contador.textContent = `Mostrando ${{filas.length.toLocaleString()}} de ${{DATOS.length.toLocaleString()}} mensajes`;
 
-  // Limitar render a 5000 para no colgar el navegador
   const limite = Math.min(filas.length, 5000);
   const partes = [];
   for (let i = 0; i < limite; i++) {{
     const f = filas[i];
     partes.push(
       '<tr>' +
-      '<td class="mono">' + escapeHtml(f.sentAt_col) + '</td>' +
+      '<td class="mono">' + escapeHtml(f.fecha_col) + '</td>' +
+      '<td class="mono">' + escapeHtml((f.sentAt_col||"").slice(11)) + '</td>' +
       '<td class="mono">' + escapeHtml(f.bulkId) + '</td>' +
       '<td class="mono">' + escapeHtml(f.destination) + '</td>' +
       '<td>' + escapeHtml(f.operador) + '</td>' +
@@ -640,6 +615,7 @@ function renderTabla() {{
 
 function aplicarFiltros() {{
   const bulkid    = document.getElementById("f-bulkid").value;
+  const fecha     = document.getElementById("f-fecha").value;
   const estado    = document.getElementById("f-estado").value;
   const operador  = document.getElementById("f-operador").value;
   const error     = document.getElementById("f-error").value;
@@ -649,13 +625,13 @@ function aplicarFiltros() {{
 
   datosFiltrados = DATOS.filter(f => {{
     if (bulkid && f.bulkId !== bulkid) return false;
+    if (fecha && f.fecha_col !== fecha) return false;
     if (estado && f.estado !== estado) return false;
     if (operador && f.operador !== operador) return false;
     if (error && f.error !== error) return false;
 
-    // Hora en formato HH:MM:SS → comparar solo HH:MM
     if (desde || hasta) {{
-      const hora = (f.sentAt_col || "").slice(11, 16); // "HH:MM"
+      const hora = (f.sentAt_col || "").slice(11, 16);
       if (desde && hora < desde) return false;
       if (hasta && hora > hasta) return false;
     }}
@@ -664,7 +640,6 @@ function aplicarFiltros() {{
       const hay = (f.destination + " " + f.texto + " " + f.bulkId).toLowerCase();
       if (!hay.includes(buscar)) return false;
     }}
-
     return true;
   }});
 
@@ -672,13 +647,12 @@ function aplicarFiltros() {{
 }}
 
 function limpiarFiltros() {{
-  ["f-bulkid","f-estado","f-operador","f-error","f-desde","f-hasta","f-buscar"]
+  ["f-bulkid","f-fecha","f-estado","f-operador","f-error","f-desde","f-hasta","f-buscar"]
     .forEach(id => {{ document.getElementById(id).value = ""; }});
   datosFiltrados = DATOS.slice();
   renderTabla();
 }}
 
-// Click en botón "Filtrar" de la tabla de bulkIds
 document.querySelectorAll(".btn-filtrar").forEach(btn => {{
   btn.addEventListener("click", () => {{
     const bid = btn.getAttribute("data-bulkid");
@@ -688,9 +662,8 @@ document.querySelectorAll(".btn-filtrar").forEach(btn => {{
   }});
 }});
 
-// Exportar la vista filtrada a CSV
 function exportarCSV() {{
-  const cols = ["sentAt_col","bulkId","destination","operador","estado",
+  const cols = ["fecha_col","sentAt_col","bulkId","destination","operador","estado",
                 "error","accion","precio","texto"];
   const cabecera = cols.join(";");
   const lineas = datosFiltrados.map(f =>
@@ -705,12 +678,11 @@ function exportarCSV() {{
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "vista_filtrada_" + new Date().toISOString().slice(0,10) + ".csv";
+  a.download = "vista_filtrada_48h_" + new Date().toISOString().slice(0,10) + ".csv";
   a.click();
   URL.revokeObjectURL(url);
 }}
 
-// Render inicial
 renderTabla();
 </script>
 
@@ -728,8 +700,8 @@ renderTabla();
 if __name__ == "__main__":
     t0 = datetime.now(TZ_COL)
 
-    # 1. Descarga (sin cambios, paralela, rápida)
-    logs = asyncio.run(descargar_logs_hoy())
+    # 1. Descarga paralela de las últimas 48h
+    logs = asyncio.run(descargar_logs_48h())
     if not logs:
         print("Sin datos.")
         raise SystemExit
@@ -737,13 +709,13 @@ if __name__ == "__main__":
     # 2. Procesar
     filas = extraer_filas(logs)
 
-    # 3. CSV general (igual que antes)
+    # 3. CSV general
     exportar_csv(filas)
 
-    # 4. Reporte en terminal (igual que antes)
+    # 4. Reporte en terminal
     reporte(filas)
 
-    # 5. HTML con dashboard filtrable
+    # 5. Dashboard HTML filtrable
     generar_html(filas)
 
     print(f"✅ Listo. Abrí '{SALIDA_HTML}' con doble clic.")

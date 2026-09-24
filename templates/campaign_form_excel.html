@@ -1,7 +1,6 @@
 {% extends "layouts/adminlte.html" %}
-{% set is_edit = campaign is not none %}
 
-{% block title %}Enviar Excel - Campaña Wolkvox{% endblock %}
+{% block title %}Enviar Excel a Wolkvox{% endblock %}
 
 {% block page_title %}
   <div class="d-flex align-items-center gap-3">
@@ -23,7 +22,7 @@
 {% block extra_css %}
 <style>
   /* ══════════════════════════════════════════════════════
-     LAYOUT GENERAL (idéntico a campaign_form.html)
+     Layout general (igual que campaign_form.html)
      ══════════════════════════════════════════════════════ */
   .sms-container {
     display: grid;
@@ -44,7 +43,7 @@
   .sms-card:hover { box-shadow: var(--shadow-lg); }
   .sms-card-body { padding: 24px 26px 26px; }
 
-  /* TABS */
+  /* Tabs */
   .sms-tabs {
     display: flex;
     gap: 2px;
@@ -83,7 +82,7 @@
     box-shadow: 0 2px 8px rgba(31, 41, 102, 0.06);
   }
 
-  /* FIELDS */
+  /* Fields */
   .sms-field { margin-bottom: 18px; }
   .sms-field label {
     font-weight: 600;
@@ -93,13 +92,6 @@
     display: flex;
     align-items: center;
     gap: 6px;
-  }
-  .sms-field label .badge-required {
-    background: var(--danger);
-    color: #fff;
-    font-size: 0.6rem;
-    padding: 1px 8px;
-    border-radius: 20px;
   }
   .sms-help {
     font-size: 0.76rem;
@@ -116,6 +108,9 @@
     color: var(--text-primary);
     transition: var(--transition);
     background: var(--bg-input);
+    padding: 8px 12px;
+    width: 100%;
+    font-family: inherit;
   }
   .form-control:focus {
     border-color: var(--primary);
@@ -123,7 +118,7 @@
     outline: none;
   }
 
-  /* SECCIÓN DATOS */
+  /* Secciones */
   .sms-auto-section {
     background: #FAFAFD;
     border: 1.5px dashed var(--border);
@@ -141,7 +136,7 @@
     gap: 8px;
   }
 
-  /* BOTONES */
+  /* Botones */
   .sms-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
   .btn {
     border-radius: 10px;
@@ -158,41 +153,23 @@
   }
   .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
   .btn:active { transform: translateY(0); }
-  .btn-outline-primary {
-    background: #fff;
-    color: var(--primary);
-    border: 1.5px solid var(--primary);
-  }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-outline-primary { background: #fff; color: var(--primary); border: 1.5px solid var(--primary); }
   .btn-outline-primary:hover { background: var(--primary-light); color: var(--primary-hover); }
-  .btn-success {
-    background: var(--success);
-    color: #fff;
-    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.28);
-  }
+  .btn-success { background: var(--success); color: #fff; box-shadow: 0 6px 16px rgba(16, 185, 129, 0.28); }
   .btn-success:hover { background: #0D9668; }
-  .btn-success:disabled { background: #B9C0CC; box-shadow: none; cursor: not-allowed; transform: none; }
   .btn-primary { background: var(--primary); color: #fff; }
   .btn-primary:hover { background: var(--primary-hover); }
-  .btn-outline-secondary {
-    background: #fff;
-    color: var(--text-secondary);
-    border: 1.5px solid var(--border);
-  }
+  .btn-outline-secondary { background: #fff; color: var(--text-secondary); border: 1.5px solid var(--border); }
   .btn-outline-secondary:hover { background: var(--border-light); color: var(--text-primary); }
-  .btn-danger { background: var(--danger); color: #fff; box-shadow: 0 6px 16px rgba(225, 53, 43, 0.25); }
+  .btn-danger { background: var(--danger); color: #fff; }
   .btn-danger:hover { background: #C0392B; }
   .btn-warning { background: var(--warning); color: #fff; }
   .btn-warning:hover { background: #D97706; }
   .btn-sm { padding: 0.35rem 0.8rem; font-size: 0.78rem; }
 
-  /* SIDEBAR */
-  .sms-side {
-    position: sticky;
-    top: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
+  /* Sidebar */
+  .sms-side { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 16px; }
   .sms-stats {
     background: #fff;
     border: 1px solid var(--border);
@@ -214,7 +191,7 @@
   .sms-stats .value.warning { color: var(--warning); }
   .sms-stats .value.primary { color: var(--primary); }
 
-  /* STATUS PILL */
+  /* Status pill */
   .status-pill {
     display: inline-flex;
     align-items: center;
@@ -229,7 +206,7 @@
   .status-pill.ok { color: var(--success); background: var(--success-bg); }
   .status-pill.err { color: var(--danger); background: var(--danger-bg); }
 
-  /* RESULT BOX */
+  /* Result box */
   .result-box {
     margin-top: 16px;
     padding: 16px 20px;
@@ -240,9 +217,8 @@
   .result-box.visible { display: block; animation: fadeIn 0.3s ease; }
   .result-box.success { background: var(--success-bg); border-color: #BEEBDA; }
   .result-box.error { background: var(--danger-bg); border-color: #FBD6D7; }
-  .result-box .result-content { font-size: 0.9rem; }
 
-  /* TOAST */
+  /* Toast */
   #smsToastArea {
     position: fixed;
     top: 0.6rem;
@@ -270,12 +246,11 @@
   .sms-toast.warning { border-left-color: var(--warning); }
   .sms-toast.info { border-left-color: var(--info); }
   .sms-toast .icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 2px; }
-  .sms-toast .content { flex: 1; font-size: 0.88rem; color: var(--text-primary); }
+  .sms-toast .content { flex: 1; font-size: 0.88rem; }
   .sms-toast .close-btn {
     background: none; border: none; font-size: 1.2rem;
     color: var(--text-secondary); cursor: pointer; padding: 0 4px;
   }
-  .sms-toast .close-btn:hover { color: var(--text-primary); }
 
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(6px); }
@@ -297,7 +272,7 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ZONA UPLOAD EXCEL */
+  /* Upload row */
   .excel-upload-row {
     display: flex;
     gap: 12px;
@@ -305,13 +280,8 @@
     flex-wrap: wrap;
     margin-bottom: 12px;
   }
-  .excel-upload-row .file-input-wrapper {
-    flex: 1;
-    min-width: 220px;
-  }
-  .excel-upload-row .prefix-input-wrapper {
-    width: 130px;
-  }
+  .excel-upload-row .file-input-wrapper { flex: 1; min-width: 220px; }
+  .excel-upload-row .prefix-input-wrapper { width: 130px; }
   .excel-upload-row .prefix-input-wrapper input {
     text-align: center;
     font-family: monospace;
@@ -334,7 +304,7 @@
   .excel-status.success { background: var(--success-bg); color: #065F46; }
   .excel-status.error { background: var(--danger-bg); color: #991B1B; }
 
-  /* TABLA RESUMEN (reutilizada del form de Enviar) */
+  /* Tabla resumen */
   .vk-summary {
     margin-top: 16px;
     background: #fff;
@@ -442,42 +412,46 @@
 
       <!-- TABS -->
       <div class="sms-tabs" id="smsTabs">
-        <a href="/auto-campaigns/{{ campaign.id }}" class="tab">
+        <a href="/auto-campaigns/new" class="tab">
           <i class="fas fa-paper-plane"></i> Enviar
         </a>
         <a href="/auto-campaigns/programar" class="tab">
           <i class="fas fa-clock"></i> Programar
         </a>
-        <a href="/auto-campaigns/{{ campaign.id }}/excel" class="tab">
-            <i class="fas fa-file-excel"></i> Enviar Excel
-        </a>
+        <button class="tab active" data-tab="excel" type="button">
+          <i class="fas fa-file-excel"></i> Enviar Excel
+        </button>
       </div>
 
-      <!-- DATOS DE LA CAMPAÑA -->
+      <!-- DATOS DE LA CAMPAÑA (editables) -->
       <div class="sms-auto-section">
         <div class="section-title">
           <i class="fas fa-info-circle"></i> Datos de la campaña
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
           <div class="sms-field" style="margin-bottom:0;">
-            <label>Nombre</label>
-            <input class="form-control form-control-sm" id="excelNombre"
-                   value="{{ campaign.name }}" readonly>
+            <label>Nombre <span class="text-danger">*</span></label>
+            <input class="form-control form-control-sm" id="excelNombre" placeholder="Ej: Cobro Septiembre">
           </div>
           <div class="sms-field" style="margin-bottom:0;">
-            <label>Campaign ID</label>
-            <input class="form-control form-control-sm" id="excelCampaignId"
-                   value="{{ campaign.wolkvox_campaign_id }}" readonly>
+            <label>Campaign ID <span class="text-danger">*</span></label>
+            <input class="form-control form-control-sm" id="excelCampaignId" placeholder="Ej: 20213">
           </div>
           <div class="sms-field" style="margin-bottom:0;">
-            <label>Servidor</label>
-            <input class="form-control form-control-sm" id="excelServerName"
-                   value="{{ campaign.server_name }}" readonly>
+            <label>Servidor <span class="text-danger">*</span></label>
+            <select class="form-control form-control-sm" id="excelServerName">
+              <option value="">Seleccionar servidor</option>
+              {% for server in servers %}
+                <option value="{{ server.name }}">{{ server.name }}</option>
+              {% endfor %}
+            </select>
           </div>
           <div class="sms-field" style="margin-bottom:0;">
-            <label>Tipo</label>
-            <input class="form-control form-control-sm" id="excelCampaignType"
-                   value="{{ campaign.campaign_type or 'predictive' }}" readonly>
+            <label>Tipo <span class="text-danger">*</span></label>
+            <select class="form-control form-control-sm" id="excelCampaignType">
+              <option value="predictive">Predictivo</option>
+              <option value="preview">Vista previa</option>
+            </select>
           </div>
         </div>
       </div>
@@ -487,7 +461,6 @@
         <div class="section-title">
           <i class="fas fa-file-excel"></i> Subir Excel de contactos
         </div>
-
         <div class="excel-upload-row">
           <div class="file-input-wrapper">
             <label for="excelFile" style="font-size:0.8rem; font-weight:600; margin-bottom:4px; display:block;">
@@ -498,7 +471,6 @@
               <span>Debe tener columna <code>Contacto__c</code></span>
             </div>
           </div>
-
           <div class="prefix-input-wrapper">
             <label for="excelPrefijo" style="font-size:0.8rem; font-weight:600; margin-bottom:4px; display:block;">
               Prefijo tel1
@@ -506,12 +478,10 @@
             <input type="text" id="excelPrefijo" class="form-control form-control-sm"
                    value="9157" maxlength="6" inputmode="numeric">
           </div>
-
           <button type="button" class="btn btn-outline-primary btn-sm" id="btnEnriquecer">
             <i class="fas fa-magic"></i> Enriquecer
           </button>
         </div>
-
         <div class="excel-status" id="excelStatus"></div>
       </div>
 
@@ -551,17 +521,8 @@
 
       <!-- ACCIONES -->
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 0;">
-        <button type="button" class="btn btn-warning btn-sm" id="btnClear">
-          <i class="fas fa-broom"></i> Limpiar campaña
-        </button>
         <button type="button" class="btn btn-success btn-sm" id="btnEnviarExcel" disabled>
           <i class="fas fa-paper-plane"></i> Enviar Excel a Wolkvox
-        </button>
-        <button type="button" class="btn btn-primary btn-sm" id="btnStart">
-          <i class="fas fa-play"></i> Iniciar
-        </button>
-        <button type="button" class="btn btn-danger btn-sm" id="btnStop">
-          <i class="fas fa-stop"></i> Detener
         </button>
       </div>
 
@@ -569,7 +530,6 @@
         <div id="resultContent" class="result-content"></div>
       </div>
 
-      <!-- BOTÓN VOLVER -->
       <div class="sms-actions" style="margin-top:20px;">
         <a class="btn btn-outline-secondary" href="/auto-campaigns">
           <i class="fas fa-arrow-left"></i> Volver
@@ -582,26 +542,11 @@
   <!-- SIDEBAR -->
   <div class="sms-side">
     <div class="sms-stats">
-      <div class="row">
-        <span class="label"><i class="fas fa-users"></i> Total</span>
-        <span class="value" id="statTotal">—</span>
-      </div>
-      <div class="row">
-        <span class="label"><i class="fas fa-check-circle" style="color:var(--success);"></i> Válidos</span>
-        <span class="value success" id="statValidos">—</span>
-      </div>
-      <div class="row">
-        <span class="label"><i class="fas fa-exclamation-circle" style="color:var(--danger);"></i> Inválidos</span>
-        <span class="value danger" id="statInvalidos">—</span>
-      </div>
-      <div class="row">
-        <span class="label"><i class="fas fa-copy" style="color:var(--warning);"></i> Duplicados hoy</span>
-        <span class="value warning" id="statDuplicados">—</span>
-      </div>
-      <div class="row">
-        <span class="label"><i class="fas fa-ban" style="color:var(--danger);"></i> Lista negra</span>
-        <span class="value danger" id="statBlacklist">—</span>
-      </div>
+      <div class="row"><span class="label"><i class="fas fa-users"></i> Total</span><span class="value" id="statTotal">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-check-circle" style="color:var(--success);"></i> Válidos</span><span class="value success" id="statValidos">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-exclamation-circle" style="color:var(--danger);"></i> Inválidos</span><span class="value danger" id="statInvalidos">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-copy" style="color:var(--warning);"></i> Duplicados hoy</span><span class="value warning" id="statDuplicados">—</span></div>
+      <div class="row"><span class="label"><i class="fas fa-ban" style="color:var(--danger);"></i> Lista negra</span><span class="value danger" id="statBlacklist">—</span></div>
       <div class="row" style="border-top:2px solid var(--border);padding-top:8px;margin-top:4px;">
         <span class="label" style="font-weight:700;">📤 A enviar</span>
         <span class="value primary" id="statAEnviar" style="font-size:1.1rem;color:var(--primary);">—</span>
@@ -617,7 +562,6 @@
 (function() {
   'use strict';
 
-  const campaignId = "{{ campaign.id }}";
   let uploadId = null;
 
   // ══════════════════════════════════════════════════════
@@ -627,51 +571,35 @@
     const area = document.getElementById('smsToastArea');
     const toast = document.createElement('div');
     toast.className = 'sms-toast ' + (type || 'info');
-    const iconMap = {
-      success: 'fa-check-circle',
-      danger: 'fa-exclamation-circle',
-      warning: 'fa-exclamation-triangle',
-      info: 'fa-info-circle'
-    };
+    const iconMap = { success: 'fa-check-circle', danger: 'fa-exclamation-circle',
+                      warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
     const icon = iconMap[type] || iconMap.info;
-    toast.innerHTML = `
-      <span class="icon"><i class="fas ${icon}"></i></span>
-      <div class="content">${message}</div>
-      <button class="close-btn">&times;</button>
-    `;
+    toast.innerHTML = `<span class="icon"><i class="fas ${icon}"></i></span>
+                       <div class="content">${message}</div>
+                       <button class="close-btn">&times;</button>`;
     toast.querySelector('.close-btn').onclick = () => toast.remove();
     area.appendChild(toast);
     setTimeout(() => { if (toast.parentElement) toast.remove(); }, 5000);
   }
 
-  // ══════════════════════════════════════════════════════
-  // RESULT BOX
-  // ══════════════════════════════════════════════════════
   function showResult(success, message, extraData) {
     const box = document.getElementById('resultBox');
     const content = document.getElementById('resultContent');
     box.className = 'result-box visible ' + (success ? 'success' : 'error');
-
     let html = message;
     if (extraData) {
-      html += `
-        <div style="margin-top:12px;padding:12px;background:#FFF3CD;border-radius:8px;border:1px solid #FFC107;">
+      html += `<div style="margin-top:12px;padding:12px;background:#FFF3CD;border-radius:8px;border:1px solid #FFC107;">
           <strong>📊 Estadísticas:</strong><br>
           <span style="color:#28a745;">✅ Enviados: ${extraData.records_sent || 0}</span><br>
           <span style="color:#dc3545;">🚫 Bloqueados: ${extraData.records_blocked || 0}</span><br>
           <span style="color:#f59e0b;">📋 Duplicados: ${extraData.duplicados || 0}</span><br>
           <span style="color:#6c757d;">📋 Total: ${extraData.records_fetched || 0}</span>
-        </div>
-      `;
+        </div>`;
     }
     content.innerHTML = html;
-
     if (success) setTimeout(() => { box.className = 'result-box'; }, 10000);
   }
 
-  // ══════════════════════════════════════════════════════
-  // SET LOADING
-  // ══════════════════════════════════════════════════════
   function setLoading(btn, loading, text) {
     if (!btn) return;
     if (loading) {
@@ -685,28 +613,18 @@
   }
 
   // ══════════════════════════════════════════════════════
-  // ENRIQUECER (subir Excel)
+  // ENRIQUECER
   // ══════════════════════════════════════════════════════
   document.getElementById('btnEnriquecer').addEventListener('click', async () => {
-    const fileInput = document.getElementById('excelFile');
-    const prefijoInput = document.getElementById('excelPrefijo');
+    const file = document.getElementById('excelFile').files[0];
+    const prefijo = document.getElementById('excelPrefijo').value.trim();
     const statusBox = document.getElementById('excelStatus');
 
-    const file = fileInput.files[0];
-    const prefijo = prefijoInput.value.trim();
-
-    if (!file) {
-      showToast('⚠️ Seleccioná un archivo Excel primero.', 'warning');
-      return;
-    }
-    if (!prefijo || !/^\d+$/.test(prefijo)) {
-      showToast('⚠️ El prefijo debe ser numérico.', 'warning');
-      return;
-    }
+    if (!file) { showToast('⚠️ Seleccioná un archivo Excel', 'warning'); return; }
+    if (!prefijo || !/^\d+$/.test(prefijo)) { showToast('⚠️ El prefijo debe ser numérico', 'warning'); return; }
 
     const btn = document.getElementById('btnEnriquecer');
     setLoading(btn, true, 'Enriqueciendo...');
-
     statusBox.className = 'excel-status visible info';
     statusBox.innerHTML = '⏳ Procesando Excel...';
 
@@ -715,26 +633,31 @@
       formData.append('file', file);
       formData.append('prefijo', prefijo);
 
-      const resp = await fetch(`/auto-campaigns/${campaignId}/upload-excel`, {
-        method: 'POST',
-        body: formData
-      });
+      const resp = await fetch('/auto-campaigns/upload-excel', { method: 'POST', body: formData });
       const data = await resp.json();
 
       if (data.success) {
         uploadId = data.upload_id;
 
-        // Actualizar tabla resumen
+        // Actualizar tabla y sidebar
+        ['Total','Validos','Invalidos','Duplicados','ListaNegra','AEnviar'].forEach(k => {
+          const id = 'vk' + k;
+          const side = 'stat' + k;
+          document.getElementById(id).textContent = (data[k.toLowerCase() === 'total' ? 'total_consulta' : k.toLowerCase()] || 0).toLocaleString();
+          document.getElementById(side).textContent = (data[k.toLowerCase() === 'total' ? 'total_consulta' : k.toLowerCase()] || 0).toLocaleString();
+        });
+
+        document.getElementById('vkSummaryTime').textContent =
+          new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+
+        // Ajustar los IDs de la tabla (los nombres son distintos)
         document.getElementById('vkTotal').textContent = (data.total_consulta || 0).toLocaleString();
         document.getElementById('vkValidos').textContent = (data.validos || 0).toLocaleString();
         document.getElementById('vkInvalidos').textContent = (data.invalidos || 0).toLocaleString();
         document.getElementById('vkDuplicados').textContent = (data.duplicados || 0).toLocaleString();
         document.getElementById('vkListaNegra').textContent = (data.lista_negra || 0).toLocaleString();
         document.getElementById('vkAEnviar').textContent = (data.a_enviar || 0).toLocaleString();
-        document.getElementById('vkSummaryTime').textContent =
-          new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
 
-        // Actualizar sidebar
         document.getElementById('statTotal').textContent = (data.total_consulta || 0).toLocaleString();
         document.getElementById('statValidos').textContent = (data.validos || 0).toLocaleString();
         document.getElementById('statInvalidos').textContent = (data.invalidos || 0).toLocaleString();
@@ -743,11 +666,10 @@
         document.getElementById('statAEnviar').textContent = (data.a_enviar || 0).toLocaleString();
 
         document.getElementById('vkSummary').classList.add('visible');
-
         statusBox.className = 'excel-status visible success';
-        statusBox.innerHTML = `✅ Enriquecido: ${data.a_enviar} contactos listos para enviar`;
-
+        statusBox.innerHTML = `✅ Enriquecido: ${data.a_enviar} contactos listos`;
         document.getElementById('btnEnviarExcel').disabled = false;
+
         showToast(`✅ ${data.a_enviar} contactos listos`, 'success');
       } else {
         statusBox.className = 'excel-status visible error';
@@ -758,7 +680,6 @@
     } catch (e) {
       statusBox.className = 'excel-status visible error';
       statusBox.innerHTML = '❌ Error: ' + e.message;
-      document.getElementById('btnEnviarExcel').disabled = true;
       showToast('❌ Error: ' + e.message, 'danger');
     } finally {
       setLoading(btn, false);
@@ -766,100 +687,58 @@
   });
 
   // ══════════════════════════════════════════════════════
-  // ENVIAR A WOLKVOX
+  // ENVIAR
   // ══════════════════════════════════════════════════════
   document.getElementById('btnEnviarExcel').addEventListener('click', async () => {
-    if (!uploadId) {
-      showToast('⚠️ Primero enriquecé el Excel.', 'warning');
-      return;
-    }
-    if (!confirm('¿Enviar los contactos del Excel a Wolkvox?')) return;
+    if (!uploadId) { showToast('⚠️ Primero enriquecé el Excel', 'warning'); return; }
+
+    const nombre = document.getElementById('excelNombre').value.trim();
+    const wolkvox_campaign_id = document.getElementById('excelCampaignId').value.trim();
+    const server_name = document.getElementById('excelServerName').value;
+    const campaign_type = document.getElementById('excelCampaignType').value;
+
+    if (!nombre) { showToast('⚠️ El nombre es obligatorio', 'warning'); return; }
+    if (!wolkvox_campaign_id) { showToast('⚠️ El Campaign ID es obligatorio', 'warning'); return; }
+    if (!server_name) { showToast('⚠️ El servidor es obligatorio', 'warning'); return; }
+
+    if (!confirm(`¿Enviar los contactos del Excel a la campaña ${wolkvox_campaign_id} en ${server_name}?`)) return;
 
     const btn = document.getElementById('btnEnviarExcel');
     setLoading(btn, true, 'Enviando...');
 
     try {
-      const resp = await fetch(`/auto-campaigns/${campaignId}/load-excel-wkv`, {
+      const resp = await fetch('/auto-campaigns/load-excel-wkv', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           upload_id: uploadId,
-          excluir_duplicados: true
+          nombre: nombre,
+          wolkvox_campaign_id: wolkvox_campaign_id,
+          server_name: server_name,
+          campaign_type: campaign_type,
         })
       });
       const data = await resp.json();
 
       if (data.success) {
-        let message = `✅ ${data.records_sent || 0} contactos enviados a Wolkvox.`;
+        let message = `✅ ${data.records_sent || 0} contactos enviados.`;
         if (data.records_blocked > 0) message += ` 🚫 ${data.records_blocked} bloqueados.`;
-        if (data.duplicados > 0) message += ` 📋 ${data.duplicados} duplicados excluidos.`;
+        if (data.duplicados > 0) message += ` 📋 ${data.duplicados} duplicados.`;
         showResult(true, message, data);
         showToast('✅ Envío completado', 'success');
 
-        // Reset
         uploadId = null;
         document.getElementById('excelFile').value = '';
         document.getElementById('excelStatus').className = 'excel-status';
         document.getElementById('vkSummary').classList.remove('visible');
         document.getElementById('btnEnviarExcel').disabled = true;
       } else {
-        showResult(false, '❌ ' + (data.message || 'Error en el envío'), data);
+        showResult(false, '❌ ' + (data.message || 'Error'), data);
         showToast('⚠️ Carga parcial', 'warning');
       }
     } catch (e) {
       showResult(false, '❌ Error: ' + e.message);
       showToast('❌ Error: ' + e.message, 'danger');
-    } finally {
-      setLoading(btn, false);
-    }
-  });
-
-  // ══════════════════════════════════════════════════════
-  // ACCIONES SECUNDARIAS
-  // ══════════════════════════════════════════════════════
-  document.getElementById('btnClear')?.addEventListener('click', async () => {
-    if (!confirm('¿Limpiar todos los registros de la campaña en Wolkvox?')) return;
-    const btn = document.getElementById('btnClear');
-    setLoading(btn, true);
-    try {
-      const resp = await fetch(`/auto-campaigns/${campaignId}/clear-wkv`, { method: 'DELETE' });
-      const data = await resp.json();
-      showResult(data.success, data.message || '✅ Campaña limpiada');
-      if (data.success) showToast('✅ Campaña limpiada', 'success');
-    } catch (e) {
-      showResult(false, '❌ Error: ' + e.message);
-    } finally {
-      setLoading(btn, false);
-    }
-  });
-
-  document.getElementById('btnStart')?.addEventListener('click', async () => {
-    if (!confirm('¿Iniciar la campaña en Wolkvox?')) return;
-    const btn = document.getElementById('btnStart');
-    setLoading(btn, true);
-    try {
-      const resp = await fetch(`/auto-campaigns/${campaignId}/start-wkv`, { method: 'POST' });
-      const data = await resp.json();
-      showResult(data.success, data.message || '✅ Campaña iniciada');
-      if (data.success) showToast('✅ Campaña iniciada', 'success');
-    } catch (e) {
-      showResult(false, '❌ Error: ' + e.message);
-    } finally {
-      setLoading(btn, false);
-    }
-  });
-
-  document.getElementById('btnStop')?.addEventListener('click', async () => {
-    if (!confirm('¿Detener la campaña en Wolkvox?')) return;
-    const btn = document.getElementById('btnStop');
-    setLoading(btn, true);
-    try {
-      const resp = await fetch(`/auto-campaigns/${campaignId}/stop-wkv`, { method: 'POST' });
-      const data = await resp.json();
-      showResult(data.success, data.message || '✅ Campaña detenida');
-      if (data.success) showToast('✅ Campaña detenida', 'success');
-    } catch (e) {
-      showResult(false, '❌ Error: ' + e.message);
     } finally {
       setLoading(btn, false);
     }
